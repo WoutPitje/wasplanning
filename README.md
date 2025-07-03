@@ -188,6 +188,17 @@ NUXT_PUBLIC_API_URL=http://localhost:3000
 NUXT_PUBLIC_WS_URL=ws://localhost:3000
 ```
 
+## Technical Documentation
+
+For detailed technical information, see:
+
+- **[📋 Technical Overview](./technical-overview.md)** - Start here for system architecture
+- **[⚙️ Backend Technical](./backend-technical.md)** - NestJS API specification
+- **[🌐 Frontend Technical](./frontend-technical.md)** - Nuxt 3 web application
+- **[📱 Mobile Technical](./mobile-technical.md)** - Expo React Native app
+- **[🚀 Development Setup](./development-setup.md)** - Developer onboarding guide
+- **[🏗️ Deployment](./deployment.md)** - Production deployment guide
+
 ## Contributing
 
 1. Fork the repository
