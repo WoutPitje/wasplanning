@@ -14,6 +14,7 @@ A real-time vehicle wash management system for auto service centers, coordinatin
 
 - **Backend**: NestJS, PostgreSQL, Redis, TypeORM
 - **Frontend**: Nuxt 3 (SSG), shadcn-vue, Pinia
+- **Mobile**: Expo/React Native, NativeWind, Zustand
 - **Storage**: MinIO (S3-compatible object storage)
 - **Real-time**: Socket.io
 - **API Docs**: Swagger/OpenAPI
@@ -73,6 +74,11 @@ wasplanning/
 │   ├── components/     # Shared components
 │   ├── composables/    # Vue composables
 │   └── stores/         # Pinia stores
+├── mobile/             # Expo React Native app
+│   ├── app/            # Expo Router pages
+│   ├── components/     # Native components
+│   ├── hooks/          # React hooks
+│   └── services/       # API & WebSocket
 ├── docker/             # Docker configurations
 └── scripts/            # Development scripts
 ```
@@ -81,7 +87,8 @@ wasplanning/
 
 ```bash
 # Development
-npm run dev              # Start all services
+npm run dev              # Start all services (DB, API, Web)
+npm run dev:mobile       # Start Expo development server
 npm run dev:backend      # Start only backend
 npm run dev:frontend     # Start only frontend
 
@@ -97,7 +104,8 @@ npm run test:e2e        # Run E2E tests
 npm run test:cov        # Run tests with coverage
 
 # Building
-npm run build           # Build for production
+npm run build           # Build web for production
+npm run build:mobile    # Build mobile app (iOS/Android)
 npm run clean           # Clean build artifacts
 ```
 
@@ -115,6 +123,12 @@ npm run clean           # Clean build artifacts
 - **E2E Tests**: Playwright for user scenarios
 - **Visual Tests**: Storybook (optional)
 
+### Mobile Testing
+- **Unit Tests**: Jest + React Native Testing Library
+- **Component Tests**: @testing-library/react-native
+- **E2E Tests**: Detox for device testing
+- **Platform Testing**: Expo Go + EAS Build
+
 ### Running Tests
 
 ```bash
@@ -131,6 +145,13 @@ npm run test           # Run all tests
 npm run test:unit      # Unit tests only
 npm run test:e2e       # E2E tests
 npm run test:coverage  # Coverage report
+
+# Mobile tests
+cd mobile
+npm run test           # Run all tests
+npm run test:watch     # Watch mode
+npm run test:coverage  # Coverage report
+npx detox test         # E2E tests on simulator
 ```
 
 ## API Documentation
