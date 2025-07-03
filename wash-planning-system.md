@@ -68,6 +68,39 @@ graph TB
 - **Configureerbare Werktijden**: Instelbaar voor binnen/buiten kantooruren
 - **Open API**: Swagger documentatie voor toekomstige integraties
 
+## Automatische Planningshulp
+
+Het systeem biedt slimme planningsondersteuning:
+
+### Automatische Toewijzing
+- **Capaciteit matching**: Koppelt auto's aan beschikbare wassers op basis van:
+  - Huidige werkbelasting
+  - Vaardigheden (quick wash, polish, detailing)
+  - Geschatte wasduur
+- **Retourrit prioriteit**: Auto's met vroege retourrit krijgen automatisch voorrang
+- **Load balancing**: Verdeel werk gelijkmatig over alle wassers
+
+### Slimme Meldingen
+- **Uitloop detectie**: Bij 80% van geschatte tijd waarschuwing naar wasser
+- **Escalatie**: Als wasbeurt uitloopt → melding naar haal/breng planner
+- **Herverdeling**: Bij ziekte/afwezigheid automatisch taken herverdelen
+
+### Planning Optimalisatie
+```mermaid
+graph LR
+    A[Nieuwe Auto] --> B{Retourrit tijd?}
+    B -->|Vandaag 14:00| C[Hoge Prioriteit]
+    B -->|Morgen| D[Normale Prioriteit]
+    B -->|Geen| E[Lage Prioriteit]
+    
+    C --> F{Wasser vrij?}
+    F -->|Ja| G[Direct toewijzen]
+    F -->|Nee| H[Wachtrij vooraan]
+    
+    D --> I[Wachtrij midden]
+    E --> J[Wachtrij achteraan]
+```
+
 ## Gebruikersvoordelen
 
 ### Werkplaats
@@ -183,39 +216,6 @@ timeline
 - Landelijke uitrol
 - Partnerships met garage software leveranciers
 - MOBO integratie ontwikkeling
-
-## Automatische Planningshulp
-
-Het systeem biedt slimme planningsondersteuning:
-
-### Automatische Toewijzing
-- **Capaciteit matching**: Koppelt auto's aan beschikbare wassers op basis van:
-  - Huidige werkbelasting
-  - Vaardigheden (quick wash, polish, detailing)
-  - Geschatte wasduur
-- **Retourrit prioriteit**: Auto's met vroege retourrit krijgen automatisch voorrang
-- **Load balancing**: Verdeel werk gelijkmatig over alle wassers
-
-### Slimme Meldingen
-- **Uitloop detectie**: Bij 80% van geschatte tijd waarschuwing naar wasser
-- **Escalatie**: Als wasbeurt uitloopt → melding naar haal/breng planner
-- **Herverdeling**: Bij ziekte/afwezigheid automatisch taken herverdelen
-
-### Planning Optimalisatie
-```mermaid
-graph LR
-    A[Nieuwe Auto] --> B{Retourrit tijd?}
-    B -->|Vandaag 14:00| C[Hoge Prioriteit]
-    B -->|Morgen| D[Normale Prioriteit]
-    B -->|Geen| E[Lage Prioriteit]
-    
-    C --> F{Wasser vrij?}
-    F -->|Ja| G[Direct toewijzen]
-    F -->|Nee| H[Wachtrij vooraan]
-    
-    D --> I[Wachtrij midden]
-    E --> J[Wachtrij achteraan]
-```
 
 ## Success Metrics
 - 75% minder handmatige communicatie over wasstatus
