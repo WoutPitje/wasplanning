@@ -152,7 +152,6 @@ timeline
     
     Fase 1 (Maand 1-3)
         : 3 pilot garages
-        : Regio Utrecht/Amsterdam
         : Gratis pilot periode
         : Wekelijkse feedback
 
@@ -170,7 +169,7 @@ timeline
 ```
 
 ### Fase 1: Pilot (Maand 1-3)
-- 3 pilot garages in regio Utrecht/Amsterdam
+- 3 pilot garages
 - Focus op garages met 5+ wassers
 - Gratis tijdens pilot periode
 - Wekelijkse feedback sessies
@@ -185,13 +184,38 @@ timeline
 - Partnerships met garage software leveranciers
 - MOBO integratie ontwikkeling
 
-## Openstaande Vragen voor Implementatie
+## Automatische Planningshulp
 
-1. **Automatische herverdeling**: Systeem verdeelt taken automatisch bij ziekte/afwezigheid
-2. **Wasplekken configuratie**: Instelbaar per garage (vast of flexibel)
-3. **Niet op tijd klaar**: Wat gebeurt er als wasbeurt uitloopt?
-4. **Integratie volgorde**: Eerst WvA koppeling, daarna MOBO
-5. **Mobiele app**: Toekomstige native app voor push notificaties (wordt later uitgewerkt)
+Het systeem biedt slimme planningsondersteuning:
+
+### Automatische Toewijzing
+- **Capaciteit matching**: Koppelt auto's aan beschikbare wassers op basis van:
+  - Huidige werkbelasting
+  - Vaardigheden (quick wash, polish, detailing)
+  - Geschatte wasduur
+- **Retourrit prioriteit**: Auto's met vroege retourrit krijgen automatisch voorrang
+- **Load balancing**: Verdeel werk gelijkmatig over alle wassers
+
+### Slimme Meldingen
+- **Uitloop detectie**: Bij 80% van geschatte tijd waarschuwing naar wasser
+- **Escalatie**: Als wasbeurt uitloopt → melding naar haal/breng planner
+- **Herverdeling**: Bij ziekte/afwezigheid automatisch taken herverdelen
+
+### Planning Optimalisatie
+```mermaid
+graph LR
+    A[Nieuwe Auto] --> B{Retourrit tijd?}
+    B -->|Vandaag 14:00| C[Hoge Prioriteit]
+    B -->|Morgen| D[Normale Prioriteit]
+    B -->|Geen| E[Lage Prioriteit]
+    
+    C --> F{Wasser vrij?}
+    F -->|Ja| G[Direct toewijzen]
+    F -->|Nee| H[Wachtrij vooraan]
+    
+    D --> I[Wachtrij midden]
+    E --> J[Wachtrij achteraan]
+```
 
 ## Success Metrics
 - 75% minder handmatige communicatie over wasstatus
