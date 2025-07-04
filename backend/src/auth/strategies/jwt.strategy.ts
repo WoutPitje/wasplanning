@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { JwtPayload } from '../auth.service';
+import { UserRole } from '../entities/user.entity';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -23,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     const user = await this.userRepository.findOne({
-      where: { id: payload.sub, is_active: true },
+      where: { id: payload.id, is_active: true },
       relations: ['tenant'],
     });
 
@@ -31,13 +32,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found or inactive');
     }
 
-    if (!user.tenant.is_active) {
+    // Skip tenant validation for super admin
+    if (user.role !== UserRole.SUPER_ADMIN && !user.tenant.is_active) {
       throw new UnauthorizedException('Tenant is inactive');
     }
 
     // Return user with tenant context for use in guards and controllers
     return {
-      sub: user.id, // Keep for backward compatibility
       id: user.id,
       email: user.email,
       role: user.role,
@@ -47,8 +48,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         id: user.tenant.id,
         name: user.tenant.name,
         display_name: user.tenant.display_name,
+        language: user.tenant.language,
       },
-      tenantId: user.tenant.id, // Keep for backward compatibility
     };
   }
 }

@@ -1,12 +1,16 @@
-import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Body, UseGuards, Request, Get, Param } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ImpersonateUserDto } from './dto/impersonate-user.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { Roles } from './decorators/roles.decorator';
+import { UserRole } from './entities/user.entity';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -47,5 +51,33 @@ export class AuthController {
       last_name: user.last_name,
       tenant: user.tenant,
     };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
+  @Post('impersonate/:userId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Impersonate a user (Super Admin only)' })
+  @ApiParam({ name: 'userId', description: 'ID of the user to impersonate' })
+  @ApiResponse({ status: 200, description: 'Impersonation successful' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Super Admin access required' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async impersonateUser(
+    @Param('userId') userId: string,
+    @CurrentUser() currentUser,
+  ) {
+    return this.authService.impersonateUser(currentUser, userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('stop-impersonation')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Stop impersonating a user' })
+  @ApiResponse({ status: 200, description: 'Stopped impersonation successfully' })
+  @ApiResponse({ status: 400, description: 'Not currently impersonating' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async stopImpersonation(@CurrentUser() user) {
+    return this.authService.stopImpersonation(user);
   }
 }

@@ -1,17 +1,22 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole } from './entities/user.entity';
-import { Tenant } from './entities/tenant.entity';
 
 export interface JwtPayload {
-  sub: string;
+  id: string;
   email: string;
   role: string;
-  tenantId: string;
-  tenantName: string;
+  tenant: {
+    id: string;
+    name: string;
+    display_name: string;
+    language: string;
+  };
+  impersonator_id?: string;
+  is_impersonating?: boolean;
 }
 
 export interface AuthResponse {
@@ -27,7 +32,13 @@ export interface AuthResponse {
       id: string;
       name: string;
       display_name: string;
+      language: string;
     };
+  };
+  impersonation?: {
+    is_impersonating: boolean;
+    impersonator_id: string;
+    impersonator_email?: string;
   };
 }
 
@@ -36,8 +47,6 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @InjectRepository(Tenant)
-    private tenantRepository: Repository<Tenant>,
     private jwtService: JwtService,
   ) {}
 
@@ -58,11 +67,15 @@ export class AuthService {
 
   async login(user: User): Promise<AuthResponse> {
     const payload: JwtPayload = {
-      sub: user.id,
+      id: user.id,
       email: user.email,
       role: user.role,
-      tenantId: user.tenant_id,
-      tenantName: user.tenant.name,
+      tenant: {
+        id: user.tenant.id,
+        name: user.tenant.name,
+        display_name: user.tenant.display_name,
+        language: user.tenant.language,
+      },
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -83,6 +96,7 @@ export class AuthService {
           id: user.tenant.id,
           name: user.tenant.name,
           display_name: user.tenant.display_name,
+          language: user.tenant.language,
         },
       },
     };
@@ -92,12 +106,65 @@ export class AuthService {
     try {
       const payload = this.jwtService.verify(refreshToken);
       const user = await this.userRepository.findOne({
-        where: { id: payload.sub, is_active: true },
+        where: { id: payload.id, is_active: true },
         relations: ['tenant'],
       });
 
       if (!user) {
         throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      // If this is an impersonation session, preserve the impersonation fields
+      if (payload.is_impersonating && payload.impersonator_id) {
+        const impersonator = await this.userRepository.findOne({
+          where: { id: payload.impersonator_id, is_active: true },
+        });
+
+        if (!impersonator) {
+          throw new UnauthorizedException('Impersonator not found');
+        }
+
+        const newPayload: JwtPayload = {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          tenant: {
+            id: user.tenant.id,
+            name: user.tenant.name,
+            display_name: user.tenant.display_name,
+            language: user.tenant.language,
+          },
+          impersonator_id: payload.impersonator_id,
+          is_impersonating: true,
+        };
+
+        const accessToken = this.jwtService.sign(newPayload);
+        const newRefreshToken = this.jwtService.sign(newPayload, {
+          expiresIn: '30d',
+        });
+
+        return {
+          access_token: accessToken,
+          refresh_token: newRefreshToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            tenant: {
+              id: user.tenant.id,
+              name: user.tenant.name,
+              display_name: user.tenant.display_name,
+              language: user.tenant.language,
+            },
+          },
+          impersonation: {
+            is_impersonating: true,
+            impersonator_id: impersonator.id,
+            impersonator_email: impersonator.email,
+          },
+        };
       }
 
       return this.login(user);
@@ -127,5 +194,107 @@ export class AuthService {
     });
 
     return this.userRepository.save(user);
+  }
+
+  async impersonateUser(impersonatorId: string, targetUserId: string): Promise<AuthResponse> {
+    // Load the impersonator user to verify they are SUPER_ADMIN
+    const impersonator = await this.userRepository.findOne({
+      where: { id: impersonatorId, is_active: true },
+      relations: ['tenant'],
+    });
+
+    if (!impersonator) {
+      throw new UnauthorizedException('Impersonator not found');
+    }
+
+    if (impersonator.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only SUPER_ADMIN can impersonate users');
+    }
+
+    // Load the target user with tenant relation
+    const targetUser = await this.userRepository.findOne({
+      where: { id: targetUserId },
+      relations: ['tenant'],
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException('Target user not found');
+    }
+
+    if (!targetUser.is_active) {
+      throw new ForbiddenException('Cannot impersonate inactive user');
+    }
+
+    if (targetUser.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Cannot impersonate another SUPER_ADMIN');
+    }
+
+    // Create JWT payload with impersonation fields
+    const payload: JwtPayload = {
+      id: targetUser.id,
+      email: targetUser.email,
+      role: targetUser.role,
+      tenant: {
+        id: targetUser.tenant.id,
+        name: targetUser.tenant.name,
+        display_name: targetUser.tenant.display_name,
+        language: targetUser.tenant.language,
+      },
+      impersonator_id: impersonator.id,
+      is_impersonating: true,
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: '30d',
+    });
+
+    // Return auth response with impersonation info
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      user: {
+        id: targetUser.id,
+        email: targetUser.email,
+        role: targetUser.role,
+        first_name: targetUser.first_name,
+        last_name: targetUser.last_name,
+        tenant: {
+          id: targetUser.tenant.id,
+          name: targetUser.tenant.name,
+          display_name: targetUser.tenant.display_name,
+          language: targetUser.tenant.language,
+        },
+      },
+      impersonation: {
+        is_impersonating: true,
+        impersonator_id: impersonator.id,
+        impersonator_email: impersonator.email,
+      },
+    };
+  }
+
+  async stopImpersonation(currentUser: any): Promise<AuthResponse> {
+    // Verify user is currently impersonating
+    if (!currentUser.is_impersonating || !currentUser.impersonator_id) {
+      throw new ForbiddenException('User is not currently impersonating');
+    }
+
+    // Load original superadmin user
+    const superAdmin = await this.userRepository.findOne({
+      where: { id: currentUser.impersonator_id, is_active: true },
+      relations: ['tenant'],
+    });
+
+    if (!superAdmin) {
+      throw new UnauthorizedException('Original superadmin not found');
+    }
+
+    if (superAdmin.role !== UserRole.SUPER_ADMIN) {
+      throw new UnauthorizedException('Original user is not a SUPER_ADMIN');
+    }
+
+    // Create regular JWT without impersonation fields
+    return this.login(superAdmin);
   }
 }

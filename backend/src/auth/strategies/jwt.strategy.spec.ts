@@ -30,11 +30,14 @@ describe('JwtStrategy', () => {
   };
 
   const mockJwtPayload: JwtPayload = {
-    sub: 'user-uuid',
+    id: 'user-uuid',
     email: 'test@example.com',
     role: UserRole.WERKPLAATS,
-    tenantId: 'tenant-uuid',
-    tenantName: 'test-garage',
+    tenant: {
+      id: 'tenant-uuid',
+      name: 'test-garage',
+      display_name: 'Test Garage',
+    },
   };
 
   const mockUserRepository = {
@@ -78,7 +81,6 @@ describe('JwtStrategy', () => {
       const result = await strategy.validate(mockJwtPayload);
 
       expect(result).toEqual({
-        sub: mockUser.id, // backward compatibility
         id: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
@@ -89,11 +91,10 @@ describe('JwtStrategy', () => {
           name: mockUser.tenant.name,
           display_name: mockUser.tenant.display_name,
         },
-        tenantId: mockUser.tenant.id, // backward compatibility
       });
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-        where: { id: mockJwtPayload.sub, is_active: true },
+        where: { id: mockJwtPayload.id, is_active: true },
         relations: ['tenant'],
       });
     });
@@ -117,7 +118,7 @@ describe('JwtStrategy', () => {
       );
     });
 
-    it('should throw UnauthorizedException when tenant is inactive', async () => {
+    it('should throw UnauthorizedException when tenant is inactive for non-super-admin users', async () => {
       const userWithInactiveTenant = {
         ...mockUser,
         tenant: { ...mockUser.tenant, is_active: false },
@@ -130,6 +131,24 @@ describe('JwtStrategy', () => {
       await expect(strategy.validate(mockJwtPayload)).rejects.toThrow(
         'Tenant is inactive'
       );
+    });
+
+    it('should allow super admin with inactive tenant', async () => {
+      const superAdminWithInactiveTenant = {
+        ...mockUser,
+        role: UserRole.SUPER_ADMIN,
+        tenant: { ...mockUser.tenant, is_active: false },
+      };
+      const superAdminPayload = {
+        ...mockJwtPayload,
+        role: UserRole.SUPER_ADMIN,
+      };
+      mockUserRepository.findOne.mockResolvedValue(superAdminWithInactiveTenant);
+
+      const result = await strategy.validate(superAdminPayload);
+
+      expect(result).toBeDefined();
+      expect(result.role).toBe(UserRole.SUPER_ADMIN);
     });
 
     it('should validate different user roles', async () => {

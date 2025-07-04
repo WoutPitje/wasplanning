@@ -178,11 +178,14 @@ describe('AuthService', () => {
       });
 
       expect(mockJwtService.sign).toHaveBeenCalledWith({
-        sub: mockUser.id,
+        id: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
-        tenantId: mockUser.tenant_id,
-        tenantName: mockUser.tenant.name,
+        tenant: {
+          id: mockUser.tenant.id,
+          name: mockUser.tenant.name,
+          display_name: mockUser.tenant.display_name,
+        },
       });
     });
   });
@@ -193,7 +196,7 @@ describe('AuthService', () => {
       const newAccessToken = 'new-access-token';
       const newRefreshToken = 'new-refresh-token';
       
-      mockJwtService.verify.mockReturnValue({ sub: mockUser.id });
+      mockJwtService.verify.mockReturnValue({ id: mockUser.id });
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockJwtService.sign
         .mockReturnValueOnce(newAccessToken)
@@ -221,7 +224,7 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException when user is not found', async () => {
       const refreshToken = 'valid-refresh-token';
       
-      mockJwtService.verify.mockReturnValue({ sub: 'nonexistent-id' });
+      mockJwtService.verify.mockReturnValue({ id: 'nonexistent-id' });
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(service.refreshToken(refreshToken)).rejects.toThrow(

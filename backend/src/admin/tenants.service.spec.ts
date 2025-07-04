@@ -287,7 +287,7 @@ describe('TenantsService', () => {
       const password = (service as any).generateTemporaryPassword();
       
       expect(password).toHaveLength(12);
-      expect(password).toMatch(/^[A-HJ-NP-Za-hj-np-z2-9!@#$%]+$/);
+      expect(password).toMatch(/^[A-HJ-NP-Za-hj-kmnp-z2-9!@#$%]+$/);
     });
   });
 });

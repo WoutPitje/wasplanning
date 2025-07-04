@@ -12,6 +12,7 @@ export class AuthTestUtils {
       display_name: 'Test Garage',
       logo_url: '',
       settings: {},
+      language: 'nl',
       is_active: true,
       created_at: new Date(),
       updated_at: new Date(),
@@ -40,12 +41,17 @@ export class AuthTestUtils {
   }
 
   static createMockJwtPayload(overrides: Partial<JwtPayload> = {}): JwtPayload {
+    const mockTenant = this.createMockTenant();
     return {
-      sub: 'user-uuid',
+      id: 'user-uuid',
       email: 'test@example.com',
       role: UserRole.WERKPLAATS,
-      tenantId: 'tenant-uuid',
-      tenantName: 'test-garage',
+      tenant: {
+        id: mockTenant.id,
+        name: mockTenant.name,
+        display_name: mockTenant.display_name,
+        language: mockTenant.language,
+      },
       ...overrides,
     };
   }
@@ -57,7 +63,7 @@ export class AuthTestUtils {
   static createMockJwtService(): Partial<JwtService> {
     return {
       sign: jest.fn().mockReturnValue('mock-jwt-token'),
-      verify: jest.fn().mockReturnValue({ sub: 'user-uuid' }),
+      verify: jest.fn().mockReturnValue({ id: 'user-uuid' }),
     };
   }
 

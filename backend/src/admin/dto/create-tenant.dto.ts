@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateTenantDto {
@@ -26,6 +26,17 @@ export class CreateTenantDto {
   @IsOptional()
   @IsString()
   logo_url?: string;
+
+  @ApiProperty({
+    description: 'Language preference for the tenant',
+    example: 'nl',
+    enum: ['nl', 'en'],
+    default: 'nl',
+    required: false,
+  })
+  @IsOptional()
+  @IsIn(['nl', 'en'])
+  language?: string;
 
   @ApiProperty({
     description: 'Email for the initial admin user',

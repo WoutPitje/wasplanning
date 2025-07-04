@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateTenantDto {
@@ -28,6 +28,16 @@ export class UpdateTenantDto {
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
+
+  @ApiProperty({
+    description: 'Language preference for the tenant',
+    example: 'nl',
+    enum: ['nl', 'en'],
+    required: false,
+  })
+  @IsOptional()
+  @IsIn(['nl', 'en'])
+  language?: string;
 
   @ApiProperty({
     description: 'Additional settings for the tenant',

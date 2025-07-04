@@ -18,6 +18,9 @@ export class Tenant {
   @Column({ type: 'jsonb', nullable: true })
   settings: Record<string, any>;
 
+  @Column({ default: 'nl', length: 2 })
+  language: string;
+
   @Column({ default: true })
   is_active: boolean;
 

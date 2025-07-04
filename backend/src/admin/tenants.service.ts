@@ -51,6 +51,7 @@ export class TenantsService {
       name: createTenantDto.name,
       display_name: createTenantDto.display_name,
       logo_url: createTenantDto.logo_url || '',
+      language: createTenantDto.language || 'nl',
       is_active: true,
       settings: {},
     });
@@ -90,7 +91,7 @@ export class TenantsService {
 
   async findAll() {
     return this.tenantRepository.find({
-      select: ['id', 'name', 'display_name', 'logo_url', 'is_active', 'created_at', 'updated_at'],
+      select: ['id', 'name', 'display_name', 'logo_url', 'language', 'is_active', 'created_at', 'updated_at'],
       order: { created_at: 'DESC' },
     });
   }
