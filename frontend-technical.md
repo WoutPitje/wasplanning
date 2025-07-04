@@ -31,7 +31,7 @@
 - **Forms**: VeeValidate + Zod
 - **Tables**: shadcn-vue DataTable (built-in)
 - **API**: $fetch with ofetch interceptors
-- **Auth**: @sidebase/nuxt-auth
+- **Auth**: Custom JWT implementation (not @sidebase/nuxt-auth)
 - **i18n**: @nuxtjs/i18n
 - **PWA**: @vite-pwa/nuxt
 - **Charts**: Chart.js
@@ -48,7 +48,7 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@nuxtjs/i18n',
     '@vite-pwa/nuxt',
-    '@sidebase/nuxt-auth'
+    // '@sidebase/nuxt-auth' // Not used - custom JWT auth
   ],
   ssr: true,
   nitro: {

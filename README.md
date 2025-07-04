@@ -5,7 +5,7 @@ A real-time vehicle wash management system for auto service centers, coordinatin
 ## Features
 
 - **Real-time Status Tracking** - Track vehicles from workshop to wash station to completion
-- **Role-based Access** - Separate interfaces for Workshop, Washers, and Planners
+- **Role-based Access** - Separate interfaces for Werkplaats, Wassers, Haal/Breng Planners, Wasplanners, and Admins
 - **Smart Task Assignment** - Match wash tasks to available washers based on skills
 - **Mobile Responsive** - Optimized for tablets and phones used by wash staff
 - **Real-time Updates** - WebSocket notifications for instant status changes
@@ -163,9 +163,12 @@ http://localhost:3000/api/docs
 
 ## User Roles
 
-1. **Workshop** - Submit vehicles for washing
-2. **Washer** - View queue, update wash status
-3. **Planner** - Monitor all wash activities
+1. **Werkplaats** - Submit wash requests only
+2. **Wassers** - View queue, update wash status
+3. **Haal/Breng Planners** - View completion status for return trips
+4. **Wasplanners** - Manage queue and task assignments
+5. **Garage Admin** - Manage users and settings for their garage
+6. **Super Admin** - Manage all garages and global settings
 
 ## Environment Variables
 

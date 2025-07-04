@@ -210,3 +210,83 @@ backend/
 "test:cov": "jest --coverage",
 "test:e2e": "jest --config ./test/jest-e2e.json"
 ```
+
+### CI/CD Testing
+```yaml
+# .github/workflows/test.yml
+- Run linting (ESLint, Prettier)
+- Run unit tests with coverage
+- Run integration tests with test database
+- Run E2E tests on staging environment
+- SonarQube analysis
+```
+
+### Environment Variables
+```env
+# Database
+DATABASE_URL=postgresql://dev:dev123@localhost:5432/wasplanning
+DATABASE_TEST_URL=postgresql://dev:dev123@localhost:5432/wasplanning_test
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# JWT
+JWT_SECRET=your-secret-key-here
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+# MinIO
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_USE_SSL=false
+
+# Application
+PORT=3000
+NODE_ENV=development
+API_PREFIX=api/v1
+
+# WebSockets
+WS_CORS_ORIGIN=http://localhost:3001
+
+# External APIs
+RDW_API_KEY=your-rdw-api-key
+MOLLIE_API_KEY=your-mollie-api-key
+```
+
+### Deployment Configuration
+```dockerfile
+# Production Dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY dist/ ./dist/
+EXPOSE 3000
+CMD ["node", "dist/main.js"]
+```
+
+### API Documentation
+- Swagger UI available at `/api/docs`
+- OpenAPI 3.0 specification
+- Role-based endpoint documentation
+- Request/response examples
+- Authentication requirements
+
+### Performance Considerations
+- Database connection pooling
+- Redis caching for frequently accessed data
+- Efficient database queries with proper indexing
+- Rate limiting per tenant and user
+- Background job processing for heavy operations
+
+### Security Features
+- Multi-tenant data isolation
+- Role-based access control
+- JWT token authentication
+- Input validation and sanitization
+- SQL injection prevention
+- XSS protection
+- CORS configuration
+- Audit logging for sensitive operations

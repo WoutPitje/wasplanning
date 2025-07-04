@@ -31,7 +31,7 @@ mobile/
   - NativeWind (TailwindCSS for RN)
   - React Native Elements
   - Expo Vector Icons
-- **State**: Zustand + MMKV persistence
+- **State**: Zustand + MMKV persistence (confirmed choice)
 - **API Client**: Axios with interceptors
 - **WebSockets**: Socket.io-client
 - **Camera**: Expo Camera
