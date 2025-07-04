@@ -192,6 +192,26 @@ Het systeem ondersteunt meerdere garages/locaties binnen één installatie:
 - **Automatische onboarding** voor nieuwe garages
 - **Centrale rapportage** voor franchise/keten beheer
 
+## Dashboard & Inzichten
+
+Real-time overzicht van alle belangrijke cijfers:
+
+### Operationeel Dashboard
+- **Live wachtrij status** met gemiddelde wachttijden
+- **Wasserproductiviteit** per medewerker/team
+- **Doorlooptijden** per type wasbeurt
+- **Uitloop alerts** voor retourritten
+
+### Management Rapportages
+- **Maandoverzicht** aantal wassen per locatie
+- **Prestatie vergelijking** tussen vestigingen
+- **Piekuren analyse** voor betere planning
+- **Trend grafieken** voor capaciteitsplanning
+
+### Export Mogelijkheden
+- Download rapporten als PDF/Excel
+- API toegang voor eigen BI tools (Groei/Enterprise)
+
 ## Configuratie Opties
 
 - **Wasduur**: Instelbaar per type (snel/standaard/uitgebreid)
@@ -215,6 +235,14 @@ Het systeem ondersteunt meerdere garages/locaties binnen één installatie:
 - 90% werkt nog met handmatige processen/papier
 
 ## Prijsmodel
+
+### Betaling & Facturatie
+- **Veilige betalingen** via Mollie payment gateway
+- **Automatische incasso** voor maandelijkse abonnementen
+- **Ondersteuning** voor alle Nederlandse betaalmethoden (iDEAL, Bancontact, creditcard)
+- **Prorating** bij pakket upgrades/downgrades
+- **Automatische factuur** generatie en verzending
+- **BTW compliance** volgens Nederlandse wetgeving
 
 ### Drie Transparante Pakketten
 

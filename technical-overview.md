@@ -75,6 +75,7 @@ graph TB
 | **Mobile App** | Expo + React Native | Mobile wassers |
 | **Real-time** | Socket.io | Live updates |
 | **Auth** | JWT + Role-based | Security |
+| **Payments** | Mollie Gateway | Subscription billing |
 
 ## 🎯 Core Features
 
