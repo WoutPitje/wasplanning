@@ -78,17 +78,26 @@ graph TB
 
 ## 🎯 Core Features
 
+### Multi-Tenancy
+- **Tenant Isolation**: Complete data separation between garages
+- **Row-Level Security**: Database-level tenant filtering
+- **Tenant-Aware API**: All endpoints respect tenant context
+- **Garage Admin**: Self-service garage management
+- **Super Admin**: Cross-tenant oversight and management
+
 ### Automatic Planning
-- **Smart Assignment**: Capacity + skills matching
+- **Smart Assignment**: Capacity + skills matching (per garage)
 - **Priority Queue**: Return trip time based
 - **Auto Redistribution**: Sick leave handling
 - **Delay Alerts**: 80% completion warnings
 
-### User Roles
+### User Roles (Per Tenant)
 - **Werkplaats**: Submit wash requests
 - **Wassers**: Execute wash tasks, update status
 - **Haal/Breng Planners**: Monitor completion for return trips  
 - **Wasplanners**: Manage queue and assignments
+- **Garage Admin**: Manage users and settings for their garage
+- **Super Admin**: Manage all garages and global settings
 
 ### Mobile App (Future)
 - **License Plate Recognition**: Camera OCR

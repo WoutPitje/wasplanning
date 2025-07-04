@@ -1,0 +1,99 @@
+# Cursor Rules - Wasplanning Systeem
+
+## Tech Stack (NEVER CHANGE)
+- Backend: NestJS + TypeScript + PostgreSQL + TypeORM + Redis + MinIO
+- Frontend: Nuxt 3 + Vue 3 + shadcn-vue + Pinia + TailwindCSS
+- Mobile: Expo + React Native + Zustand + NativeWind
+- Real-time: Socket.io
+- Auth: JWT + Role-based access
+
+## Code Style
+- Use TypeScript everywhere
+- Prefer composition over inheritance
+- Use async/await over Promises
+- Follow existing naming conventions
+- NO console.log in production code
+- Use proper error handling with try/catch
+- Always validate DTOs with class-validator
+
+## Backend Rules
+- All endpoints MUST have Swagger decorators
+- Use modules for feature organization
+- Database entities in separate files
+- Always use transactions for multi-table operations
+- Redis for caching and job queues only
+- MinIO for all file storage (photos, documents)
+
+## Frontend Rules
+- Use composables for shared logic
+- Pinia stores for global state
+- shadcn-vue components ONLY (no other UI libs)
+- TailwindCSS for styling (no custom CSS unless absolutely needed)
+- TypeScript for all .vue files
+- Use $fetch for API calls
+
+## Mobile Rules
+- Expo SDK features preferred over native modules
+- NativeWind for styling (TailwindCSS syntax)
+- Zustand for state management
+- TypeScript for all components
+- File-based routing with Expo Router
+
+## Multi-Tenancy (MANDATORY)
+- ALL entities MUST have tenant_id foreign key
+- ALL API endpoints MUST be tenant-aware
+- Row-Level Security MUST be enabled on tenant-scoped tables
+- JWT tokens MUST include tenant context
+- Redis keys MUST be namespaced by tenant
+- MinIO buckets MUST be per tenant
+- WebSocket rooms MUST be tenant-specific
+
+## User Roles (FIXED - Per Tenant)
+1. Werkplaats - submit wash requests only
+2. Wassers - view queue, update status
+3. Haal/Breng Planners - view completion status only
+4. Wasplanners - manage queue and assignments
+5. Garage Admin - manage users and settings for their garage
+6. Super Admin - manage all garages and global settings
+
+## Database Naming
+- snake_case for table/column names
+- UUID primary keys
+- created_at/updated_at timestamps
+- Soft deletes with deleted_at
+
+## API Conventions
+- RESTful endpoints
+- /api/v1/ prefix
+- Consistent response format
+- Proper HTTP status codes
+- JWT in Authorization header
+
+## File Structure (NEVER CHANGE)
+```
+wasplanning/
+├── backend/
+├── frontend/  
+├── mobile/
+├── docker/
+└── scripts/
+```
+
+## Environment
+- Development: npm run dev starts all services
+- Separate mobile development: npm run dev:mobile
+- PostgreSQL on 5432, Redis on 6379, MinIO on 9000
+- API on 3000, Frontend on 3001
+
+## Testing
+- Jest for backend unit tests
+- Vitest for frontend unit tests  
+- Playwright for E2E tests
+- Minimum 80% code coverage
+
+## NO Offline Mode
+- Mobile app does NOT need offline functionality
+- No biometric authentication
+- No location tracking
+- No minimum photo resolution requirements
+- No digital signatures

@@ -10,24 +10,37 @@ Digitaal wasplanning platform dat communicatie en tracking tussen alle afdelinge
 
 ```mermaid
 graph TB
-    subgraph Gebruikers
-        W[Werkplaats]
-        WA[Wassers]
-        HP[Haal/Breng Planners]
-        WP[Wasplanners]
+    subgraph "Garage A Gebruikers"
+        W1[Werkplaats A]
+        WA1[Wassers A]
+        HP1[Planners A]
+        WP1[Wasplanner A]
+    end
+    
+    subgraph "Garage B Gebruikers"
+        W2[Werkplaats B]
+        WA2[Wassers B]
+        HP2[Planners B]
+        WP2[Wasplanner B]
+    end
+    
+    subgraph "Super Admin"
+        SA[Systeem Beheerder]
+        GA[Garage Admins]
     end
     
     subgraph Frontend
-        WEB[Web App<br/>Nuxt/Vue]
+        WEB[Web App<br/>Nuxt/Vue<br/>Multi-Tenant]
         APP[Mobiele App<br/>React Native]
+        ADMIN[Admin Dashboard<br/>Multi-Garage]
     end
     
     subgraph Backend
-        API[REST API<br/>NestJS]
+        API[REST API<br/>NestJS<br/>Tenant-Aware]
         WS[WebSocket<br/>Real-time]
-        DB[(PostgreSQL)]
-        REDIS[(Redis<br/>Cache/Queue)]
-        S3[MinIO<br/>Foto's]
+        DB[(PostgreSQL<br/>Row-Level Security)]
+        REDIS[(Redis<br/>Tenant Namespacing)]
+        S3[MinIO<br/>Tenant Buckets]
     end
     
     subgraph Integraties
@@ -35,14 +48,24 @@ graph TB
         MOBO[MOBO Werkplaats]
     end
     
-    W --> WEB
-    WA --> WEB
-    WA -.->|Toekomstig| APP
-    HP --> WEB
-    WP --> WEB
+    W1 --> WEB
+    WA1 --> WEB
+    WA1 -.->|Toekomstig| APP
+    HP1 --> WEB
+    WP1 --> WEB
+    
+    W2 --> WEB
+    WA2 --> WEB
+    WA2 -.->|Toekomstig| APP
+    HP2 --> WEB
+    WP2 --> WEB
+    
+    SA --> ADMIN
+    GA --> ADMIN
     
     WEB --> API
     APP -.-> API
+    ADMIN --> API
     
     API --> DB
     API --> REDIS
@@ -51,9 +74,10 @@ graph TB
     
     WS --> WEB
     WS -.-> APP
+    WS --> ADMIN
     
-    API -.->|Toekomstig| WVA
-    API -.->|Toekomstig| MOBO
+    API -.->|Per Tenant| WVA
+    API -.->|Per Tenant| MOBO
 ```
 
 - **Real-time Status Tracking**: Werkplaats meldt aan → Waswachtrij → Gereed status
@@ -108,7 +132,7 @@ graph LR
 - Geen handmatige coördinatie meer
 
 ### Wassers  
-- Overzichtelijke werklijst
+- Overzichtelijke werklijst per garage
 - Duidelijke prioriteiten (spoed/normaal)
 - Mobiel-vriendelijke interface
 - Mogelijkheid om samen te werken aan één auto
@@ -119,9 +143,15 @@ graph LR
 - Geen verrassingen bij klantaflevering
 
 ### Wasplanners
-- Beheer van wachtrij en capaciteit
+- Beheer van wachtrij en capaciteit per locatie
 - Toewijzing aan beschikbare wassers
 - Inzicht in doorlooptijden
+
+### Garage Eigenaren/Managers
+- **Multi-locatie beheer** vanuit één dashboard
+- **Prestatie vergelijking** tussen verschillende vestigingen
+- **Centrale gebruikersbeheer** voor de hele keten
+- **Consistent merk experience** met eigen logo/kleuren
 
 ## Werkproces
 
@@ -146,12 +176,29 @@ flowchart LR
 5. **Afmelding**: Wasser meldt auto gereed
 6. **Notificatie**: Planner ziet auto is klaar voor retourrit
 
+## Multi-Tenant Architectuur
+
+Het systeem ondersteunt meerdere garages/locaties binnen één installatie:
+
+### Tenant Isolation
+- **Volledige scheiding** van data tussen verschillende garages
+- **Gebruikers** behoren tot één specifieke garage
+- **Auto's en wastaken** zijn tenant-specifiek
+- **Configuratie** per garage (werktijden, wasplekken, etc.)
+
+### Garage Beheer
+- **Hoofdbeheerder** kan nieuwe garages toevoegen
+- **Garage Admin** beheert eigen locatie en gebruikers
+- **Automatische onboarding** voor nieuwe garages
+- **Centrale rapportage** voor franchise/keten beheer
+
 ## Configuratie Opties
 
 - **Wasduur**: Instelbaar per type (snel/standaard/uitgebreid)
 - **Wasplekken**: Instelbaar per garage (vast of flexibel)
 - **Shifts**: Optioneel roostersysteem voor wassers
 - **Werktijden**: Instelbaar per locatie
+- **Tenant Instellingen**: Logo, kleuren, bedrijfsnaam per garage
 - **Toekomstige klantentoegang**: Foto's voor/na wasbeurt
 
 ## Toekomstige Mobiele App
@@ -168,14 +215,68 @@ flowchart LR
 - 90% werkt nog met handmatige processen/papier
 
 ## Prijsmodel
-- **Basis**: €49/maand per locatie
-- **Pro**: €79/maand (met shifts & rapportages)
-- **Enterprise**: €99/maand (API integraties)
-- **Alternatieven**: 
-  - €5/maand per wasser
-  - €0,50 per gewassen auto
-- Geen setup kosten
-- 30 dagen gratis proberen
+
+### Drie Transparante Pakketten
+
+```mermaid
+graph TD
+    subgraph "🚗 Starter - €49/maand"
+        S1[1 locatie]
+        S2[Tot 500 auto's/maand]
+        S3[5 gebruikers]
+        S4[Basis functies]
+    end
+    
+    subgraph "🏢 Groei - €149/maand"
+        G1[Tot 3 locaties]
+        G2[Tot 2.000 auto's/maand]
+        G3[Onbeperkt gebruikers]
+        G4[Alle functies + API]
+    end
+    
+    subgraph "🏭 Enterprise - €299/maand"
+        E1[Onbeperkt locaties]
+        E2[Onbeperkt auto's]
+        E3[Multi-tenant dashboard]
+        E4[Custom integraties]
+    end
+```
+
+#### 🚗 **Starter** - €49/maand
+- **1 locatie**
+- **Tot 500 auto's/maand**
+- Basis functies
+- 5 gebruikers
+- Email support
+
+#### 🏢 **Groei** - €149/maand  
+- **Tot 3 locaties**
+- **Tot 2.000 auto's/maand**
+- Alle functies + rapportages
+- Onbeperkt gebruikers
+- Priority support
+- API toegang
+
+#### 🏭 **Enterprise** - €299/maand
+- **Onbeperkt locaties**
+- **Onbeperkt auto's**
+- Multi-tenant dashboard
+- Custom integraties
+- Dedicated support
+- SLA garantie
+- Custom branding
+
+### Extra Opties
+- **Extra locatie** (Groei pakket): €39/locatie/maand
+- **Overschrijding auto's**: €0,10 per extra auto
+- **WhiteLabel**: €99/maand extra
+- **On-premise installatie**: Op aanvraag
+
+### Voordelen
+- **Geen setup kosten**
+- **30 dagen gratis proberen**
+- **Maandelijks opzegbaar**
+- **Inclusief updates**
 
 ## Go-to-Market Strategie
 
@@ -222,3 +323,17 @@ timeline
 - 100% zekerheid over gereedheid voor retourrit
 - <5 minuten om nieuwe wasorder aan te maken
 - ROI binnen 3 maanden door tijdsbesparing
+
+## Rekenvoorbeeld ROI
+
+### Kleine Garage (300 auto's/maand)
+- **Huidige tijdsbesteding**: 10 min/auto coördinatie = 50 uur/maand
+- **Met systeem**: 2 min/auto = 10 uur/maand
+- **Besparing**: 40 uur × €35/uur = €1.400/maand
+- **Kosten Starter**: €49/maand
+- **ROI**: €1.351/maand (2700% rendement)
+
+### Middelgrote Keten (1.500 auto's, 2 locaties)
+- **Besparing**: 200 uur × €35 = €7.000/maand
+- **Kosten Groei**: €149/maand
+- **ROI**: €6.851/maand
