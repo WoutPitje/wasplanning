@@ -8,20 +8,28 @@ mobile/
 ├── app/                    # Expo Router
 │   ├── (auth)/
 │   ├── (tabs)/
+│   ├── locations/
 │   └── _layout.tsx
 ├── components/
 │   ├── wash/
 │   ├── common/
-│   └── camera/
+│   ├── camera/
+│   └── location/
 ├── hooks/
 │   ├── useAuth.ts
 │   ├── useWashTasks.ts
+│   ├── useLocations.ts
 │   └── useCamera.ts
 ├── services/
 │   ├── api.ts
 │   └── websocket.ts
+├── stores/
+│   ├── auth.ts
+│   ├── locations.ts
+│   └── tasks.ts
 └── utils/
-    └── licenseplate.ts
+    ├── licenseplate.ts
+    └── location.ts
 ```
 
 ### Tech Stack
@@ -50,14 +58,27 @@ const recognizePlate = async (imageUri: string) => {
   return extractDutchPlate(result.text)
 }
 
-// Push notifications
+// Location-aware push notifications
 await Notifications.scheduleNotificationAsync({
   content: {
     title: "Nieuwe wasopdracht",
-    body: `${vehicle.licensePlate} toegewezen`,
+    body: `${vehicle.licensePlate} toegewezen op ${location.name}`,
+    data: {
+      taskId: task.id,
+      locationId: location.id,
+      tenantId: task.tenantId
+    }
   },
   trigger: null,
 })
+
+// Location filtering for tasks
+const filterTasksByUserLocations = (tasks: WashTask[], userLocations: Location[]) => {
+  const locationIds = userLocations.map(loc => loc.id)
+  return tasks.filter(task => 
+    !task.locationId || locationIds.includes(task.locationId)
+  )
+}
 ```
 
 ### Mobile App Specificaties
@@ -66,11 +87,14 @@ await Notifications.scheduleNotificationAsync({
 - **Offline**: Geen offline functionaliteit vereist
 - **Authenticatie**: Standaard login (geen biometrie)
 - **Features**: 
-  - Push notificaties voor nieuwe opdrachten
+  - Push notificaties voor nieuwe opdrachten (location-aware)
   - Kenteken herkenning via camera
   - Foto's maken voor/na wasbeurt
   - Real-time status updates
   - Barcode scanner voor werkorders
+  - Multi-location task filtering
+  - Location selector voor cross-location toegang
+  - Location-specific dashboards
 - **Toekomstig**: RDW API integratie voor auto details
 
 ### Mobile Testing

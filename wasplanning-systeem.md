@@ -152,6 +152,8 @@ graph LR
 - **Prestatie vergelijking** tussen verschillende vestigingen
 - **Centrale gebruikersbeheer** voor de hele keten
 - **Consistent merk experience** met eigen logo/kleuren
+- **Flexibele locatie toewijzing** - gebruikers kunnen toegang krijgen tot meerdere locaties
+- **Locatie-specifieke rapportage** en **geaggregeerde overzichten** per keten
 
 ## Werkproces
 
@@ -176,21 +178,29 @@ flowchart LR
 5. **Afmelding**: Wasser meldt auto gereed
 6. **Notificatie**: Planner ziet auto is klaar voor retourrit
 
-## Multi-Tenant Architectuur
+## Multi-Tenant & Multi-Location Architectuur
 
-Het systeem ondersteunt meerdere garages/locaties binnen één installatie:
+Het systeem ondersteunt meerdere garages (tenants) met elk meerdere locaties:
 
-### Tenant Isolation
-- **Volledige scheiding** van data tussen verschillende garages
-- **Gebruikers** behoren tot één specifieke garage
-- **Auto's en wastaken** zijn tenant-specifiek
-- **Configuratie** per garage (werktijden, wasplekken, etc.)
+### Tenant & Location Isolation
+- **Volledige scheiding** van data tussen verschillende garages (tenants)
+- **Meerdere locaties per tenant** - elke garage kan meerdere vestigingen beheren
+- **Gebruikers** behoren tot één tenant maar kunnen toegang hebben tot meerdere locaties
+- **Auto's en wastaken** zijn zowel tenant- als locatie-specifiek
+- **Configuratie** per garage en per locatie (werktijden, wasplekken, etc.)
 
-### Garage Beheer
-- **Hoofdbeheerder** kan nieuwe garages toevoegen
-- **Garage Admin** beheert eigen locatie en gebruikers
-- **Automatische onboarding** voor nieuwe garages
-- **Centrale rapportage** voor franchise/keten beheer
+### Garage & Location Beheer
+- **Hoofdbeheerder** kan nieuwe garages en locaties toevoegen
+- **Garage Admin** beheert eigen tenant inclusief alle locaties
+- **Locatie managers** kunnen specifieke locaties beheren
+- **Automatische onboarding** voor nieuwe garages en locaties
+- **Centrale rapportage** voor franchise/keten beheer met locatie-specifieke filters
+
+### Multi-Location Functionaliteiten
+- **Cross-location visibility** voor wasplanners en garage admins
+- **Locatie-specifieke wachtrijen** met mogelijkheid tot cross-location toewijzing
+- **Gebruiker-locatie toewijzingen** voor flexibele toegangscontrole
+- **Locatie-gebaseerde rapportage** met aggregatie mogelijkheden
 
 ## Dashboard & Inzichten
 
@@ -276,6 +286,7 @@ graph TD
 - Basis functies
 - 5 gebruikers
 - Email support
+- Basis locatie functionaliteiten
 
 #### 🏢 **Groei** - €149/maand  
 - **Tot 3 locaties**
@@ -284,6 +295,8 @@ graph TD
 - Onbeperkt gebruikers
 - Priority support
 - API toegang
+- Geavanceerde multi-location functies
+- Cross-location gebruiker toewijzingen
 
 #### 🏭 **Enterprise** - €299/maand
 - **Onbeperkt locaties**
@@ -293,6 +306,9 @@ graph TD
 - Dedicated support
 - SLA garantie
 - Custom branding
+- Geavanceerde multi-location analytics
+- Franchise/keten beheer functies
+- Cross-location resource planning
 
 ### Extra Opties
 - **Extra locatie** (Groei pakket): €39/locatie/maand

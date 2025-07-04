@@ -7,15 +7,19 @@
 ├── composables/
 │   ├── useAuth.ts
 │   ├── useWashTasks.ts
+│   ├── useLocations.ts
 │   └── useNotifications.ts
 ├── stores/
 │   ├── auth.ts
+│   ├── locations.ts
 │   ├── tasks.ts
 │   └── vehicles.ts
 ├── pages/
 │   ├── workshop/
 │   ├── washer/
-│   └── planner/
+│   ├── planner/
+│   └── admin/
+│       └── locations/
 ```
 
 ### Key Components
@@ -23,6 +27,9 @@
 - Real-time task board (drag-drop)
 - Mobile-responsive washer interface
 - Dashboard with KPIs
+- Location selector and management
+- Multi-location task views
+- Cross-location reporting dashboard
 
 ### Tech Stack
 - **UI**: shadcn-vue + Radix Vue

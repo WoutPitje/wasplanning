@@ -1,0 +1,199 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# IDE - IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# IDE - Sublime
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Backend specific
+backend/dist/
+backend/build/
+backend/*.log
+backend/.nyc_output/
+backend/coverage/
+backend/.jest/
+backend/test-results/
+backend/uploads/
+backend/temp/
+backend/tmp/
+backend/logs/
+backend/ormconfig.json
+backend/ormconfig.js
+
+# Frontend specific
+frontend/.nuxt/
+frontend/.output/
+frontend/dist/
+frontend/.cache/
+frontend/coverage/
+frontend/.parcel-cache/
+frontend/storybook-static/
+
+# Mobile specific
+mobile/.expo/
+mobile/.expo-shared/
+mobile/dist/
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/.idea/
+mobile/android/*.iml
+mobile/ios/Pods/
+mobile/ios/build/
+mobile/ios/*.xcworkspace/xcuserdata/
+mobile/ios/*.xcodeproj/xcuserdata/
+mobile/ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+mobile/web-build/
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+playwright/.cache/
+e2e/screenshots/
+e2e/videos/
+cypress/screenshots/
+cypress/videos/
+
+# TypeScript
+*.tsbuildinfo
+.tscache/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+postgres-data/
+redis-data/
+mysql-data/
+
+# MinIO/S3 storage
+minio-data/
+.minio.sys/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Misc
+*.swp
+*.swo
+*~
+.tmp/
+.temp/
+.cache/
+.sass-cache/
+*.pid
+*.seed
+*.pid.lock
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.csr
+
+# Package lock files (choose one)
+# If using npm, uncomment:
+# yarn.lock
+# pnpm-lock.yaml
+
+# If using yarn, uncomment:
+# package-lock.json
+# pnpm-lock.yaml
+
+# If using pnpm, uncomment:
+# package-lock.json
+# yarn.lock
+
+# Build artifacts
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.vercel/
+
+# Debugging
+.vscode/launch.json
+debug/
+.chrome/
+
+# Backup files
+*.bak
+*.backup
+*_backup
+*_old
+*.orig
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Terraform (if using for infrastructure)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Documentation build
+docs/_build/
+docs/.vuepress/dist/
+
+# Monorepo tools
+.turbo/
+.nx/
+
+# Performance profiling
+*.heapsnapshot
+*.cpuprofile
+
+# Generated files
+generated/
+.generated/

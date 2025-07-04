@@ -1,0 +1,223 @@
+<template>
+  <div class="space-y-6">
+    <!-- Breadcrumbs -->
+    <Breadcrumb :items="breadcrumbItems" />
+    
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between">
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold leading-8 text-foreground sm:text-3xl">
+          {{ tenant?.display_name || 'Garage Details' }}
+        </h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Bekijk garage informatie en gebruikers
+        </p>
+      </div>
+      <div class="mt-4 flex space-x-3 md:ml-4 md:mt-0">
+        <Button variant="outline" asChild>
+          <NuxtLink :to="`/admin/tenants/${$route.params.id}/edit`">
+            Bewerken
+          </NuxtLink>
+        </Button>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div v-if="pending" class="text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <p class="mt-2 text-sm text-muted-foreground">Garage laden...</p>
+    </div>
+
+    <!-- Error state -->
+    <div v-else-if="error" class="rounded-md bg-destructive/15 p-4">
+      <div class="flex">
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-destructive">
+            Fout bij laden
+          </h3>
+          <div class="mt-2 text-sm text-destructive/80">
+            {{ error }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tenant details -->
+    <div v-else-if="tenant" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <!-- Tenant Info -->
+      <Card class="lg:col-span-2">
+        <CardHeader>
+          <h3 class="text-lg font-medium text-foreground">Garage Informatie</h3>
+        </CardHeader>
+        <CardContent class="space-y-6">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">Weergave Naam</dt>
+              <dd class="mt-1 text-sm text-foreground">{{ tenant.display_name }}</dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">Systeem Naam</dt>
+              <dd class="mt-1 text-sm text-foreground">{{ tenant.name }}</dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">Status</dt>
+              <dd class="mt-1">
+                <span
+                  :class="[
+                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                    tenant.is_active
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  ]"
+                >
+                  {{ tenant.is_active ? 'Actief' : 'Inactief' }}
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">Aangemaakt</dt>
+              <dd class="mt-1 text-sm text-foreground">{{ formatDate(tenant.created_at) }}</dd>
+            </div>
+          </div>
+          
+          <div v-if="tenant.logo_url">
+            <dt class="text-sm font-medium text-muted-foreground">Logo</dt>
+            <dd class="mt-2">
+              <img
+                :src="tenant.logo_url"
+                :alt="`${tenant.display_name} logo`"
+                class="h-20 w-20 rounded-lg object-cover"
+              />
+            </dd>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Statistics -->
+      <Card>
+        <CardHeader>
+          <h3 class="text-lg font-medium text-foreground">Statistieken</h3>
+        </CardHeader>
+        <CardContent>
+          <div v-if="stats" class="space-y-4">
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">Totaal Gebruikers</dt>
+              <dd class="mt-1 text-2xl font-semibold text-foreground">{{ stats.total_users }}</dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">Actieve Gebruikers</dt>
+              <dd class="mt-1 text-2xl font-semibold text-foreground">{{ stats.active_users }}</dd>
+            </div>
+          </div>
+          <div v-else class="text-sm text-muted-foreground">
+            Statistieken laden...
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Users list -->
+      <Card class="lg:col-span-3">
+        <CardHeader>
+          <h3 class="text-lg font-medium text-foreground">Gebruikers</h3>
+        </CardHeader>
+        <CardContent>
+          <div v-if="tenant.users?.length" class="divide-y divide-border">
+            <div v-for="user in tenant.users" :key="user.id" class="py-4 first:pt-0 last:pb-0">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <div class="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                    <span class="text-sm font-medium text-muted-foreground">
+                      {{ user.first_name?.charAt(0).toUpperCase() }}{{ user.last_name?.charAt(0).toUpperCase() }}
+                    </span>
+                  </div>
+                  <div class="ml-4">
+                    <p class="text-sm font-medium text-foreground">
+                      {{ user.first_name }} {{ user.last_name }}
+                    </p>
+                    <p class="text-sm text-muted-foreground">{{ user.email }}</p>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                    {{ user.role }}
+                  </span>
+                  <span
+                    :class="[
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                      user.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    ]"
+                  >
+                    {{ user.is_active ? 'Actief' : 'Inactief' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-center py-8">
+            <p class="text-sm text-muted-foreground">Geen gebruikers gevonden</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { format } from 'date-fns'
+import { nl } from 'date-fns/locale'
+import { Button } from '~/components/ui/button'
+import { Card, CardContent, CardHeader } from '~/components/ui/card'
+import { Breadcrumb } from '~/components/ui/breadcrumb'
+
+// Meta
+definePageMeta({
+  middleware: 'super-admin',
+  layout: 'admin'
+})
+
+// Composables
+const route = useRoute()
+const { getTenant, getTenantStats, pending, error } = useAdmin()
+
+// State
+const tenant = ref(null)
+const stats = ref(null)
+
+// Breadcrumbs
+const breadcrumbItems = computed(() => [
+  { label: 'Admin', href: '/admin/tenants' },
+  { label: 'Garages', href: '/admin/tenants' },
+  { label: tenant.value?.display_name || 'Details' }
+])
+
+// Methods
+const formatDate = (dateString: string) => {
+  return format(new Date(dateString), 'dd MMM yyyy', { locale: nl })
+}
+
+const loadTenant = async () => {
+  const id = route.params.id as string
+  const result = await getTenant(id)
+  if (result) {
+    tenant.value = result
+  }
+}
+
+const loadStats = async () => {
+  const id = route.params.id as string
+  const result = await getTenantStats(id)
+  if (result) {
+    stats.value = result
+  }
+}
+
+// Load data on mount
+onMounted(async () => {
+  await Promise.all([
+    loadTenant(),
+    loadStats()
+  ])
+})
+</script>

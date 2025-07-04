@@ -3,6 +3,13 @@
 ## Project Context
 Dutch car wash planning system for garages with pickup/delivery service. Coordinates between workshop, washers, and delivery planners.
 
+## Important TypeORM Migration Notes
+- Use `ts-node` to run TypeORM CLI commands to avoid TypeScript enum issues
+- Entity columns with `nullable: true` should NOT use union types like `string | null`
+- Just use the base type (e.g., `string`) - TypeORM handles null values internally
+- Migration data-source.ts should be in the root backend directory, not in src/
+- Use relative paths in data-source.ts entities/migrations arrays, not __dirname
+
 ## FIXED Technical Decisions (DO NOT SUGGEST CHANGES)
 
 ### Tech Stack
@@ -44,12 +51,15 @@ Dutch car wash planning system for garages with pickup/delivery service. Coordin
 - Redis for caching/queues, MinIO for files
 
 ### Frontend (Nuxt 3)  
-- shadcn-vue components ONLY
-- Pinia stores for global state
-- Composables for shared logic
-- TailwindCSS for styling
-- $fetch for API calls
-- TypeScript everywhere
+- **shadcn-vue components ONLY** - Never use other UI libraries
+- **Pinia stores** for global state management (auth, user data)
+- **Composables** for shared logic and API requests (`composables/`)
+- **TailwindCSS** for styling - no other CSS frameworks
+- **$fetch** for API calls within composables
+- **TypeScript everywhere** - all files must be .ts/.vue with types
+- **Pages structure**: `/pages/[role]/` for role-based routing
+- **Components**: Reusable UI components in `/components/ui/`
+- **Types**: Shared TypeScript interfaces in `/types/`
 
 ### Mobile (Expo)
 - Expo Router for navigation
@@ -61,7 +71,7 @@ Dutch car wash planning system for garages with pickup/delivery service. Coordin
 - Monorepo with backend/, frontend/, mobile/
 - `npm run dev` starts all backend services + web app
 - `npm run dev:mobile` starts Expo separately
-- PostgreSQL:5432, Redis:6379, MinIO:9000, API:3000, Web:3001
+- PostgreSQL:5432, Redis:6379, MinIO:9000, API:3001, Web:3000
 
 ## Business Logic Rules
 - **Automatic assignment** based on capacity + skills + return trip priority
@@ -79,15 +89,29 @@ Dutch car wash planning system for garages with pickup/delivery service. Coordin
 ## File Organization
 ```
 backend/src/modules/[feature]/
-frontend/pages/[role]/
+frontend/
+├── pages/[role]/              # Role-based page routing
+├── components/ui/             # Reusable shadcn-vue components
+├── composables/               # API requests and shared logic
+├── stores/                    # Pinia stores for global state
+├── types/                     # TypeScript type definitions
+├── lib/                       # Utility functions
+└── assets/css/                # Global styles
 mobile/app/(tabs)/
 ```
+
+## Frontend API Patterns
+- **Composables**: Use `useApi()` composables for all API calls
+- **Error Handling**: Consistent error handling in composables
+- **Loading States**: Reactive loading/error states in composables
+- **Type Safety**: Full TypeScript coverage for API responses
+- **Caching**: Use Nuxt's built-in request caching where appropriate
 
 ## Testing Requirements
 - Jest (backend) + Vitest (frontend) + Detox (mobile)
 - Minimum 80% code coverage
-- E2E tests with Playwright
-- No unit tests for simple getters/setters
+- Unit tests for logic and composables only
+- No unit tests for simple getters/setters or UI components
 
 ## When Helping
 1. Always reference the technical documentation files first

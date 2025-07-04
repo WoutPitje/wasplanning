@@ -81,18 +81,28 @@ MINIO_PORT=9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 MINIO_USE_SSL=false
+
+# Multi-location support
+ENABLE_MULTI_LOCATION=true
+DEFAULT_LOCATION_NAME=Hoofdvestiging
 ```
 
 ### Frontend (.env)
 ```env
 NUXT_PUBLIC_API_URL=http://localhost:3000
 NUXT_PUBLIC_WS_URL=ws://localhost:3000
+
+# Feature flags
+NUXT_PUBLIC_ENABLE_MULTI_LOCATION=true
 ```
 
 ### Mobile (.env)
 ```env
 EXPO_PUBLIC_API_URL=http://localhost:3000
 EXPO_PUBLIC_WS_URL=ws://localhost:3000
+
+# Feature flags
+EXPO_PUBLIC_ENABLE_MULTI_LOCATION=true
 ```
 
 ## Available Scripts

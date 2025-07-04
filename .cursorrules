@@ -25,12 +25,15 @@
 - MinIO for all file storage (photos, documents)
 
 ## Frontend Rules
-- Use composables for shared logic
-- Pinia stores for global state
+- Use composables for ALL API requests (never direct $fetch in components)
+- Pinia stores for global state (auth, user data)
 - shadcn-vue components ONLY (no other UI libs)
 - TailwindCSS for styling (no custom CSS unless absolutely needed)
-- TypeScript for all .vue files
-- Use $fetch for API calls
+- TypeScript for all .vue files with full type coverage
+- Use $fetch for API calls ONLY within composables
+- Pages structure: /pages/[role]/ for role-based routing
+- Components in /components/ui/ for reusable elements
+- Reactive loading/error states in composables
 
 ## Mobile Rules
 - Expo SDK features preferred over native modules
@@ -83,7 +86,7 @@ wasplanning/
 - Development: npm run dev starts all services
 - Separate mobile development: npm run dev:mobile
 - PostgreSQL on 5432, Redis on 6379, MinIO on 9000
-- API on 3000, Frontend on 3001
+- API on 3001, Frontend on 3000
 
 ## Testing
 - Jest for backend unit tests

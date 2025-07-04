@@ -31,7 +31,7 @@ src/
 
 **Entity Relationship Diagram**: See [database-schema.md](./database-schema.md) for complete ERD
 
-**Multi-Tenant Entities**
+**Multi-Tenant Entities with Location Support**
 ```typescript
 @Entity('tenants')
 class Tenant {
@@ -40,6 +40,22 @@ class Tenant {
   @Column() slug: string
   @Column({ nullable: true }) logo_url: string
   @Column({ type: 'json', nullable: true }) settings: object
+  
+  @OneToMany(() => Location, location => location.tenant)
+  locations: Location[]
+}
+
+@Entity('locations')
+class Location {
+  @PrimaryGeneratedColumn('uuid') id: string
+  @Column() name: string
+  @Column({ nullable: true }) address: string
+  @Column({ type: 'json', nullable: true }) settings: object
+  
+  @Column() tenant_id: string
+  @ManyToOne(() => Tenant, tenant => tenant.locations)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant
 }
 
 @Entity('users')
@@ -54,6 +70,21 @@ class User {
   @ManyToOne(() => Tenant)
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant
+  
+  // Primary location assignment
+  @Column({ nullable: true }) location_id: string
+  @ManyToOne(() => Location)
+  @JoinColumn({ name: 'location_id' })
+  primaryLocation: Location
+  
+  // Multiple location assignments
+  @ManyToMany(() => Location, location => location.users)
+  @JoinTable({
+    name: 'user_location_assignments',
+    joinColumn: { name: 'user_id' },
+    inverseJoinColumn: { name: 'location_id' }
+  })
+  assignedLocations: Location[]
 }
 
 @Entity('vehicles')
@@ -63,6 +94,11 @@ class Vehicle {
   @Column() tenant_id: string // Tenant isolation
   @ManyToOne(() => Tenant)
   tenant: Tenant
+  
+  @Column({ nullable: true }) location_id: string // Location assignment
+  @ManyToOne(() => Location)
+  @JoinColumn({ name: 'location_id' })
+  location: Location
 }
 
 @Entity('wash_tasks')
@@ -73,6 +109,11 @@ class WashTask {
   @Column() tenant_id: string // Tenant isolation
   @ManyToOne(() => Tenant)
   tenant: Tenant
+  
+  @Column({ nullable: true }) location_id: string // Location where wash is performed
+  @ManyToOne(() => Location)
+  @JoinColumn({ name: 'location_id' })
+  location: Location
 }
 
 @Entity('subscriptions')
@@ -118,44 +159,83 @@ src/
 - Multi-tenant JWT tokens with tenant context
 - Mollie payment integration for subscription billing
 
-### Multi-Tenancy Implementation
+### Multi-Tenancy & Multi-Location Implementation
 
-#### Tenant Context Injection
+#### Tenant & Location Context Injection
 ```typescript
 @Injectable()
-export class TenantInterceptor implements NestInterceptor {
+export class TenantLocationInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler) {
     const request = context.switchToHttp().getRequest()
     const tenantId = this.extractTenantId(request)
+    const locationId = this.extractLocationId(request) // Optional location filter
     
-    // Set tenant context for entire request
+    // Set tenant and location context for entire request
     TenantContext.setTenantId(tenantId)
+    if (locationId) {
+      LocationContext.setLocationId(locationId)
+    }
     
     return next.handle()
   }
 }
 ```
 
-#### Row-Level Security
+#### Row-Level Security with Location Support
 ```sql
 -- Enable RLS on all tenant-scoped tables
+ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY; 
 ALTER TABLE wash_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_location_assignments ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for tenant isolation
+CREATE POLICY tenant_isolation_locations ON locations 
+  USING (tenant_id = current_setting('app.current_tenant')::uuid);
+
 CREATE POLICY tenant_isolation_users ON users 
   USING (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- Location-based access policies
+CREATE POLICY location_access_wash_tasks ON wash_tasks
+  USING (
+    tenant_id = current_setting('app.current_tenant')::uuid AND
+    (location_id IS NULL OR 
+     location_id = ANY(current_setting('app.user_locations')::uuid[]))
+  );
 ```
 
-#### Tenant-Aware Services
+#### Tenant & Location-Aware Services
 ```typescript
 @Injectable()
 export class VehicleService {
-  async findAll(): Promise<Vehicle[]> {
+  async findAll(locationId?: string): Promise<Vehicle[]> {
     const tenantId = TenantContext.getTenantId()
+    const whereConditions: any = { tenant_id: tenantId }
+    
+    // Filter by location if specified
+    if (locationId) {
+      whereConditions.location_id = locationId
+    }
+    
     return this.vehicleRepository.find({
-      where: { tenant_id: tenantId }
+      where: whereConditions,
+      relations: ['location']
+    })
+  }
+  
+  async findByUserAccessibleLocations(userId: string): Promise<Vehicle[]> {
+    // Get user's accessible locations and filter vehicles accordingly
+    const user = await this.userService.findWithLocations(userId)
+    const locationIds = user.assignedLocations.map(loc => loc.id)
+    
+    return this.vehicleRepository.find({
+      where: {
+        tenant_id: TenantContext.getTenantId(),
+        location_id: In(locationIds)
+      },
+      relations: ['location']
     })
   }
 }

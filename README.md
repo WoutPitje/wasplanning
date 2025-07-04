@@ -170,6 +170,16 @@ http://localhost:3000/api/docs
 5. **Garage Admin** - Manage users and settings for their garage
 6. **Super Admin** - Manage all garages and global settings
 
+## Multi-Location Support
+
+The system supports multiple locations per tenant:
+
+- **Per Tenant**: Each garage can have multiple physical locations
+- **Location-Specific**: Wash tasks, users, and vehicles can be assigned to specific locations
+- **Cross-Location**: Wasplanners can view and manage tasks across all locations within their tenant
+- **Reporting**: Generate reports per location or aggregated across all locations
+- **User Assignment**: Users can be assigned to one or multiple locations based on their role
+
 ## Environment Variables
 
 ### Backend (.env)

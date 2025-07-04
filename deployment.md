@@ -125,6 +125,14 @@ MINIO_PASSWORD=secure_minio_password
 
 # API
 API_URL=https://api.wasplanning.nl
+
+# Multi-location features
+ENABLE_MULTI_LOCATION=true
+DEFAULT_LOCATION_NAME=Hoofdvestiging
+
+# Feature flags
+ENABLE_CROSS_LOCATION_ASSIGNMENTS=true
+ENABLE_LOCATION_ANALYTICS=true
 ```
 
 ## Cloud Deployment Options

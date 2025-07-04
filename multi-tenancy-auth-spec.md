@@ -11,12 +11,14 @@
 
 ## Overview
 
-This document defines the complete multi-tenancy, authentication, and authorization architecture for the Wasplanning system. The system supports complete tenant isolation while providing flexible role-based access control within each tenant.
+This document defines the complete multi-tenancy, authentication, and authorization architecture for the Wasplanning system. The system supports complete tenant isolation while providing flexible role-based access control within each tenant. Each tenant can have multiple physical locations.
 
 ### Key Principles
 - **Complete Tenant Isolation**: No data leakage between tenants
+- **Multi-Location Support**: Each tenant can manage multiple physical locations
+- **Location-Aware Access**: Users can be assigned to specific locations within their tenant
 - **Row-Level Security**: Database-enforced tenant boundaries
-- **JWT-Based Auth**: Stateless authentication with tenant context
+- **JWT-Based Auth**: Stateless authentication with tenant and location context
 - **Role-Based Access**: 6 hierarchical roles with specific permissions
 - **Fail-Secure**: Default deny, explicit allow
 
@@ -75,10 +77,24 @@ CREATE TABLE tenants (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Users table with tenant isolation
+-- Locations table for multi-location support per tenant
+CREATE TABLE locations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    address TEXT,
+    settings JSONB DEFAULT '{}',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tenant_id, name)
+);
+
+-- Users table with tenant and location isolation
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    location_id UUID REFERENCES locations(id) ON DELETE SET NULL,
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'garage_admin', 'wasplanner', 'hb_planner', 'wasser', 'werkplaats')),
@@ -92,10 +108,20 @@ CREATE TABLE users (
     UNIQUE(tenant_id, email)
 );
 
--- Vehicles with tenant isolation
+-- User-Location assignments for multi-location access
+CREATE TABLE user_location_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    location_id UUID NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, location_id)
+);
+
+-- Vehicles with tenant and location isolation
 CREATE TABLE vehicles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    location_id UUID REFERENCES locations(id) ON DELETE SET NULL,
     license_plate VARCHAR(20) NOT NULL,
     make VARCHAR(50),
     model VARCHAR(50),
@@ -105,10 +131,11 @@ CREATE TABLE vehicles (
     UNIQUE(tenant_id, license_plate)
 );
 
--- Wash tasks with tenant isolation
+-- Wash tasks with tenant and location isolation
 CREATE TABLE wash_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    location_id UUID REFERENCES locations(id) ON DELETE SET NULL,
     vehicle_id UUID NOT NULL REFERENCES vehicles(id),
     assigned_user_id UUID REFERENCES users(id),
     created_by_id UUID NOT NULL REFERENCES users(id),
@@ -139,11 +166,16 @@ CREATE TABLE refresh_tokens (
 
 ```sql
 -- Enable RLS on all tenant-scoped tables
+ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wash_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_location_assignments ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policies
+-- Create RLS policies for tenant isolation
+CREATE POLICY tenant_isolation_policy ON locations
+    USING (tenant_id = current_setting('app.current_tenant')::uuid);
+
 CREATE POLICY tenant_isolation_policy ON users
     USING (tenant_id = current_setting('app.current_tenant')::uuid);
 
@@ -152,6 +184,24 @@ CREATE POLICY tenant_isolation_policy ON vehicles
 
 CREATE POLICY tenant_isolation_policy ON wash_tasks
     USING (tenant_id = current_setting('app.current_tenant')::uuid);
+
+CREATE POLICY tenant_isolation_policy ON user_location_assignments
+    USING (user_id IN (SELECT id FROM users WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+-- Additional policies for location-based access
+CREATE POLICY location_access_policy ON wash_tasks
+    USING (
+        location_id IS NULL OR
+        location_id IN (
+            SELECT location_id FROM user_location_assignments 
+            WHERE user_id = current_setting('app.current_user')::uuid
+        ) OR
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE id = current_setting('app.current_user')::uuid 
+            AND role IN ('garage_admin', 'wasplanner', 'super_admin')
+        )
+    );
 
 -- Super admin bypass policy
 CREATE POLICY super_admin_bypass ON users
@@ -175,6 +225,8 @@ interface JWTPayload {
   role: UserRole;
   tenantId: string;     // tenant.id
   tenantSlug: string;   // tenant.slug
+  locationId?: string;  // user's primary location
+  locationIds: string[]; // all accessible locations for this user
   permissions: string[]; // Computed permissions based on role
   iat: number;
   exp: number;

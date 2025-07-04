@@ -11,16 +11,33 @@ erDiagram
         string more_attributes
     }
     
+    LOCATION {
+        uuid id
+        uuid tenant_id
+        string name
+        string address
+        string more_attributes
+    }
+    
     USER {
         uuid id
         uuid tenant_id
+        uuid location_id
         string email
+        string more_attributes
+    }
+    
+    USER_LOCATION_ASSIGNMENT {
+        uuid id
+        uuid user_id
+        uuid location_id
         string more_attributes
     }
     
     VEHICLE {
         uuid id
         uuid tenant_id
+        uuid location_id
         string license_plate
         string more_attributes
     }
@@ -28,6 +45,7 @@ erDiagram
     WASH_TASK {
         uuid id
         uuid tenant_id
+        uuid location_id
         uuid vehicle_id
         string more_attributes
     }
@@ -75,6 +93,7 @@ erDiagram
     }
     
     %% Relationships
+    TENANT ||--o{ LOCATION : "has"
     TENANT ||--o{ USER : "has"
     TENANT ||--o{ VEHICLE : "owns"
     TENANT ||--o{ WASH_TASK : "manages"
@@ -84,11 +103,17 @@ erDiagram
     TENANT ||--o{ AUDIT_LOG : "logs"
     TENANT ||--o{ TENANT_SETTINGS : "configures"
     
+    LOCATION ||--o{ USER : "primary_location"
+    LOCATION ||--o{ VEHICLE : "located_at"
+    LOCATION ||--o{ WASH_TASK : "performed_at"
+    LOCATION ||--o{ USER_LOCATION_ASSIGNMENT : "assigned_to"
+    
     USER ||--o{ WASH_TASK : "assigned_to"
     USER ||--o{ WASH_TASK : "created_by"
     USER ||--o{ REFRESH_TOKEN : "owns"
     USER ||--o{ NOTIFICATION : "receives"
     USER ||--o{ AUDIT_LOG : "performs"
+    USER ||--o{ USER_LOCATION_ASSIGNMENT : "has_access_to"
     
     VEHICLE ||--o{ WASH_TASK : "requires"
     
@@ -97,9 +122,11 @@ erDiagram
 
 ## Entity Overview
 
-### Core Entities (6)
+### Core Entities (8)
 - **TENANT** - Multi-tenant root entity
+- **LOCATION** - Physical locations within each tenant
 - **USER** - System users with roles (Werkplaats, Wassers, Planners, etc.)
+- **USER_LOCATION_ASSIGNMENT** - Many-to-many relationship for user location access
 - **VEHICLE** - Cars to be washed
 - **WASH_TASK** - Wash jobs/assignments
 - **SUBSCRIPTION** - Mollie payment subscriptions
@@ -114,6 +141,9 @@ erDiagram
 ## Key Relationships
 
 - All entities (except TENANT and REFRESH_TOKEN) are tenant-scoped
-- WASH_TASK is the central entity connecting users, vehicles, and operations
+- LOCATION entities enable multi-location support within each tenant
+- USER_LOCATION_ASSIGNMENT enables users to access multiple locations
+- WASH_TASK is the central entity connecting users, vehicles, locations, and operations
 - Complete tenant isolation ensures data separation between garages
-- Row-Level Security policies enforce tenant boundaries at database level
+- Location-based access control provides fine-grained permissions
+- Row-Level Security policies enforce tenant and location boundaries at database level

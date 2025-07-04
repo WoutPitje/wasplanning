@@ -79,11 +79,14 @@ graph TB
 
 ## 🎯 Core Features
 
-### Multi-Tenancy
+### Multi-Tenancy & Multi-Location
 - **Tenant Isolation**: Complete data separation between garages
 - **Row-Level Security**: Database-level tenant filtering
 - **Tenant-Aware API**: All endpoints respect tenant context
-- **Garage Admin**: Self-service garage management
+- **Multi-Location Support**: Each tenant can have multiple physical locations
+- **Location-Specific Data**: Wash tasks, users, and vehicles can be location-specific
+- **Cross-Location Management**: Wasplanners can manage multiple locations within their tenant
+- **Garage Admin**: Self-service garage management for all locations
 - **Super Admin**: Cross-tenant oversight and management
 
 ### Automatic Planning

@@ -1,0 +1,45 @@
+{
+  "name": "wasplanning",
+  "version": "1.0.0",
+  "description": "A real-time vehicle wash management system for auto service centers, coordinating between workshop, wash station, and planning departments.",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "start": "npm run services:start && npm run dev",
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "dev:mobile": "cd mobile && npm run dev",
+    "services:start": "docker-compose up -d",
+    "services:stop": "docker-compose down",
+    "services:restart": "docker-compose down && docker-compose up -d",
+    "services:logs": "docker-compose logs -f",
+    "backend:dev": "cd backend && npm run start:dev",
+    "frontend:dev": "cd frontend && npm run dev",
+    "db:setup": "cd backend && npm run migration:run && npm run seed:run",
+    "db:reset": "cd backend && npm run migration:revert:all && npm run migration:run && npm run seed:run",
+    "test": "npm run test:backend && npm run test:frontend && npm run test:frontend:e2e && npm run test:backend:e2e",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:frontend:e2e": "cd frontend && npm run test:e2e",
+    "test:backend:e2e": "cd backend && npm run test:e2e",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "clean": "rm -rf node_modules backend/node_modules frontend/node_modules mobile/node_modules",
+    "clean:docker": "docker-compose down -v && docker system prune -f"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WoutPitje/wasplanning.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/WoutPitje/wasplanning/issues"
+  },
+  "homepage": "https://github.com/WoutPitje/wasplanning#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
