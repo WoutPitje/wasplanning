@@ -8,70 +8,70 @@ erDiagram
         uuid id
         string name
         string slug
-        etc
+        string more_attributes
     }
     
     USER {
         uuid id
         uuid tenant_id
         string email
-        etc
+        string more_attributes
     }
     
     VEHICLE {
         uuid id
         uuid tenant_id
         string license_plate
-        etc
+        string more_attributes
     }
     
     WASH_TASK {
         uuid id
         uuid tenant_id
         uuid vehicle_id
-        etc
+        string more_attributes
     }
     
     SUBSCRIPTION {
         uuid id
         uuid tenant_id
         string mollie_subscription_id
-        etc
+        string more_attributes
     }
     
     REFRESH_TOKEN {
         uuid id
         uuid user_id
         string token_hash
-        etc
+        string more_attributes
     }
     
     NOTIFICATION {
         uuid id
         uuid tenant_id
         uuid user_id
-        etc
+        string more_attributes
     }
     
     WASH_PHOTO {
         uuid id
         uuid tenant_id
         uuid wash_task_id
-        etc
+        string more_attributes
     }
     
     AUDIT_LOG {
         uuid id
         uuid tenant_id
         uuid user_id
-        etc
+        string more_attributes
     }
     
     TENANT_SETTINGS {
         uuid id
         uuid tenant_id
         string setting_key
-        etc
+        string more_attributes
     }
     
     %% Relationships
