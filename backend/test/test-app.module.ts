@@ -6,6 +6,7 @@ import { AdminModule } from '../src/admin/admin.module';
 import { UsersModule } from '../src/users/users.module';
 import { StorageModule } from '../src/storage/storage.module';
 import { AuditModule } from '../src/audit/audit.module';
+import { EmailModule } from '../src/email/email.module';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
 
@@ -33,6 +34,7 @@ import { AppService } from '../src/app.service';
     AdminModule,
     UsersModule,
     AuditModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

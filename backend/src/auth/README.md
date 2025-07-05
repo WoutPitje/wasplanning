@@ -170,6 +170,24 @@ JWT_REFRESH_SECRET=your-refresh-secret
 JWT_REFRESH_EXPIRES_IN=30d
 ```
 
+## Integration with Other Modules
+
+### Email Module
+- Welcome emails sent upon user registration
+- Password reset email notifications
+- Account activation confirmations
+- Tenant-specific email templates and branding
+
+### Users Module
+- User creation and management
+- Password reset workflows
+- Account status management
+
+### Admin Module
+- Cross-tenant user administration
+- Tenant management and configuration
+- Super admin impersonation features
+
 ## Migration Notes
 - Entity columns with `nullable: true` should not use union types
 - Use base types only (e.g., `string` not `string | null`)

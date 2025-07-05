@@ -105,7 +105,10 @@
     <Button
       variant="ghost"
       size="icon"
-      class="fixed top-4 left-4 z-40 lg:hidden"
+      :class="[
+        'fixed left-4 z-40 lg:hidden',
+        isImpersonating ? 'top-20' : 'top-4'
+      ]"
       @click="sidebarOpen = true"
     >
       <Menu class="w-5 h-5" />
@@ -126,6 +129,9 @@ const config = useRuntimeConfig()
 
 // Sidebar state
 const sidebarOpen = ref(false)
+
+// Impersonation state
+const isImpersonating = computed(() => authStore.impersonation?.is_impersonating || false)
 
 // Tenant logo state
 const tenantLogoUrl = ref<string | null>(null)

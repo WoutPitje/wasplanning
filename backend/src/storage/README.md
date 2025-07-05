@@ -160,6 +160,20 @@ npm run test storage
 4. **Cleanup**: Delete files when related entities are removed
 5. **Monitoring**: Track storage usage per tenant
 
+## Integration with Other Modules
+
+### Admin Module
+- **Tenant logos**: Storage and management of garage branding images
+- **Tenant file management**: Access to tenant-specific file operations
+
+### Email Module  
+- **Email attachments**: Storage for email template assets and attachments
+- **Logo embedding**: Tenant logos in email templates via presigned URLs
+
+### Users Module
+- **User avatars**: Profile picture storage and management
+- **Document storage**: User-related document storage
+
 ## Dependencies
 
 - **MinIO**: S3-compatible object storage

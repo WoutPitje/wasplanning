@@ -104,6 +104,7 @@ interface Props {
   error?: string | null
   showTenantFilter?: boolean
   showTenantColumn?: boolean
+  showImpersonate?: boolean
   availableRoles?: UserRole[]
 }
 

@@ -58,6 +58,7 @@ This will start:
 - PostgreSQL on `localhost:5432`
 - Redis on `localhost:6379`
 - MinIO on `localhost:9000` (Console: `http://localhost:9001`)
+- MailHog on `localhost:1025` (Web UI: `http://localhost:8025`)
 - NestJS API on `http://localhost:3001`
 - Nuxt frontend on `http://localhost:3000`
 - Swagger docs on `http://localhost:3001/api/docs`
@@ -242,6 +243,12 @@ MINIO_PORT=9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 MINIO_USE_SSL=false
+
+# Email Configuration (Development uses MailHog)
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_FROM_EMAIL=noreply@wasplanning.nl
+SMTP_FROM_NAME=Wasplanning System
 ```
 
 ### Frontend (.env)

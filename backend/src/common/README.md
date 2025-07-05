@@ -83,6 +83,14 @@ async findAll(
 3. **Validation**: DTOs include validation decorators for parameter validation
 4. **Documentation**: All DTOs are documented with Swagger decorators
 
+## Integration with Other Modules
+
+This module is used by all other modules to provide:
+- **Consistent pagination** across users, auth, admin, audit, storage, and email modules
+- **Standardized sorting** for all list endpoints  
+- **Unified response formats** for API consistency
+- **Shared validation patterns** for query parameters
+
 ## Dependencies
 
 - `class-validator` - For DTO validation

@@ -6,12 +6,14 @@ import { User } from '../auth/entities/user.entity';
 import { Tenant } from '../auth/entities/tenant.entity';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Tenant]),
     AuthModule, // For AuthService (password hashing)
     AuditModule,
+    EmailModule, // For EmailService (sending welcome emails)
   ],
   controllers: [UsersController],
   providers: [UsersService],

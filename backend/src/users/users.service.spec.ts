@@ -9,6 +9,7 @@ import {
 import { UsersService } from './users.service';
 import { User, UserRole } from '../auth/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
+import { EmailService } from '../email/email.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -71,6 +72,12 @@ describe('UsersService', () => {
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: EmailService,
+          useValue: {
+            sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
+          },
         },
       ],
     }).compile();

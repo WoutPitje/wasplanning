@@ -109,7 +109,7 @@
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">
-                    {{ t(`roles.${user.role}`) }}
+                    {{ t(`roles.${user.role.toLowerCase()}`) }}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -128,7 +128,7 @@
                       </NuxtLink>
                     </Button>
                     <Button 
-                      v-if="user.role !== UserRole.SUPER_ADMIN && user.is_active"
+                      v-if="authStore.isSuperAdmin && user.role !== UserRole.SUPER_ADMIN && user.is_active && user.id !== authStore.user?.id"
                       variant="outline" 
                       size="sm"
                       @click="handleImpersonate(user.id)"
@@ -167,6 +167,7 @@ import { format } from 'date-fns'
 import { nl, enUS } from 'date-fns/locale'
 
 const { t, locale } = useI18n()
+const authStore = useAuthStore()
 const { getUsers, pending, error } = useAdminUsers()
 const { getTenants } = useAdmin()
 const { startImpersonation } = useImpersonation()
@@ -209,6 +210,13 @@ watch([searchQuery, selectedTenantId, selectedRole], () => {
   loadData()
 }, { immediate: false })
 
+// Also watch tenants to trigger initial load when they're available
+watch(() => tenants.value.length, () => {
+  if (tenants.value.length > 0 && users.value.length === 0) {
+    loadData()
+  }
+}, { immediate: false })
+
 // Methods
 const formatDate = (dateString: string) => {
   const dateLocale = locale.value === 'nl' ? nl : enUS
@@ -218,9 +226,9 @@ const formatDate = (dateString: string) => {
 const loadData = async () => {
   // Build filters object
   const userFilters: UserFilters = {
-    ...(searchQuery.value && { search: searchQuery.value }),
-    ...(selectedRole.value !== 'all' && { role: selectedRole.value }),
-    ...(selectedTenantId.value !== 'all' && { tenant: selectedTenantId.value }),
+    ...(searchQuery.value && searchQuery.value.trim() && { search: searchQuery.value.trim() }),
+    ...(selectedRole.value && selectedRole.value !== 'all' && { role: selectedRole.value }),
+    ...(selectedTenantId.value && selectedTenantId.value !== 'all' && { tenant: selectedTenantId.value }),
     page: 1,
     limit: 20
   }
@@ -228,14 +236,14 @@ const loadData = async () => {
   // Load filtered users
   const usersResult = await getUsers(userFilters)
   if (usersResult) {
-    users.value = usersResult.data
+    users.value = usersResult.data || []
   }
   
   // Load all tenants (only need to do this once)
   if (!tenants.value || tenants.value.length === 0) {
     const tenantsResult = await getTenants()
     if (tenantsResult) {
-      tenants.value = tenantsResult
+      tenants.value = tenantsResult || []
     }
   }
 }

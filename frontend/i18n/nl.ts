@@ -1,9 +1,11 @@
 export default {
   // Common
   common: {
+    appName: 'Wasplanning',
     loading: 'Laden...',
     error: 'Fout',
     retry: 'Opnieuw proberen',
+    tryAgain: 'Probeer opnieuw',
     save: 'Opslaan',
     cancel: 'Annuleren',
     delete: 'Verwijderen',
@@ -40,6 +42,10 @@ export default {
   },
   
   // Auth
+  auth: {
+    login: 'Inloggen'
+  },
+  
   login: {
     title: 'Inloggen',
     subtitle: 'Log in op uw account',
@@ -518,6 +524,7 @@ export default {
     
     nav: {
       features: 'Functionaliteiten',
+      integrations: 'Koppelingen',
       pricing: 'Prijzen',
       contact: 'Contact'
     },
@@ -572,6 +579,32 @@ export default {
         title: 'Mobiel Vriendelijk',
         description: 'Volledig responsive design. Wassers werken op tablet of telefoon, geen training nodig.'
       }
+    },
+    
+    integrations: {
+      title: 'Koppelingen & Integraties',
+      subtitle: 'Verbind Wasplanning met uw bestaande systemen voor een volledig geïntegreerde workflow',
+      
+      wva: {
+        title: 'WvA Planning',
+        description: 'Automatische synchronisatie met uw haal/breng planningssysteem. Planners zien direct wanneer auto\'s klaar zijn voor retourrit.',
+        status: 'Binnenkort beschikbaar'
+      },
+      
+      mobo: {
+        title: 'MOBO Werkplaats',
+        description: 'Naadloze integratie met werkplaatsplanning. Auto\'s worden automatisch aangemeld voor wassen na werkplaats gereedmelding.',
+        status: 'In ontwikkeling'
+      },
+      
+      api: {
+        title: 'Open API',
+        description: 'Gebruik onze REST API om Wasplanning te integreren met uw eigen systemen. Volledige Swagger documentatie beschikbaar.',
+        status: 'Beschikbaar'
+      },
+      
+      note: 'Alle integraties respecteren complete tenant-isolatie en zijn beschikbaar vanaf het Groei pakket.',
+      contact: 'Neem contact op voor maatwerk integraties'
     },
     
     howItWorks: {
@@ -936,6 +969,281 @@ export default {
       intro: 'Voor vragen over ons cookiebeleid:',
       email: 'E-mail',
       phone: 'Telefoon'
+    }
+  },
+  
+  // Documentation
+  docs: {
+    title: 'Documentatie',
+    subtitle: 'Uitgebreide documentatie voor het Wasplanning systeem en API',
+    metaTitle: 'Documentatie - Wasplanning',
+    metaDescription: 'Volledige technische documentatie voor het Wasplanning systeem en REST API',
+    
+    toc: {
+      title: 'Inhoudsopgave',
+      systemOverview: 'Systeemoverzicht',
+      authentication: 'Authenticatie',
+      multiTenancy: 'Multi-Tenancy',
+      apiDocumentation: 'API Documentatie',
+      gettingStarted: 'Aan de Slag'
+    },
+    
+    systemOverview: {
+      title: 'Systeemoverzicht',
+      description: 'Wasplanning is een moderne, multi-tenant wasplanning oplossing gebouwd met een microservices architectuur en sterke focus op veiligheid en schaalbaarheid.',
+      
+      architecture: {
+        title: 'Technische Architectuur',
+        backend: 'Backend: NestJS met TypeScript, PostgreSQL database en Redis caching',
+        frontend: 'Frontend: Nuxt 3 met Vue 3, shadcn-vue components en TailwindCSS',
+        database: 'Database: PostgreSQL met Row-Level Security voor tenant isolatie',
+        storage: 'File Storage: MinIO S3-compatible storage met per-tenant buckets',
+        cache: 'Cache: Redis met tenant-specifieke namespacing'
+      },
+      
+      features: {
+        title: 'Belangrijkste Functionaliteiten',
+        multiTenant: 'Complete multi-tenant isolatie op database en applicatie niveau',
+        rbac: 'Role-based access control met 6 verschillende gebruikersrollen',
+        realtime: 'Real-time updates via WebSocket verbindingen',
+        api: 'RESTful API met volledige Swagger/OpenAPI documentatie',
+        security: 'Enterprise-grade beveiliging met JWT authenticatie en audit logging'
+      }
+    },
+    
+    authentication: {
+      title: 'Authenticatie & Autorisatie',
+      description: 'Het systeem gebruikt JWT tokens voor authenticatie met role-based access control (RBAC) voor autorisatie. Elke gebruiker behoort tot één tenant en heeft een specifieke rol.',
+      
+      jwt: {
+        title: 'JWT Token Structuur',
+        description: 'Alle API requests vereisen een geldig JWT token in de Authorization header.',
+        structure: 'JWT Token Payload Structuur'
+      },
+      
+      roles: {
+        title: 'Gebruikersrollen',
+        superAdmin: 'Beheert alle tenants, kan impersoneren en systeem configureren',
+        garageAdmin: 'Beheert eigen garage tenant, gebruikers en instellingen',
+        wasplanner: 'Plant en beheert wastaken binnen eigen tenant',
+        werkplaats: 'Meldt auto\'s aan voor wasbeurt binnen eigen tenant'
+      }
+    },
+    
+    multiTenancy: {
+      title: 'Multi-Tenant Architectuur',
+      description: 'Het systeem ondersteunt complete multi-tenancy met strikte data isolatie tussen verschillende garages (tenants). Elke tenant heeft volledige scheiding van data, configuratie en gebruikers.',
+      
+      isolation: {
+        title: 'Tenant Isolatie',
+        database: 'Row-Level Security policies in PostgreSQL voor complete data scheiding',
+        storage: 'Afzonderlijke MinIO buckets per tenant voor file storage',
+        cache: 'Tenant-specifieke Redis namespacing voor cache data',
+        api: 'Tenant context wordt automatisch toegevoegd aan alle API requests'
+      },
+      
+      security: {
+        title: 'Beveiliging',
+        description: 'Tenant isolatie wordt afgedwongen op meerdere niveaus om cross-tenant data access te voorkomen.',
+        alertTitle: 'Belangrijke Beveiligingsnota',
+        alertDescription: 'Alle API endpoints controleren automatisch tenant toegang. Cross-tenant data access is technisch onmogelijk door Row-Level Security policies.'
+      }
+    },
+    
+    api: {
+      title: 'API Documentatie',
+      description: 'Wasplanning biedt een volledige REST API met OpenAPI 3.0 specificatie. Alle endpoints zijn gedocumenteerd via Swagger UI.',
+      
+      swagger: {
+        title: 'Swagger UI',
+        description: 'Interactieve API documentatie met test mogelijkheden',
+        button: 'Open Swagger Documentatie'
+      },
+      
+      endpoints: {
+        title: 'Beschikbare Endpoints',
+        description: 'Huidige geïmplementeerde API endpoints'
+      },
+      
+      authentication: {
+        title: 'API Authenticatie',
+        description: 'Alle API requests vereisen een Bearer token in de Authorization header.',
+        example: 'Voorbeeld Authorization Header'
+      },
+      
+      rateLimiting: {
+        title: 'Rate Limiting',
+        description: 'API endpoints hebben rate limiting om misbruik te voorkomen:',
+        global: 'Globaal: 1000 requests per uur per IP adres',
+        perTenant: 'Per tenant: 5000 requests per uur',
+        auth: 'Auth endpoints: 10 pogingen per 15 minuten per IP'
+      }
+    },
+    
+    gettingStarted: {
+      title: 'Aan de Slag',
+      description: 'Volg deze stappen om toegang te krijgen tot de Wasplanning API en uw eerste integratie te bouwen.',
+      
+      steps: {
+        title: 'Stap-voor-stap Handleiding',
+        step1: {
+          title: 'Account Aanmaken',
+          description: 'Registreer uw garage bij Wasplanning en kies het juiste abonnement (API toegang vanaf Groei pakket)'
+        },
+        step2: {
+          title: 'API Credentials',
+          description: 'Log in op uw dashboard en genereer API credentials in de instellingen sectie'
+        },
+        step3: {
+          title: 'Authenticatie Testen',
+          description: 'Test uw credentials door een POST request te sturen naar /api/v1/auth/login'
+        },
+        step4: {
+          title: 'API Verkennen',
+          description: 'Gebruik de Swagger UI om beschikbare endpoints te verkennen en te testen'
+        }
+      },
+      
+      support: {
+        title: 'Ondersteuning',
+        description: 'Heeft u vragen tijdens de integratie? Neem contact op met ons support team.',
+        email: 'Email Ondersteuning',
+        swagger: 'Swagger Documentatie'
+      }
+    }
+  },
+
+  // Pricing
+  pricing: {
+    title: 'Transparante Prijsstelling',
+    subtitle: 'Kies het pakket dat bij uw garage past. Alle pakketten hebben 30 dagen gratis trial.',
+    seoTitle: 'Prijzen - Wasplanning',
+    seoDescription: 'Bekijk onze transparante prijsstelling voor automatisering van uw autowasproces. Vanaf €49 per maand.',
+    monthly: 'Maandelijks',
+    yearly: 'Jaarlijks',
+    save10: 'Bespaar 10%',
+    popular: 'Populair',
+    perMonth: '/maand',
+    saveYearly: 'Bespaar {amount} per jaar',
+    contact: 'Contact',
+    startTrial: 'Start gratis trial',
+    maxCars: 'Tot {count} auto\'s per maand',
+    unlimitedCars: 'Onbeperkt auto\'s',
+    maxUsers: 'Tot {count} gebruikers',
+    unlimitedUsers: 'Onbeperkt gebruikers',
+    maxLocations: 'Tot {count} locaties',
+    unlimitedLocations: 'Onbeperkt locaties',
+    features: {
+      basic_features: 'Basis functionaliteiten',
+      advanced_reporting: 'Geavanceerde rapportages',
+      api_access: 'API toegang',
+      priority_support: 'Prioriteit support',
+      custom_branding: 'Custom branding',
+      multi_location: 'Multi-locatie ondersteuning',
+      cross_location_planning: 'Cross-locatie planning',
+      custom_integrations: 'Maatwerk integraties',
+      dedicated_support: 'Dedicated support',
+      sla_guarantee: 'SLA garantie',
+      franchise_management: 'Franchise management'
+    },
+    faq: {
+      title: 'Veelgestelde Vragen',
+      trial: {
+        question: 'Hoe werkt de gratis trial?',
+        answer: '30 dagen volledige toegang tot alle functies. Geen creditcard vereist. Na afloop kunt u kiezen voor een betaald abonnement.'
+      },
+      cancel: {
+        question: 'Kan ik mijn abonnement opzeggen?',
+        answer: 'Ja, u kunt uw abonnement op elk moment opzeggen. Er zijn geen opzegtermijnen of verborgen kosten.'
+      },
+      support: {
+        question: 'Welke ondersteuning is beschikbaar?',
+        answer: 'Nederlandse email en telefoon support tijdens kantooruren. Prioriteit support voor Groei en Enterprise pakketten.'
+      },
+      upgrade: {
+        question: 'Kan ik upgraden naar een hoger pakket?',
+        answer: 'Ja, u kunt op elk moment upgraden. De nieuwe prijs gaat direct in en wordt pro-rata berekend.'
+      }
+    }
+  },
+
+  // Subscription Management
+  subscription: {
+    title: 'Abonnement Beheer',
+    description: 'Beheer uw abonnement, bekijk gebruik en wijzig uw pakket',
+    seoTitle: 'Abonnement - Wasplanning',
+    seoDescription: 'Beheer uw Wasplanning abonnement en bekijk uw gebruik.',
+    
+    viewPlans: 'Bekijk Beschikbare Pakketten',
+    cancelSubscription: 'Abonnement Opzeggen',
+    reactivate: 'Heractiveer Abonnement',
+    
+    noSubscription: {
+      title: 'Geen Actief Abonnement',
+      description: 'U heeft momenteel geen actief abonnement. Kies een pakket om te beginnen met Wasplanning.',
+      trialInfo: 'Alle nieuwe abonnementen starten met 30 dagen gratis trial.'
+    },
+    
+    current: {
+      title: 'Huidig Abonnement',
+      description: 'Uw huidige abonnement informatie en status',
+      badge: 'Huidige pakket'
+    },
+    
+    billing: {
+      month: 'Maandelijks',
+      year: 'Jaarlijks'
+    },
+    
+    status: {
+      title: 'Status',
+      trialing: 'Trial periode',
+      active: 'Actief',
+      past_due: 'Betaling achterstallig',
+      canceled: 'Opgezegd',
+      unpaid: 'Onbetaald'
+    },
+    
+    renewsOn: 'Verlengd op',
+    
+    trial: {
+      title: 'Trial Periode',
+      endsOn: 'Trial eindigt op'
+    },
+    
+    cancellation: {
+      title: 'Abonnement Opgezegd',
+      message: 'Uw abonnement is opgezegd en eindigt op {date}. U kunt het nog heractiveren.'
+    },
+    
+    usage: {
+      title: 'Gebruik Overzicht',
+      description: 'Uw huidige gebruik voor deze facturatieperiode',
+      cars: 'Auto\'s gewassen',
+      users: 'Actieve gebruikers',
+      locations: 'Actieve locaties',
+      limitExceeded: 'Limiet overschreden',
+      approachingLimit: 'Benadert limiet'
+    },
+    
+    changePlan: {
+      title: 'Wijzig Pakket',
+      description: 'Upgrade of downgrade naar een ander pakket',
+      confirm: {
+        title: 'Pakket Wijziging Bevestigen',
+        description: 'Weet u zeker dat u wilt overstappen naar dit pakket?',
+        effective: 'De wijziging gaat direct in en wordt pro-rata berekend.',
+        button: 'Wijzig Pakket'
+      }
+    },
+    
+    cancel: {
+      title: 'Abonnement Opzeggen',
+      description: 'Zeker weten dat u uw abonnement wilt opzeggen?',
+      warning: 'Uw abonnement blijft actief tot {date}. Daarna verliest u toegang tot alle functies.',
+      immediately: 'Direct opzeggen',
+      immediatelyWarning: 'U verliest direct toegang tot alle functies.',
+      confirm: 'Ja, Opzeggen'
     }
   }
 }

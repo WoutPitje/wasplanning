@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welkom bij {{tenantName}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .content {
+            padding: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #666;
+        }
+        .credentials {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .warning {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welkom bij het Wasplanning Systeem</h1>
+            <h2>{{tenantName}}</h2>
+        </div>
+        
+        <div class="content">
+            <p>Beste {{firstName}} {{lastName}},</p>
+            
+            <p>Welkom bij het Wasplanning Systeem! Je account is succesvol aangemaakt en je kunt nu inloggen.</p>
+            
+            <div class="credentials">
+                <h3>Jouw logingegevens:</h3>
+                <p><strong>Email:</strong> {{to}}</p>
+                {{#if temporaryPassword}}
+                <p><strong>Tijdelijk wachtwoord:</strong> {{temporaryPassword}}</p>
+                {{/if}}
+            </div>
+            
+            {{#if temporaryPassword}}
+            <div class="warning">
+                <strong>Belangrijk:</strong> Dit is een tijdelijk wachtwoord. We raden je aan om dit te wijzigen na je eerste inlog voor optimale beveiliging.
+            </div>
+            {{/if}}
+            
+            <p>Je kunt nu inloggen op het systeem en beginnen met het beheren van wasplanning taken.</p>
+            
+            <p>Als je vragen hebt over het systeem, neem dan contact op met je systeembeheerder.</p>
+            
+            <p>Met vriendelijke groet,<br>
+            Het Wasplanning Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>Dit is een automatisch gegenereerd bericht. Reageer niet op deze email.</p>
+            <p>&copy; 2024 Wasplanning Systeem. Alle rechten voorbehouden.</p>
+        </div>
+    </div>
+</body>
+</html>

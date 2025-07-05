@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from '../auth/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
+import { EmailService } from '../email/email.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
@@ -20,6 +21,7 @@ export class UsersService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private authService: AuthService,
+    private emailService: EmailService,
   ) {}
 
   private generateTemporaryPassword(): string {
@@ -53,6 +55,25 @@ export class UsersService {
       ...createUserDto,
       password,
     });
+
+    // Fetch user with tenant information for email
+    const userWithTenant = await this.userRepository.findOne({
+      where: { id: user.id },
+      relations: ['tenant'],
+    });
+
+    // Send welcome email with tenant information
+    try {
+      await this.emailService.sendWelcomeEmail(user.email, {
+        firstName: user.first_name || 'Gebruiker',
+        lastName: user.last_name || '',
+        temporaryPassword: shouldGeneratePassword ? password : undefined,
+        tenantName: userWithTenant?.tenant?.display_name || userWithTenant?.tenant?.name || 'Wasplanning',
+      });
+    } catch (emailError) {
+      // Log error but don't fail user creation
+      console.error('Failed to send welcome email:', emailError);
+    }
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user;

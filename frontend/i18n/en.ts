@@ -517,6 +517,7 @@ export default {
     
     nav: {
       features: 'Features',
+      integrations: 'Integrations',
       pricing: 'Pricing',
       contact: 'Contact'
     },
@@ -571,6 +572,32 @@ export default {
         title: 'Mobile Friendly',
         description: 'Fully responsive design. Washers work on tablet or phone, no training needed.'
       }
+    },
+    
+    integrations: {
+      title: 'Integrations & Connections',
+      subtitle: 'Connect Wasplanning with your existing systems for a fully integrated workflow',
+      
+      wva: {
+        title: 'WvA Planning',
+        description: 'Automatic synchronization with your pickup/delivery planning system. Planners see immediately when cars are ready for return trips.',
+        status: 'Coming soon'
+      },
+      
+      mobo: {
+        title: 'MOBO Workshop',
+        description: 'Seamless integration with workshop planning. Cars are automatically registered for washing after workshop completion.',
+        status: 'In development'
+      },
+      
+      api: {
+        title: 'Open API',
+        description: 'Use our REST API to integrate Wasplanning with your own systems. Full Swagger documentation available.',
+        status: 'Available'
+      },
+      
+      note: 'All integrations respect complete tenant isolation and are available from the Growth package.',
+      contact: 'Contact us for custom integrations'
     },
     
     howItWorks: {
@@ -935,6 +962,147 @@ export default {
       intro: 'For questions about our cookie policy:',
       email: 'Email',
       phone: 'Phone'
+    }
+  },
+  
+  // Documentation
+  docs: {
+    title: 'Documentation',
+    subtitle: 'Comprehensive documentation for the Wasplanning system and API',
+    metaTitle: 'Documentation - Wasplanning',
+    metaDescription: 'Complete technical documentation for the Wasplanning system and REST API',
+    
+    toc: {
+      title: 'Table of Contents',
+      systemOverview: 'System Overview',
+      authentication: 'Authentication',
+      multiTenancy: 'Multi-Tenancy',
+      apiDocumentation: 'API Documentation',
+      gettingStarted: 'Getting Started'
+    },
+    
+    systemOverview: {
+      title: 'System Overview',
+      description: 'Wasplanning is a modern, multi-tenant wash planning solution built with microservices architecture and strong focus on security and scalability.',
+      
+      architecture: {
+        title: 'Technical Architecture',
+        backend: 'Backend: NestJS with TypeScript, PostgreSQL database and Redis caching',
+        frontend: 'Frontend: Nuxt 3 with Vue 3, shadcn-vue components and TailwindCSS',
+        database: 'Database: PostgreSQL with Row-Level Security for tenant isolation',
+        storage: 'File Storage: MinIO S3-compatible storage with per-tenant buckets',
+        cache: 'Cache: Redis with tenant-specific namespacing'
+      },
+      
+      features: {
+        title: 'Key Features',
+        multiTenant: 'Complete multi-tenant isolation at database and application level',
+        rbac: 'Role-based access control with 6 different user roles',
+        realtime: 'Real-time updates via WebSocket connections',
+        api: 'RESTful API with full Swagger/OpenAPI documentation',
+        security: 'Enterprise-grade security with JWT authentication and audit logging'
+      }
+    },
+    
+    authentication: {
+      title: 'Authentication & Authorization',
+      description: 'The system uses JWT tokens for authentication with role-based access control (RBAC) for authorization. Each user belongs to one tenant and has a specific role.',
+      
+      jwt: {
+        title: 'JWT Token Structure',
+        description: 'All API requests require a valid JWT token in the Authorization header.',
+        structure: 'JWT Token Payload Structure'
+      },
+      
+      roles: {
+        title: 'User Roles',
+        superAdmin: 'Manages all tenants, can impersonate and configure system',
+        garageAdmin: 'Manages own garage tenant, users and settings',
+        wasplanner: 'Plans and manages wash tasks within own tenant',
+        werkplaats: 'Reports cars for washing within own tenant'
+      }
+    },
+    
+    multiTenancy: {
+      title: 'Multi-Tenant Architecture',
+      description: 'The system supports complete multi-tenancy with strict data isolation between different garages (tenants). Each tenant has complete separation of data, configuration and users.',
+      
+      isolation: {
+        title: 'Tenant Isolation',
+        database: 'Row-Level Security policies in PostgreSQL for complete data separation',
+        storage: 'Separate MinIO buckets per tenant for file storage',
+        cache: 'Tenant-specific Redis namespacing for cache data',
+        api: 'Tenant context is automatically added to all API requests'
+      },
+      
+      security: {
+        title: 'Security',
+        description: 'Tenant isolation is enforced at multiple levels to prevent cross-tenant data access.',
+        alertTitle: 'Important Security Note',
+        alertDescription: 'All API endpoints automatically check tenant access. Cross-tenant data access is technically impossible due to Row-Level Security policies.'
+      }
+    },
+    
+    api: {
+      title: 'API Documentation',
+      description: 'Wasplanning provides a complete REST API with OpenAPI 3.0 specification. All endpoints are documented via Swagger UI.',
+      
+      swagger: {
+        title: 'Swagger UI',
+        description: 'Interactive API documentation with testing capabilities',
+        button: 'Open Swagger Documentation'
+      },
+      
+      endpoints: {
+        title: 'Available Endpoints',
+        description: 'Currently implemented API endpoints'
+      },
+      
+      authentication: {
+        title: 'API Authentication',
+        description: 'All API requests require a Bearer token in the Authorization header.',
+        example: 'Example Authorization Header'
+      },
+      
+      rateLimiting: {
+        title: 'Rate Limiting',
+        description: 'API endpoints have rate limiting to prevent abuse:',
+        global: 'Global: 1000 requests per hour per IP address',
+        perTenant: 'Per tenant: 5000 requests per hour',
+        auth: 'Auth endpoints: 10 attempts per 15 minutes per IP'
+      }
+    },
+    
+    gettingStarted: {
+      title: 'Getting Started',
+      description: 'Follow these steps to get access to the Wasplanning API and build your first integration.',
+      
+      steps: {
+        title: 'Step-by-step Guide',
+        step1: {
+          title: 'Create Account',
+          description: 'Register your garage with Wasplanning and choose the right subscription (API access from Growth package)'
+        },
+        step2: {
+          title: 'API Credentials',
+          description: 'Log into your dashboard and generate API credentials in the settings section'
+        },
+        step3: {
+          title: 'Test Authentication',
+          description: 'Test your credentials by sending a POST request to /api/v1/auth/login'
+        },
+        step4: {
+          title: 'Explore API',
+          description: 'Use the Swagger UI to explore and test available endpoints'
+        }
+      },
+      
+      support: {
+        title: 'Support',
+        description: 'Have questions during integration? Contact our support team.',
+        email: 'Email Support',
+        swagger: 'Swagger Documentation'
+      }
     }
   }
 }

@@ -45,12 +45,11 @@
       </div>
     </div>
 
-    <!-- Users List -->
-    <UsersList
+    <!-- Users Table -->
+    <TenantUsersTable
       :users="users"
       :loading="pending"
       :error="error"
-      :available-roles="availableRoles"
       @view="viewUser"
       @edit="editUser"
     />
@@ -64,7 +63,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import UsersList from '~/components/users/UsersList.vue'
+import TenantUsersTable from '~/components/users/TenantUsersTable.vue'
 import type { UserWithoutPassword, UserFilters } from '~/types/users'
 import { UserRole } from '~/types/auth'
 

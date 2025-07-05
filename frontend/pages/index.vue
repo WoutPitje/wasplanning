@@ -16,6 +16,9 @@
             <a href="#features">{{ t('landing.nav.features') }}</a>
           </Button>
           <Button variant="ghost" asChild>
+            <a href="#integrations">{{ t('landing.nav.integrations') }}</a>
+          </Button>
+          <Button variant="ghost" asChild>
             <a href="#pricing">{{ t('landing.nav.pricing') }}</a>
           </Button>
           <Button variant="ghost" asChild>
@@ -43,6 +46,11 @@
              @click="mobileMenuOpen = false"
              class="block py-2 text-sm hover:text-primary transition-colors">
             {{ t('landing.nav.features') }}
+          </a>
+          <a href="#integrations" 
+             @click="mobileMenuOpen = false"
+             class="block py-2 text-sm hover:text-primary transition-colors">
+            {{ t('landing.nav.integrations') }}
           </a>
           <a href="#pricing" 
              @click="mobileMenuOpen = false"
@@ -219,6 +227,94 @@
               </CardDescription>
             </CardHeader>
           </Card>
+        </div>
+      </div>
+    </section>
+
+    <!-- Integrations Section -->
+    <section id="integrations" class="py-16 sm:py-24 bg-gray-50">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-2xl text-center mb-12 sm:mb-16">
+          <h2 class="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            {{ t('landing.integrations.title') }}
+          </h2>
+          <p class="mt-4 text-lg text-muted-foreground">
+            {{ t('landing.integrations.subtitle') }}
+          </p>
+        </div>
+
+        <div class="grid gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <!-- WvA Integration -->
+          <Card class="relative overflow-hidden hover:shadow-lg transition-shadow duration-300">
+            <CardHeader>
+              <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <Car class="h-6 w-6" />
+              </div>
+              <CardTitle>{{ t('landing.integrations.wva.title') }}</CardTitle>
+              <CardDescription>
+                {{ t('landing.integrations.wva.description') }}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="outline" class="bg-blue-50 text-blue-600">
+                  {{ t('landing.integrations.wva.status') }}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- MOBO Integration -->
+          <Card class="relative overflow-hidden hover:shadow-lg transition-shadow duration-300">
+            <CardHeader>
+              <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 text-green-600">
+                <Building2 class="h-6 w-6" />
+              </div>
+              <CardTitle>{{ t('landing.integrations.mobo.title') }}</CardTitle>
+              <CardDescription>
+                {{ t('landing.integrations.mobo.description') }}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="outline" class="bg-green-50 text-green-600">
+                  {{ t('landing.integrations.mobo.status') }}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Open API -->
+          <Card class="relative overflow-hidden hover:shadow-lg transition-shadow duration-300">
+            <CardHeader>
+              <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
+                <Activity class="h-6 w-6" />
+              </div>
+              <CardTitle>{{ t('landing.integrations.api.title') }}</CardTitle>
+              <CardDescription>
+                {{ t('landing.integrations.api.description') }}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="outline" class="bg-purple-50 text-purple-600">
+                  {{ t('landing.integrations.api.status') }}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div class="mt-12 text-center">
+          <p class="text-sm text-muted-foreground mb-4">
+            {{ t('landing.integrations.note') }}
+          </p>
+          <Button variant="outline" asChild>
+            <a href="#contact" class="inline-flex items-center justify-center">
+              {{ t('landing.integrations.contact') }}
+              <ArrowRight class="ml-2 h-4 w-4" />
+            </a>
+          </Button>
         </div>
       </div>
     </section>
@@ -557,7 +653,7 @@
           <div>
             <h4 class="font-semibold mb-4">{{ t('landing.footer.support') }}</h4>
             <ul class="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" class="hover:text-foreground">{{ t('landing.footer.docs') }}</a></li>
+              <li><NuxtLink to="/docs" class="hover:text-foreground">{{ t('landing.footer.docs') }}</NuxtLink></li>
               <li><a href="#" class="hover:text-foreground">{{ t('landing.footer.help') }}</a></li>
               <li><a href="#" class="hover:text-foreground">{{ t('landing.footer.status') }}</a></li>
             </ul>

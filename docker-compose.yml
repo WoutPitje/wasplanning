@@ -58,6 +58,16 @@ services:
     networks:
       - wasplanning
 
+  # MailHog Email Testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: wasplanning_mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - wasplanning
+
 volumes:
   postgres_data:
     driver: local

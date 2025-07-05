@@ -3,9 +3,9 @@
     <!-- Impersonation banner -->
     <div v-if="isImpersonating" class="bg-yellow-500 text-black">
       <div class="max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div class="flex items-center space-x-2">
-            <span class="text-sm font-medium">
+            <span class="text-xs sm:text-sm font-medium break-all">
               {{ t('admin.users.impersonating_as', { email: authStore.user?.email || '' }) }}
             </span>
           </div>
@@ -14,6 +14,7 @@
             variant="secondary"
             @click="handleStopImpersonation"
             :disabled="stoppingImpersonation"
+            class="shrink-0 text-xs"
           >
             {{ t('admin.users.stop_impersonation') }}
           </Button>

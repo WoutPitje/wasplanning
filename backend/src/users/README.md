@@ -204,6 +204,12 @@ Changes user status:
 - Role-based access control
 - Impersonation support for super admins
 
+### Email Module
+- Welcome email notifications for new users
+- Password reset confirmation emails
+- Account activation notifications
+- Tenant-specific email branding
+
 ### Admin Module
 - Tenant management integration
 - Cross-tenant user administration

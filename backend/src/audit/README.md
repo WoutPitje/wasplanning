@@ -232,6 +232,33 @@ npm run test:e2e audit
 4. **No PII in Actions**: Action names shouldn't contain sensitive data
 5. **Immutable Logs**: No update or delete operations on audit logs
 
+## Integration with Other Modules
+
+### Auth Module
+- **Login tracking**: Log successful and failed authentication attempts
+- **Permission changes**: Track role modifications and access changes
+- **Session management**: Log token refresh and logout events
+
+### Users Module
+- **User lifecycle**: Track user creation, updates, and deactivation
+- **Profile changes**: Log personal information modifications
+- **Password resets**: Record password change events
+
+### Admin Module
+- **Tenant management**: Log tenant creation and configuration changes
+- **Cross-tenant actions**: Track super admin activities across tenants
+- **System configuration**: Log global setting modifications
+
+### Email Module
+- **Email delivery**: Track sent emails and delivery status
+- **Template usage**: Log which email templates were used
+- **Configuration changes**: Record email setting modifications
+
+### Storage Module
+- **File operations**: Track file uploads, downloads, and deletions
+- **Access logging**: Record file access attempts and permissions
+- **Storage changes**: Log storage configuration modifications
+
 ## Future Enhancements
 
 1. **Retention Policies**: Automatic cleanup of old logs

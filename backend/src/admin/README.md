@@ -198,12 +198,17 @@ npm run test:cov -- admin
 - **401 Unauthorized**: Missing or invalid JWT token
 - **403 Forbidden**: Insufficient permissions (non-Super Admin)
 
-## Integration with Auth Module
+## Integration with Other Modules
 
-### Dependencies
+### Auth Module
 - **AuthService**: Used for creating admin users with proper password hashing
 - **User/Tenant Entities**: Shared entity definitions
 - **UserRole Enum**: Role validation and assignment
+
+### Email Module
+- **Welcome emails**: Automatically sent to new garage admin users
+- **Account setup notifications**: Instructions for new tenant administrators
+- **Tenant-specific branding**: Email templates include tenant logo and information
 
 ### Multi-Tenant Architecture
 - **Tenant Isolation**: Each tenant operates independently

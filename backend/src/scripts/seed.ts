@@ -2,6 +2,12 @@ import { DataSource } from 'typeorm';
 import { runSeeds } from '../database/seeds';
 import { User } from '../auth/entities/user.entity';
 import { Tenant } from '../auth/entities/tenant.entity';
+import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
+import { Subscription } from '../subscriptions/entities/subscription.entity';
+import { UsageRecord } from '../subscriptions/entities/usage-record.entity';
+import { BillingCycle } from '../subscriptions/entities/billing-cycle.entity';
+import { PaymentMethod } from '../payments/entities/payment-method.entity';
+import { PaymentTransaction } from '../payments/entities/payment-transaction.entity';
 
 async function bootstrap() {
   // Create DataSource
@@ -12,7 +18,16 @@ async function bootstrap() {
     username: process.env.DATABASE_USERNAME || 'wasplanning',
     password: process.env.DATABASE_PASSWORD || 'wasplanning_dev',
     database: process.env.DATABASE_NAME || 'wasplanning',
-    entities: [User, Tenant],
+    entities: [
+      User, 
+      Tenant, 
+      SubscriptionPlan, 
+      Subscription, 
+      UsageRecord, 
+      BillingCycle, 
+      PaymentMethod, 
+      PaymentTransaction
+    ],
     synchronize: false, // Don't auto-sync in production
     logging: false,
   });
