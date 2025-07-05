@@ -27,7 +27,21 @@
     "db:reset": "ts-node -r tsconfig-paths/register src/scripts/db-reset.ts",
     "test:db:create": "docker exec wasplanning_postgres psql -U wasplanning -c \"CREATE DATABASE wasplanning_test;\" || true",
     "test:db:setup": "npm run test:db:create && DATABASE_NAME=wasplanning_test npm run migration:run",
-    "test:setup": "npm run test:db:setup"
+    "test:setup": "npm run test:db:setup",
+    "storage:setup": "ts-node -r tsconfig-paths/register src/scripts/setup-storage.ts",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
+    "migration:show": "npm run typeorm migration:show -d data-source.ts",
+    "schema:drop": "npm run typeorm schema:drop -d data-source.ts",
+    "schema:sync": "npm run typeorm schema:sync -d data-source.ts",
+    "lint:check": "eslint \"{src,apps,libs,test}/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "test:unit": "jest --testPathPattern=.spec.ts$",
+    "test:integration": "jest --testPathPattern=.service.spec.ts$",
+    "db:seed": "npm run seed:run",
+    "db:migrate": "npm run migration:run",
+    "db:rollback": "npm run migration:revert",
+    "typecheck": "tsc --noEmit",
+    "typecheck:watch": "tsc --noEmit --watch"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

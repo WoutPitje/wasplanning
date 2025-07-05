@@ -19,7 +19,7 @@ export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid')
+  @Column('uuid', { nullable: true })
   tenant_id: string;
 
   @Column('uuid', { nullable: true })

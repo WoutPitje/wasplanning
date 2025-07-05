@@ -21,7 +21,9 @@ export default {
     showing: 'Showing',
     of: 'of',
     previous: 'Previous',
-    next: 'Next'
+    next: 'Next',
+    month: 'month',
+    hours: 'hours'
   },
   
   // App
@@ -506,5 +508,433 @@ export default {
   languages: {
     nl: 'Dutch',
     en: 'English'
+  },
+  
+  // Landing page
+  landing: {
+    metaTitle: 'Wasplanning - Digital Car Wash Planning for Garages',
+    metaDescription: 'Streamline your car wash process with smart planning. Real-time tracking, automatic assignment and full integration with your workshop.',
+    
+    nav: {
+      features: 'Features',
+      pricing: 'Pricing',
+      contact: 'Contact'
+    },
+    
+    hero: {
+      badge: 'For garages with pickup/delivery service',
+      title: 'Smart Wash Planning for Modern Garages',
+      subtitle: 'Digitize your car wash process. From workshop to return trip - everything in one system.',
+      cta: {
+        start: 'Start free trial',
+        demo: 'View demo'
+      }
+    },
+    
+    stats: {
+      garages: 'Garages in the Netherlands',
+      timeSaved: 'Less manual coordination',
+      certainty: 'Certainty for return trip',
+      orderTime: 'For new wash order'
+    },
+    
+    features: {
+      title: 'Everything you need',
+      subtitle: 'Complete solution for efficient wash management in your garage',
+      
+      realtime: {
+        title: 'Real-time Status Tracking',
+        description: 'Track every car from workshop to car wash to ready. Everyone sees the current status immediately.'
+      },
+      
+      smartAssignment: {
+        title: 'Smart Assignment',
+        description: 'Automatic matching based on capacity, skills and return trip priority.'
+      },
+      
+      priority: {
+        title: 'Priority System',
+        description: 'Urgent washes automatically get priority. No more stress with urgent return trips.'
+      },
+      
+      multiLocation: {
+        title: 'Multi-location Support',
+        description: 'Manage multiple locations from one dashboard. Perfect for garage chains.'
+      },
+      
+      reports: {
+        title: 'Insightful Reports',
+        description: 'Real-time dashboards with performance, lead times and productivity per location.'
+      },
+      
+      mobile: {
+        title: 'Mobile Friendly',
+        description: 'Fully responsive design. Washers work on tablet or phone, no training needed.'
+      }
+    },
+    
+    howItWorks: {
+      title: 'How it works',
+      subtitle: 'From registration to return trip in 4 simple steps',
+      
+      step1: {
+        title: 'Workshop registers car',
+        description: 'Mechanic clicks one button: car ready for wash. No phone calls, no notes.'
+      },
+      
+      step2: {
+        title: 'System determines priority',
+        description: 'Based on return trip time and wash type, priority is automatically determined.'
+      },
+      
+      step3: {
+        title: 'Washer performs wash',
+        description: 'Washer sees new tasks immediately, works through list and reports car ready with one click.'
+      },
+      
+      step4: {
+        title: 'Planner sees ready status',
+        description: 'Pickup/delivery planner has certainty: car is washed and ready for return trip.'
+      }
+    },
+    
+    pricing: {
+      title: 'Transparent Pricing',
+      subtitle: 'No surprises, no setup costs. Start today.',
+      popular: 'Most popular',
+      cta: 'Try free for 30 days',
+      contact: 'Contact us',
+      benefits: 'All packages include: ✓ 30 days free trial ✓ No setup costs ✓ Monthly cancellable ✓ Dutch support',
+      
+      starter: {
+        name: 'Starter',
+        description: 'Perfect for smaller garages',
+        feature1: '1 location',
+        feature2: 'Up to 500 cars/month',
+        feature3: '5 users',
+        feature4: 'Basic features'
+      },
+      
+      growth: {
+        name: 'Growth',
+        description: 'For growing garages',
+        feature1: 'Up to 3 locations',
+        feature2: 'Up to 2,000 cars/month',
+        feature3: 'Unlimited users',
+        feature4: 'All features',
+        feature5: 'API access'
+      },
+      
+      enterprise: {
+        name: 'Enterprise',
+        description: 'For garage chains',
+        feature1: 'Unlimited locations',
+        feature2: 'Unlimited cars',
+        feature3: 'Multi-tenant dashboard',
+        feature4: 'Custom integrations',
+        feature5: 'SLA guarantee'
+      }
+    },
+    
+    roi: {
+      title: 'Calculate your savings',
+      subtitle: 'See immediately how much time and money you save',
+      
+      small: {
+        title: 'Small Garage (300 cars/month)',
+        current: 'Current time spent',
+        withSystem: 'With Wasplanning',
+        savings: 'Savings'
+      },
+      
+      medium: {
+        title: 'Medium-sized Chain (1,500 cars)',
+        current: 'Current time spent',
+        withSystem: 'With Wasplanning',
+        savings: 'Savings'
+      }
+    },
+    
+    cta: {
+      title: 'Ready to digitize?',
+      subtitle: 'Join hundreds of garages already working more efficiently with Wasplanning.',
+      startTrial: 'Start free trial',
+      contact: 'Request a demo'
+    },
+    
+    footer: {
+      description: 'The complete wash planning solution for modern garages.',
+      product: 'Product',
+      company: 'Company',
+      support: 'Support',
+      integrations: 'Integrations',
+      about: 'About us',
+      privacy: 'Privacy',
+      terms: 'Terms of Service',
+      cookies: 'Cookie Policy',
+      docs: 'Documentation',
+      help: 'Help Center',
+      status: 'System Status',
+      rights: 'All rights reserved'
+    },
+    
+    contact: {
+      title: 'Contact',
+      subtitle: 'Have questions? We\'re here to help.',
+      email: {
+        title: 'Send us an email',
+        description: 'For general inquiries and support',
+        response: 'We respond within 24 hours'
+      },
+      businessHours: 'Available weekdays from 9:00 AM - 5:00 PM'
+    }
+  },
+  
+  // Privacy Policy
+  privacy: {
+    title: 'Privacy Policy',
+    metaTitle: 'Privacy Policy - Wasplanning',
+    metaDescription: 'Learn how Wasplanning protects and processes your personal data.',
+    lastUpdated: 'Last updated: {date}',
+    
+    intro: {
+      title: 'Introduction',
+      content: 'At Wasplanning, we value your privacy. This privacy policy explains how we collect, use and protect your personal data when you use our services.'
+    },
+    
+    dataCollection: {
+      title: 'What data we collect',
+      intro: 'We collect the following categories of personal data:',
+      item1: 'Account data: name, email address, phone number',
+      item2: 'Business data: company name, VAT number, address',
+      item3: 'Usage data: how you use our service, login data',
+      item4: 'Technical data: IP address, browser type, device information'
+    },
+    
+    dataUsage: {
+      title: 'How we use your data',
+      intro: 'We use your personal data for:',
+      item1: 'Providing and improving our services',
+      item2: 'Communication about your account and our services',
+      item3: 'Complying with legal obligations',
+      item4: 'Preventing fraud and abuse'
+    },
+    
+    dataProtection: {
+      title: 'Data Protection',
+      content: 'We implement appropriate technical and organizational measures to protect your personal data against unauthorized access, modification, disclosure or destruction.'
+    },
+    
+    dataSharing: {
+      title: 'Data Sharing',
+      intro: 'We only share your personal data in the following cases:',
+      item1: 'With your explicit consent',
+      item2: 'To comply with legal obligations',
+      item3: 'With trusted service providers working on our behalf'
+    },
+    
+    cookies: {
+      title: 'Cookies',
+      content: 'We use cookies to improve your experience and analyze our services.',
+      link: 'Read our full cookie policy'
+    },
+    
+    rights: {
+      title: 'Your Rights',
+      intro: 'Under the GDPR, you have the following rights:',
+      item1: 'Right to access your personal data',
+      item2: 'Right to correct inaccurate data',
+      item3: 'Right to delete your data',
+      item4: 'Right to restrict processing'
+    },
+    
+    retention: {
+      title: 'Data Retention',
+      content: 'We do not retain your personal data longer than necessary for the purposes for which it was collected, unless a longer retention period is legally required.'
+    },
+    
+    contact: {
+      title: 'Contact',
+      intro: 'For questions about this privacy policy or your personal data, please contact:',
+      email: 'Email',
+      phone: 'Phone'
+    }
+  },
+  
+  // Terms of Service
+  terms: {
+    title: 'Terms of Service',
+    metaTitle: 'Terms of Service - Wasplanning',
+    metaDescription: 'The terms of service for using Wasplanning services.',
+    lastUpdated: 'Last updated: {date}',
+    
+    acceptance: {
+      title: 'Acceptance of Terms',
+      content: 'By using Wasplanning, you agree to these terms of service. If you do not agree, you may not use our services.'
+    },
+    
+    serviceDescription: {
+      title: 'Service Description',
+      content: 'Wasplanning provides a digital planning system for car wash processes in garages, including real-time tracking, automatic assignment and reporting functionalities.'
+    },
+    
+    userAccounts: {
+      title: 'User Accounts',
+      intro: 'To use our services, you must create an account. You are responsible for:',
+      item1: 'Providing accurate and current information',
+      item2: 'Keeping your account information secure',
+      item3: 'All activities under your account',
+      item4: 'Immediately reporting unauthorized use'
+    },
+    
+    acceptableUse: {
+      title: 'Acceptable Use',
+      intro: 'You may not use our services for:',
+      item1: 'Illegal activities or violating others\' rights',
+      item2: 'Sending spam or unwanted communications',
+      item3: 'Attempting to hack or damage our systems',
+      item4: 'Sharing your account access with unauthorized persons',
+      item5: 'Activities that may disrupt our services'
+    },
+    
+    payment: {
+      title: 'Payment and Billing',
+      intro: 'The following terms apply to paid services:',
+      item1: 'Payments are billed monthly in advance',
+      item2: 'All prices exclude VAT unless otherwise stated',
+      item3: 'Payments must be made within 14 days of invoice date',
+      item4: 'We may suspend service for late payments'
+    },
+    
+    intellectualProperty: {
+      title: 'Intellectual Property',
+      content: 'All rights to the Wasplanning software, including but not limited to copyrights, trademarks and patents, remain the property of Wasplanning. You receive a limited right to use for the duration of your subscription.'
+    },
+    
+    dataProtection: {
+      title: 'Data Protection',
+      content: 'We process personal data according to our privacy policy and in compliance with the GDPR.',
+      link: 'View our privacy policy'
+    },
+    
+    liability: {
+      title: 'Liability',
+      content: 'Wasplanning is not liable for indirect damage, consequential damage, lost profits or missed savings. Our total liability is limited to the amount you paid in the last 12 months.'
+    },
+    
+    termination: {
+      title: 'Termination',
+      intro: 'Either party may terminate the subscription:',
+      item1: 'With one month\'s notice',
+      item2: 'Immediately for material breach of these terms',
+      item3: 'Upon termination, your data will be handled according to our data retention policy'
+    },
+    
+    changes: {
+      title: 'Changes',
+      content: 'We may change these terms from time to time. We will notify you of material changes via email or through our service.'
+    },
+    
+    governing: {
+      title: 'Governing Law',
+      content: 'These terms are governed by Dutch law. Disputes will be submitted to the competent court in Amsterdam.'
+    },
+    
+    contact: {
+      title: 'Contact',
+      intro: 'For questions about these terms of service:',
+      email: 'Email',
+      phone: 'Phone'
+    }
+  },
+  
+  // Cookie Policy
+  cookies: {
+    title: 'Cookie Policy',
+    metaTitle: 'Cookie Policy - Wasplanning',
+    metaDescription: 'Information about how Wasplanning uses cookies.',
+    lastUpdated: 'Last updated: {date}',
+    
+    intro: {
+      title: 'Introduction',
+      content: 'This cookie policy explains how Wasplanning uses cookies and similar technologies to recognize you when you visit our website.'
+    },
+    
+    what: {
+      title: 'What are cookies?',
+      content: 'Cookies are small text files that are placed on your device when you visit a website. They are widely used to make websites work efficiently and to provide information to the site owners.'
+    },
+    
+    types: {
+      title: 'Types of cookies we use',
+      necessary: {
+        title: 'Necessary cookies',
+        description: 'These cookies are essential for our website to function.',
+        cookie1: {
+          name: 'session_id',
+          purpose: 'Maintains your session during the visit'
+        },
+        cookie2: {
+          name: 'security_token',
+          purpose: 'Protects against cross-site request forgery attacks'
+        }
+      },
+      functional: {
+        title: 'Functional cookies',
+        description: 'These cookies remember your preferences and choices.',
+        cookie1: {
+          name: 'language',
+          purpose: 'Remembers your language preference'
+        },
+        cookie2: {
+          name: 'timezone',
+          purpose: 'Saves your timezone setting'
+        }
+      },
+      analytics: {
+        title: 'Analytics cookies',
+        description: 'These cookies help us understand how visitors use our website.',
+        cookie1: {
+          name: '_ga',
+          purpose: 'Google Analytics for measuring website usage'
+        },
+        cookie2: {
+          name: '_gid',
+          purpose: 'Google Analytics for distinguishing users'
+        }
+      }
+    },
+    
+    thirdParty: {
+      title: 'Third-party cookies',
+      content: 'Some of our pages may contain third-party cookies, for example from our payment provider or analytics services. We have no control over these cookies.'
+    },
+    
+    manage: {
+      title: 'Managing cookies',
+      intro: 'You can manage cookies through your browser settings:',
+      chrome: 'Settings > Privacy and security > Cookies',
+      firefox: 'Options > Privacy & Security > Cookies',
+      safari: 'Preferences > Privacy > Cookies',
+      edge: 'Settings > Privacy, search and services > Cookies',
+      warning: 'Note: disabling cookies may limit the functionality of our website.'
+    },
+    
+    consent: {
+      title: 'Consent',
+      content: 'By using our website, you consent to our use of cookies as described in this policy. You can withdraw your consent at any time by disabling cookies in your browser.'
+    },
+    
+    updates: {
+      title: 'Updates to this policy',
+      content: 'We may update this cookie policy from time to time. We recommend checking this policy regularly for any changes.'
+    },
+    
+    contact: {
+      title: 'Contact',
+      intro: 'For questions about our cookie policy:',
+      email: 'Email',
+      phone: 'Phone'
+    }
   }
 }
