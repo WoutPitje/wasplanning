@@ -178,10 +178,30 @@ definePageMeta({
 // State
 const users = ref<UserWithoutPassword[]>([])
 const tenants = ref<Tenant[]>([])
-const searchQuery = ref('')
-const selectedTenantId = ref('all')
-const selectedRole = ref('all')
 const impersonating = ref(false)
+
+// Query parameter sync
+const { filters, updateFilter } = useQueryFilters({
+  search: '',
+  tenant: 'all',
+  role: 'all'
+})
+
+// Use filters from query params
+const searchQuery = computed({
+  get: () => filters.search,
+  set: (value) => updateFilter('search', value)
+})
+
+const selectedTenantId = computed({
+  get: () => filters.tenant,
+  set: (value) => updateFilter('tenant', value)
+})
+
+const selectedRole = computed({
+  get: () => filters.role,
+  set: (value) => updateFilter('role', value)
+})
 
 // Computed
 const filteredUsers = computed(() => {
@@ -194,7 +214,7 @@ const filteredUsers = computed(() => {
   
   // Filter by role
   if (selectedRole.value !== 'all') {
-    filtered = filtered.filter(user => user.role === selectedRole.value)
+    filtered = filtered.filter(user => user.role.toLowerCase() === selectedRole.value.toLowerCase())
   }
   
   // Filter by search

@@ -152,6 +152,36 @@ mobile/app/(tabs)/
 - **Type Safety**: Full TypeScript coverage for API responses
 - **Caching**: Use Nuxt's built-in request caching where appropriate
 
+## Query Parameter Synchronization (MANDATORY)
+All filter and search inputs must sync with URL query parameters for:
+- **Shareable URLs**: Users can share filtered views
+- **Browser navigation**: Back/forward preserves filter state
+- **Page refresh**: Filters persist after reload
+- **Deep linking**: Direct links to filtered content
+
+### Implementation Pattern
+1. **Use `useQueryFilters` composable** for all filter/search components
+2. **Query parameter names**:
+   - `search` - Text search input
+   - `role` - Role filter (use enum values: WERKPLAATS, WASSERS, etc.)
+   - `tenant` - Tenant filter (tenant ID)
+   - `status` - Status filter (active/inactive)
+   - `page` - Pagination
+   - `limit` - Items per page
+   - `sort` - Sort field
+   - `order` - Sort direction (asc/desc)
+3. **Debounce search input** (300ms) to avoid excessive URL updates
+4. **Remove empty parameters** from URL to keep it clean
+5. **Initialize from URL** on component mount
+6. **Backend handles all filtering** - Frontend only sends query params to API
+
+### Backend Filtering (MANDATORY)
+- **NEVER filter data in frontend** - Always send filters to backend
+- **API endpoints** must accept query parameters for filtering
+- **Frontend role**: Only collect filter values and display results
+- **Backend role**: Apply filters, search, sorting, and pagination
+- **Use proper enum values** in URLs (e.g., ?role=WERKPLAATS not ?role=werkplaats)
+
 ## UI/UX Patterns
 
 ### Mobile Responsiveness (MANDATORY)

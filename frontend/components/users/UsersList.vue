@@ -89,7 +89,7 @@
                 </TableCell>
                 <TableCell>
                   <Badge :variant="getRoleBadgeVariant(user.role)">
-                    {{ t(`roles.${user.role}`) }}
+                    {{ t(`roles.${user.role.toLowerCase()}`) }}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -158,12 +158,12 @@ const props = withDefaults(defineProps<Props>(), {
   showTenantFilter: false,
   showTenantColumn: false,
   availableRoles: () => [
-    UserRole.WERKPLAATS,
-    UserRole.WASSERS,
-    UserRole.HAAL_BRENG_PLANNERS,
-    UserRole.WASPLANNERS,
-    UserRole.GARAGE_ADMIN,
-    UserRole.SUPER_ADMIN
+    'werkplaats',
+    'wassers',
+    'haal_breng_planners',
+    'wasplanners',
+    'garage_admin',
+    'super_admin'
   ]
 })
 
@@ -174,10 +174,28 @@ defineEmits<{
 
 const { t, locale } = useI18n()
 
-// State
-const searchQuery = ref('')
-const selectedTenantId = ref('all')
-const selectedRole = ref('all')
+// Query parameter sync
+const { filters, updateFilter } = useQueryFilters({
+  search: '',
+  tenant: 'all',
+  role: 'all'
+})
+
+// Use filters from query params
+const searchQuery = computed({
+  get: () => filters.search,
+  set: (value) => updateFilter('search', value)
+})
+
+const selectedTenantId = computed({
+  get: () => filters.tenant,
+  set: (value) => updateFilter('tenant', value)
+})
+
+const selectedRole = computed({
+  get: () => filters.role,
+  set: (value) => updateFilter('role', value)
+})
 
 // Computed
 const filteredUsers = computed(() => {
@@ -190,7 +208,7 @@ const filteredUsers = computed(() => {
   
   // Filter by role
   if (selectedRole.value !== 'all') {
-    filtered = filtered.filter(user => user.role === selectedRole.value)
+    filtered = filtered.filter(user => user.role.toLowerCase() === selectedRole.value.toLowerCase())
   }
   
   // Filter by search

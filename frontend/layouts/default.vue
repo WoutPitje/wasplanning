@@ -1,16 +1,25 @@
 <template>
-  <div class="min-h-screen bg-background">
-    <AppHeader />
+  <div class="h-screen bg-background flex flex-col">
+    <!-- Impersonation banner at the top -->
+    <ImpersonationBanner />
     
-    <!-- Main content -->
-    <main>
-      <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <slot />
-      </div>
-    </main>
+    <div class="flex flex-1 h-full overflow-hidden">
+      <!-- Sidebar -->
+      <AppSidebar />
+      
+      <!-- Main content -->
+      <main class="flex-1 overflow-y-auto">
+        <div class="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <!-- Add padding for mobile menu button -->
+          <div class="lg:pl-0 pl-12">
+            <slot />
+          </div>
+        </div>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// No need for additional logic - AppHeader handles everything
+// The sidebar and impersonation banner handle their own logic
 </script>

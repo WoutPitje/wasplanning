@@ -116,50 +116,17 @@
       </Card>
 
       <!-- Users list -->
-      <Card class="lg:col-span-3">
-        <CardHeader>
-          <h3 class="text-lg font-medium text-foreground">{{ t('admin.tenants.details.users') }}</h3>
-        </CardHeader>
-        <CardContent>
-          <div v-if="tenant.users?.length" class="divide-y divide-border">
-            <div v-for="user in tenant.users" :key="user.id" class="py-4 first:pt-0 last:pb-0">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <div class="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                    <span class="text-sm font-medium text-muted-foreground">
-                      {{ user.first_name?.charAt(0).toUpperCase() }}{{ user.last_name?.charAt(0).toUpperCase() }}
-                    </span>
-                  </div>
-                  <div class="ml-4">
-                    <p class="text-sm font-medium text-foreground">
-                      {{ user.first_name }} {{ user.last_name }}
-                    </p>
-                    <p class="text-sm text-muted-foreground">{{ user.email }}</p>
-                  </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-                    {{ user.role }}
-                  </span>
-                  <span
-                    :class="[
-                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                      user.is_active
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    ]"
-                  >
-                    {{ user.is_active ? t('common.active') : t('common.inactive') }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div v-else class="text-center py-8">
-            <p class="text-sm text-muted-foreground">{{ t('admin.tenants.details.noUsers') }}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div class="lg:col-span-3">
+        <h3 class="text-lg font-medium text-foreground mb-4">{{ t('admin.tenants.details.users') }}</h3>
+        <UsersList
+          :users="tenant.users || []"
+          :loading="false"
+          :error="null"
+          :show-tenant-filter="false"
+          :show-tenant-column="false"
+          @view="viewUser"
+        />
+      </div>
     </div>
 
     <!-- Back button at bottom -->
@@ -178,8 +145,11 @@ import { nl } from 'date-fns/locale'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader } from '~/components/ui/card'
 import { Breadcrumb } from '~/components/ui/breadcrumb'
+import UsersList from '~/components/users/UsersList.vue'
+import type { UserWithoutPassword } from '~/types/users'
 
 const { t } = useI18n()
+const router = useRouter()
 
 // Meta
 definePageMeta({
@@ -230,4 +200,9 @@ onMounted(async () => {
     loadStats()
   ])
 })
+
+// Methods
+const viewUser = (user: UserWithoutPassword) => {
+  router.push(`/admin/users/${user.id}`)
+}
 </script>
