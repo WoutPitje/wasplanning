@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { getErrorMessage, getErrorStack } from '../common/utils/error.util';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike } from 'typeorm';
@@ -79,7 +80,7 @@ export class StorageService {
         this.logger.log(`Created MinIO bucket: ${bucketName}`);
       }
     } catch (error) {
-      this.logger.error(`Failed to create bucket ${bucketName}: ${error.message}`);
+      this.logger.error(`Failed to create bucket ${bucketName}: ${getErrorMessage(error)}`);
       throw new InternalServerErrorException(`Failed to create storage bucket`);
     }
   }
@@ -160,7 +161,7 @@ export class StorageService {
 
       return savedFile;
     } catch (error) {
-      this.logger.error(`File upload failed: ${error.message}`, error.stack);
+      this.logger.error(`File upload failed: ${getErrorMessage(error)}`, getErrorStack(error));
       if (error instanceof ForbiddenException) {
         throw error;
       }
@@ -204,7 +205,7 @@ export class StorageService {
 
       return url;
     } catch (error) {
-      this.logger.error(`Failed to generate presigned URL: ${error.message}`, error.stack);
+      this.logger.error(`Failed to generate presigned URL: ${getErrorMessage(error)}`, getErrorStack(error));
       throw new InternalServerErrorException('Failed to generate download URL');
     }
   }
@@ -230,7 +231,7 @@ export class StorageService {
 
       this.logger.log(`File deleted successfully: ${fileId} for tenant ${tenantId}`);
     } catch (error) {
-      this.logger.error(`Failed to delete file: ${error.message}`, error.stack);
+      this.logger.error(`Failed to delete file: ${getErrorMessage(error)}`, getErrorStack(error));
       throw new InternalServerErrorException('Failed to delete file');
     }
   }
@@ -342,7 +343,7 @@ export class StorageService {
         limit,
       };
     } catch (error) {
-      this.logger.error(`Failed to list files: ${error.message}`, error.stack);
+      this.logger.error(`Failed to list files: ${getErrorMessage(error)}`, getErrorStack(error));
       throw new InternalServerErrorException('Failed to list files');
     }
   }
@@ -352,7 +353,7 @@ export class StorageService {
    * Map sort field to database column
    */
   private mapSortField(field: string): string {
-    const fieldMap = {
+    const fieldMap: Record<string, string> = {
       'created_at': 'file.created_at',
       'filename': 'file.original_filename',
       'size': 'file.size_bytes',
@@ -371,7 +372,7 @@ export class StorageService {
       const stream = await this.minioClient.getObject(file.bucket_name, file.object_key);
       return stream;
     } catch (error) {
-      this.logger.error(`Failed to get file stream: ${error.message}`, error.stack);
+      this.logger.error(`Failed to get file stream: ${getErrorMessage(error)}`, getErrorStack(error));
       throw new InternalServerErrorException('Failed to retrieve file');
     }
   }
@@ -415,7 +416,7 @@ export class StorageService {
 
       return savedFile;
     } catch (error) {
-      this.logger.error(`Failed to copy file: ${error.message}`, error.stack);
+      this.logger.error(`Failed to copy file: ${getErrorMessage(error)}`, getErrorStack(error));
       throw new InternalServerErrorException('Failed to copy file');
     }
   }
@@ -461,7 +462,7 @@ export class StorageService {
         filesByType: {}, // Can be implemented similarly based on mime types
       };
     } catch (error) {
-      this.logger.error(`Failed to get storage stats: ${error.message}`, error.stack);
+      this.logger.error(`Failed to get storage stats: ${getErrorMessage(error)}`, getErrorStack(error));
       throw new InternalServerErrorException('Failed to get storage statistics');
     }
   }

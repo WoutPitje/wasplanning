@@ -57,9 +57,9 @@ This will start:
 - PostgreSQL on `localhost:5432`
 - Redis on `localhost:6379`
 - MinIO on `localhost:9000` (Console: `http://localhost:9001`)
-- NestJS API on `http://localhost:3000`
-- Nuxt frontend on `http://localhost:3001`
-- Swagger docs on `http://localhost:3000/api/docs`
+- NestJS API on `http://localhost:3001`
+- Nuxt frontend on `http://localhost:3000`
+- Swagger docs on `http://localhost:3001/api/docs`
 
 ## Project Structure
 
@@ -67,22 +67,28 @@ This will start:
 wasplanning/
 ├── backend/              # NestJS API
 │   ├── src/
-│   │   ├── modules/     # Feature modules
-│   │   ├── entities/    # TypeORM entities
+│   │   ├── admin/       # Admin/tenant management
+│   │   ├── auth/        # Authentication & authorization
+│   │   ├── users/       # User management
+│   │   ├── storage/     # File storage (MinIO)
+│   │   ├── common/      # Shared utilities
+│   │   ├── config/      # Configuration files
+│   │   ├── database/    # Database seeds
 │   │   └── migrations/  # Database migrations
 │   └── test/
 ├── frontend/            # Nuxt 3 application
 │   ├── pages/          # Role-based pages
 │   ├── components/     # Shared components
 │   ├── composables/    # Vue composables
-│   └── stores/         # Pinia stores
-├── mobile/             # Expo React Native app
+│   ├── stores/         # Pinia stores
+│   ├── i18n/           # Internationalization
+│   └── types/          # TypeScript types
+├── mobile/             # Expo React Native app (planned)
 │   ├── app/            # Expo Router pages
 │   ├── components/     # Native components
 │   ├── hooks/          # React hooks
 │   └── services/       # API & WebSocket
-├── docker/             # Docker configurations
-└── scripts/            # Development scripts
+└── docker-compose.yml  # Docker services
 ```
 
 ## Available Scripts
@@ -125,7 +131,7 @@ npm run clean           # Clean build artifacts
 - **E2E Tests**: Playwright for user scenarios
 - **Visual Tests**: Storybook (optional)
 
-### Mobile Testing
+### Mobile Testing (Planned)
 - **Unit Tests**: Jest + React Native Testing Library
 - **Component Tests**: @testing-library/react-native
 - **E2E Tests**: Detox for device testing
@@ -148,7 +154,7 @@ npm run test:unit      # Unit tests only
 npm run test:e2e       # E2E tests
 npm run test:coverage  # Coverage report
 
-# Mobile tests
+# Mobile tests (when implemented)
 cd mobile
 npm run test           # Run all tests
 npm run test:watch     # Watch mode
@@ -160,7 +166,7 @@ npx detox test         # E2E tests on simulator
 
 Once the backend is running, access the Swagger documentation at:
 ```
-http://localhost:3000/api/docs
+http://localhost:3001/api/docs
 ```
 
 ## User Roles
@@ -172,9 +178,9 @@ http://localhost:3000/api/docs
 5. **Garage Admin** - Manage users and settings for their garage
 6. **Super Admin** - Manage all garages and global settings
 
-## Multi-Location Support
+## Multi-Location Support (Planned)
 
-The system supports multiple locations per tenant:
+The system will support multiple locations per tenant:
 
 - **Per Tenant**: Each garage can have multiple physical locations
 - **Location-Specific**: Wash tasks, users, and vehicles can be assigned to specific locations
@@ -228,7 +234,7 @@ const { t } = useI18n()
 DATABASE_URL=postgresql://dev:dev123@localhost:5432/wasplanning
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=your-secret-key
-PORT=3000
+PORT=3001
 MINIO_ENDPOINT=localhost
 MINIO_PORT=9000
 MINIO_ACCESS_KEY=minioadmin
@@ -238,8 +244,8 @@ MINIO_USE_SSL=false
 
 ### Frontend (.env)
 ```env
-NUXT_PUBLIC_API_URL=http://localhost:3000
-NUXT_PUBLIC_WS_URL=ws://localhost:3000
+NUXT_PUBLIC_API_URL=http://localhost:3001
+NUXT_PUBLIC_WS_URL=ws://localhost:3001
 ```
 
 ## Mobile Responsiveness

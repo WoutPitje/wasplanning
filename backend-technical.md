@@ -5,23 +5,26 @@
 ### Module Structure
 ```
 src/
-├── modules/
-│   ├── auth/
-│   ├── users/
-│   ├── vehicles/
-│   ├── wash-tasks/
-│   └── notifications/
-├── common/
-│   ├── guards/
-│   ├── decorators/
-│   └── filters/
-└── config/
+├── admin/              # Tenant/garage management
+├── auth/               # Authentication & authorization
+├── users/              # User management
+├── storage/            # File storage (MinIO)
+├── common/             # Shared utilities & DTOs
+│   ├── dto/
+│   └── interfaces/
+├── config/             # Configuration files
+├── database/           # Seeds and database utilities
+├── migrations/         # TypeORM migrations
+└── scripts/            # Utility scripts
 ```
 
-### Core Modules
-- **AuthModule**: JWT auth, role-based access + tenant context
-- **TenantModule**: Multi-tenant management, garage admin
-- **UsersModule**: User management, roles, availability (tenant-scoped)
+### Core Modules (Implemented)
+- **AdminModule**: Multi-tenant management, garage administration
+- **AuthModule**: JWT authentication, role-based access + tenant context
+- **UsersModule**: User management, roles, tenant-scoped operations
+- **StorageModule**: File storage with MinIO, per-tenant bucket isolation
+
+### Planned Modules
 - **VehiclesModule**: Vehicle registration, status tracking (tenant-scoped)
 - **WashTasksModule**: Task queue, assignment, status updates (tenant-scoped)
 - **NotificationsModule**: Real-time updates via WebSockets (tenant-aware)

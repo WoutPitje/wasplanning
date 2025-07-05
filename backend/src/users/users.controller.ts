@@ -46,7 +46,7 @@ export class UsersController {
     description: 'User created successfully',
   })
   @ApiResponse({ status: 409, description: 'Email already exists' })
-  async create(@Body() createUserDto: CreateUserDto, @Request() req) {
+  async create(@Body() createUserDto: CreateUserDto, @Request() req: any) {
     // Garage admin can only create users in their tenant
     if (req.user.role === UserRole.GARAGE_ADMIN && createUserDto.tenant_id !== req.user.tenant.id) {
       throw new ForbiddenException('Cannot create users for other tenants');
@@ -61,7 +61,7 @@ export class UsersController {
     status: 200,
     description: 'Paginated list of users',
   })
-  async findAll(@Query() query: GetUsersQueryDto, @Request() req) {
+  async findAll(@Query() query: GetUsersQueryDto, @Request() req: any) {
     // Super admin can filter by tenant, others only see their tenant
     if (req.user.role !== UserRole.SUPER_ADMIN) {
       query.tenant = req.user.tenant.id;
@@ -79,7 +79,7 @@ export class UsersController {
     description: 'User details',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
-  findOne(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  findOne(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     return this.usersService.findOne(id, req.user);
   }
 
@@ -95,7 +95,7 @@ export class UsersController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @Request() req,
+    @Request() req: any,
   ) {
     return this.usersService.update(id, updateUserDto, req.user);
   }
@@ -114,7 +114,7 @@ export class UsersController {
   resetPassword(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() resetPasswordDto: ResetPasswordDto,
-    @Request() req,
+    @Request() req: any,
   ) {
     return this.usersService.resetPassword(id, resetPasswordDto.new_password, req.user);
   }
@@ -130,7 +130,7 @@ export class UsersController {
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 403, description: 'Action not allowed while impersonating' })
-  remove(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  remove(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     return this.usersService.remove(id, req.user);
   }
 }

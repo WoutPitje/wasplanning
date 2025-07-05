@@ -9,10 +9,6 @@ export const useImpersonation = () => {
 
   const startImpersonation = async (userId: string) => {
     try {
-      console.log('Starting impersonation for user:', userId)
-      console.log('Current user role:', authStore.user?.role)
-      console.log('Is super admin:', authStore.isSuperAdmin)
-      
       const response = await $fetch<LoginResponse>(`${config.public.apiUrl}/auth/impersonate/${userId}`, {
         method: 'POST',
         headers: {
@@ -26,7 +22,6 @@ export const useImpersonation = () => {
       await router.push(`/`)
     } catch (error: any) {
       console.error('Impersonation failed:', error)
-      console.error('Error details:', error.data)
       throw error
     }
   }
@@ -46,7 +41,6 @@ export const useImpersonation = () => {
       // Redirect to admin dashboard
       await router.push('/admin/users')
     } catch (error: any) {
-      console.error('Stop impersonation failed:', error)
       throw error
     }
   }

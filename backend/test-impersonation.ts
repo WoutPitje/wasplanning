@@ -82,7 +82,7 @@ async function testImpersonation() {
     console.log('  Access token created:', !!result.access_token);
     console.log('  Impersonation info included:', !!result.impersonation);
   } catch (error) {
-    console.error('✗ Impersonation failed:', error.message);
+    console.error('✗ Impersonation failed:', error instanceof Error ? error.message : String(error));
   }
 
   // Test 2: Prevent nested impersonation
@@ -101,10 +101,10 @@ async function testImpersonation() {
     await authService.impersonateUser(impersonatingUser, 'another-user-id');
     console.error('✗ Should have thrown ForbiddenException');
   } catch (error) {
-    if (error instanceof ForbiddenException && error.message === 'Cannot impersonate while already impersonating another user') {
+    if (error instanceof ForbiddenException && error instanceof Error ? error.message : String(error) === 'Cannot impersonate while already impersonating another user') {
       console.log('✓ Correctly prevented nested impersonation');
     } else {
-      console.error('✗ Wrong error thrown:', error.message);
+      console.error('✗ Wrong error thrown:', error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -136,10 +136,10 @@ async function testImpersonation() {
     await authService.impersonateUser(regularCurrentUser, 'target-user-id');
     console.error('✗ Should have thrown ForbiddenException');
   } catch (error) {
-    if (error instanceof ForbiddenException && error.message === 'Only SUPER_ADMIN can impersonate users') {
+    if (error instanceof ForbiddenException && error instanceof Error ? error.message : String(error) === 'Only SUPER_ADMIN can impersonate users') {
       console.log('✓ Correctly prevented non-SUPER_ADMIN from impersonating');
     } else {
-      console.error('✗ Wrong error thrown:', error.message);
+      console.error('✗ Wrong error thrown:', error instanceof Error ? error.message : String(error));
     }
   }
 

@@ -25,7 +25,7 @@ export class AuthController {
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() loginDto: LoginDto, @Request() req) {
+  async login(@Body() loginDto: LoginDto, @Request() req: any) {
     return this.authService.login(req.user);
   }
 
@@ -45,7 +45,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@CurrentUser() user) {
+  async getProfile(@CurrentUser() user: any) {
     return {
       id: user.id,
       email: user.email,
@@ -69,7 +69,7 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async impersonateUser(
     @Param('userId') userId: string,
-    @CurrentUser() currentUser,
+    @CurrentUser() currentUser: any,
   ) {
     return this.authService.impersonateUser(currentUser, userId);
   }
@@ -82,7 +82,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Stopped impersonation successfully' })
   @ApiResponse({ status: 400, description: 'Not currently impersonating' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async stopImpersonation(@CurrentUser() user) {
+  async stopImpersonation(@CurrentUser() user: any) {
     return this.authService.stopImpersonation(user);
   }
 
@@ -92,7 +92,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user tenant logo URL' })
   @ApiResponse({ status: 200, description: 'Tenant logo URL retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getTenantLogo(@CurrentUser() user) {
+  async getTenantLogo(@CurrentUser() user: any) {
     const logoUrl = await this.authService.getTenantLogoUrl(user.tenant.id);
     return { logo_url: logoUrl };
   }

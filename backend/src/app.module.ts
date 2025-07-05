@@ -18,17 +18,29 @@ import databaseConfig from './config/database.config';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DATABASE_HOST') || 'localhost',
-        port: configService.get('DATABASE_PORT') || 5432,
-        username: configService.get('DATABASE_USERNAME') || 'wasplanning',
-        password: configService.get('DATABASE_PASSWORD') || 'wasplanning_dev',
-        database: configService.get('DATABASE_NAME') || 'wasplanning',
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') === 'development',
-        logging: configService.get('DATABASE_LOGGING') === 'true',
-      }),
+      useFactory: (configService: ConfigService) => {
+        const dbSyncValue = configService.get('DB_SYNC');
+        
+        // Only allow synchronize if explicitly set to 'true' AND in development
+        const synchronize = dbSyncValue === 'true' && configService.get('NODE_ENV') === 'development';
+        
+        // Log warning if sync is disabled for safety
+        if (dbSyncValue === 'true' && configService.get('NODE_ENV') !== 'development') {
+          console.warn('⚠️  DB_SYNC=true ignored in non-development environment for safety');
+        }
+
+        return {
+          type: 'postgres',
+          host: configService.get('DATABASE_HOST') || 'localhost',
+          port: configService.get('DATABASE_PORT') || 5432,
+          username: configService.get('DATABASE_USERNAME') || 'wasplanning',
+          password: configService.get('DATABASE_PASSWORD') || 'wasplanning_dev',
+          database: configService.get('DATABASE_NAME') || 'wasplanning',
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          synchronize: synchronize,
+          logging: configService.get('DATABASE_LOGGING') === 'true',
+        };
+      },
       inject: [ConfigService],
     }),
     StorageModule,

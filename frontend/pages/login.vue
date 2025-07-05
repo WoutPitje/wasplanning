@@ -105,26 +105,19 @@ const authStore = useAuthStore()
 
 // Methods
 const handleLogin = async () => {
-  console.log('🔄 Starting login process...', form)
-  
   try {
     const response = await login(form)
-    console.log('📥 Login response:', response)
     
     if (response) {
-      console.log('✅ Login successful, setting auth data...')
       // Set auth data in store
       authStore.setAuth(response)
       
       // Redirect based on user role
       const redirectPath = getRedirectPath(response.user.role)
-      console.log('🔄 Redirecting to:', redirectPath)
       await navigateTo(redirectPath)
-    } else {
-      console.log('❌ Login failed - no response')
     }
   } catch (err) {
-    console.error('❌ Login error:', err)
+    // Error is already handled by the useAuth composable
   }
 }
 

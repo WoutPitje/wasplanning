@@ -6,26 +6,41 @@
 ```
 ├── composables/
 │   ├── useAuth.ts
-│   ├── useWashTasks.ts
-│   ├── useLocations.ts
-│   └── useNotifications.ts
+│   ├── useAdmin.ts
+│   ├── useAdminUsers.ts
+│   ├── useUsers.ts
+│   ├── useImpersonation.ts
+│   ├── useQueryFilters.ts
+│   └── useLocale.ts
 ├── stores/
-│   ├── auth.ts
-│   ├── locations.ts
-│   ├── tasks.ts
-│   └── vehicles.ts
+│   └── auth.ts
 ├── pages/
-│   ├── workshop/
-│   ├── washer/
-│   ├── planner/
-│   └── admin/
-│       └── locations/
+│   ├── admin/           # Super admin pages
+│   │   ├── tenants/
+│   │   ├── users/
+│   │   └── settings.vue
+│   ├── garage-admin/    # Garage admin pages
+│   │   ├── users/
+│   │   ├── dashboard.vue
+│   │   └── settings.vue
+│   ├── delivery/        # Delivery planner pages
+│   ├── washer/          # Washer pages
+│   ├── wasplanner/      # Wash planner pages
+│   ├── workshop/        # Workshop pages
+│   ├── login.vue
+│   └── index.vue
 ```
 
-### Key Components
-- Role-based layouts
+### Key Components (Implemented)
+- Role-based layouts and routing
+- User management with impersonation
+- Tenant/garage administration
+- Multi-language support (Dutch/English)
+- Responsive design (mobile-first)
+- File upload with MinIO integration
+
+### Planned Components
 - Real-time task board (drag-drop)
-- Mobile-responsive washer interface
 - Dashboard with KPIs
 - Location selector and management
 - Multi-location task views

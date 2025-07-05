@@ -242,7 +242,7 @@ export class TenantsService {
           await this.storageService.deleteFile(oldFileId, tenantId, userId);
         } catch (error) {
           // Log but don't fail the upload if old logo deletion fails
-          console.warn(`Failed to delete old logo: ${error.message}`);
+          console.warn(`Failed to delete old logo: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
