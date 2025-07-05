@@ -15,7 +15,13 @@ export default {
     inactive: 'Inactief',
     yes: 'Ja',
     no: 'Nee',
-    login: 'Inloggen'
+    login: 'Inloggen',
+    all: 'Alle',
+    actions: 'Acties',
+    showing: 'Toont',
+    of: 'van',
+    previous: 'Vorige',
+    next: 'Volgende'
   },
   
   // App
@@ -209,6 +215,47 @@ export default {
         user_not_found: 'Gebruiker niet gevonden',
         not_impersonating: 'U bootst momenteel niemand na'
       }
+    },
+    
+    // Audit logs
+    audit: {
+      title: 'Audit Logs',
+      filters: 'Filters',
+      action: 'Actie',
+      resource: 'Resource',
+      user: 'Gebruiker',
+      date: 'Datum',
+      time: 'Tijd',
+      ip_address: 'IP Adres',
+      details: 'Details',
+      no_logs: 'Geen audit logs gevonden',
+      export: 'Exporteren',
+      export_csv: 'Exporteer als CSV',
+      view_details: 'Details bekijken',
+      filter_by_date: 'Filter op datum',
+      filter_by_action: 'Filter op actie',
+      filter_by_user: 'Filter op gebruiker',
+      start_date: 'Startdatum',
+      end_date: 'Einddatum',
+      apply_filters: 'Filters toepassen',
+      clear_filters: 'Filters wissen',
+      actions: {
+        'auth.login': 'Ingelogd',
+        'auth.logout': 'Uitgelogd',
+        'auth.impersonate.start': 'Impersonatie gestart',
+        'auth.impersonate.stop': 'Impersonatie gestopt',
+        'user.created': 'Gebruiker aangemaakt',
+        'user.updated': 'Gebruiker bijgewerkt',
+        'user.deactivated': 'Gebruiker gedeactiveerd',
+        'user.password_reset': 'Wachtwoord gereset',
+        'tenant.created': 'Garage aangemaakt',
+        'tenant.updated': 'Garage bijgewerkt',
+        'tenant.deactivated': 'Garage gedeactiveerd'
+      },
+      resource_types: {
+        user: 'Gebruiker',
+        tenant: 'Garage'
+      }
     }
   },
   
@@ -299,6 +346,7 @@ export default {
     logout: 'Uitloggen',
     tenants: 'Tenants',
     users: 'Gebruikers',
+    auditLogs: 'Audit Logs',
     queue: 'Wachtrij',
     planning: 'Planning',
     myTasks: 'Mijn Taken',

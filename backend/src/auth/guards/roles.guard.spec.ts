@@ -14,12 +14,12 @@ describe('RolesGuard', () => {
 
   const createMockExecutionContext = (
     user: any = null,
-    requiredRoles: UserRole[] | null = null
+    requiredRoles: UserRole[] | null = null,
   ): ExecutionContext => {
     const mockRequest = { user };
     const mockHandler = {};
     const mockClass = {};
-    
+
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(requiredRoles);
 
     return {
@@ -39,35 +39,35 @@ describe('RolesGuard', () => {
   describe('canActivate', () => {
     it('should return true when no roles are required', () => {
       const context = createMockExecutionContext();
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
     });
 
     it('should return false when user is not present', () => {
       const context = createMockExecutionContext(null, [UserRole.WERKPLAATS]);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(false);
     });
 
     it('should return true for super admin regardless of required roles', () => {
       const user = { role: UserRole.SUPER_ADMIN };
       const context = createMockExecutionContext(user, [UserRole.WERKPLAATS]);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
     });
 
     it('should return true when user has required role', () => {
       const user = { role: UserRole.WERKPLAATS };
       const context = createMockExecutionContext(user, [UserRole.WERKPLAATS]);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
     });
 
@@ -78,27 +78,27 @@ describe('RolesGuard', () => {
         UserRole.WASSERS,
         UserRole.WASPLANNERS,
       ]);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
     });
 
     it('should return false when user does not have required role', () => {
       const user = { role: UserRole.WERKPLAATS };
       const context = createMockExecutionContext(user, [UserRole.GARAGE_ADMIN]);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(false);
     });
 
     it('should check metadata keys in correct order', () => {
       const user = { role: UserRole.WERKPLAATS };
       const context = createMockExecutionContext(user, [UserRole.WERKPLAATS]);
-      
+
       guard.canActivate(context);
-      
+
       expect(reflector.getAllAndOverride).toHaveBeenCalledWith('roles', [
         context.getHandler(),
         context.getClass(),

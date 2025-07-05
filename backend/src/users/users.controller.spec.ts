@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UserRole } from '../auth/entities/user.entity';
+import { AuditService } from '../audit/audit.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -30,6 +31,10 @@ describe('UsersController', () => {
         display_name: 'Test Tenant',
       },
     },
+    ip: '127.0.0.1',
+    headers: {
+      'user-agent': 'test-agent',
+    },
   };
 
   beforeEach(async () => {
@@ -39,6 +44,12 @@ describe('UsersController', () => {
         {
           provide: UsersService,
           useValue: mockUsersService,
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            logAction: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -74,13 +85,14 @@ describe('UsersController', () => {
       const crossTenantDto = { ...createUserDto, tenant_id: 'other-tenant-id' };
 
       await expect(
-        controller.create(crossTenantDto, mockRequest)
+        controller.create(crossTenantDto, mockRequest),
       ).rejects.toThrow(ForbiddenException);
       expect(mockUsersService.create).not.toHaveBeenCalled();
     });
 
     it('should allow super admin to create user in any tenant', async () => {
       const superAdminRequest = {
+        ...mockRequest,
         user: { ...mockRequest.user, role: UserRole.SUPER_ADMIN },
       };
       const crossTenantDto = { ...createUserDto, tenant_id: 'other-tenant-id' };
@@ -99,7 +111,7 @@ describe('UsersController', () => {
       const mockQuery = { page: 1, limit: 20 };
       const mockResponse = {
         data: [{ id: 'user1' }, { id: 'user2' }],
-        meta: { total: 2, page: 1, limit: 20, totalPages: 1 }
+        meta: { total: 2, page: 1, limit: 20, totalPages: 1 },
       };
       mockUsersService.findAll.mockResolvedValue(mockResponse);
 
@@ -108,7 +120,7 @@ describe('UsersController', () => {
       expect(result).toEqual(mockResponse);
       expect(mockUsersService.findAll).toHaveBeenCalledWith({
         ...mockQuery,
-        tenant: 'tenant-id'
+        tenant: 'tenant-id',
       });
     });
 
@@ -119,11 +131,14 @@ describe('UsersController', () => {
       const mockQuery = { page: 1, limit: 20 };
       const mockResponse = {
         data: [{ id: 'user1' }, { id: 'user2' }],
-        meta: { total: 2, page: 1, limit: 20, totalPages: 1 }
+        meta: { total: 2, page: 1, limit: 20, totalPages: 1 },
       };
       mockUsersService.findAll.mockResolvedValue(mockResponse);
 
-      const result = await controller.findAll(mockQuery as any, superAdminRequest);
+      const result = await controller.findAll(
+        mockQuery as any,
+        superAdminRequest,
+      );
 
       expect(result).toEqual(mockResponse);
       expect(mockUsersService.findAll).toHaveBeenCalledWith(mockQuery);
@@ -138,7 +153,10 @@ describe('UsersController', () => {
       const result = await controller.findOne('user-id', mockRequest);
 
       expect(result).toEqual(user);
-      expect(mockUsersService.findOne).toHaveBeenCalledWith('user-id', mockRequest.user);
+      expect(mockUsersService.findOne).toHaveBeenCalledWith(
+        'user-id',
+        mockRequest.user,
+      );
     });
   });
 
@@ -152,13 +170,17 @@ describe('UsersController', () => {
       const updatedUser = { id: 'user-id', ...updateUserDto };
       mockUsersService.update.mockResolvedValue(updatedUser);
 
-      const result = await controller.update('user-id', updateUserDto, mockRequest);
+      const result = await controller.update(
+        'user-id',
+        updateUserDto,
+        mockRequest,
+      );
 
       expect(result).toEqual(updatedUser);
       expect(mockUsersService.update).toHaveBeenCalledWith(
         'user-id',
         updateUserDto,
-        mockRequest.user
+        mockRequest.user,
       );
     });
   });
@@ -167,19 +189,28 @@ describe('UsersController', () => {
     it('should reset user password', async () => {
       const resetPasswordDto = { new_password: 'NewPassword123!' };
       const expectedResult = { message: 'Password reset successfully' };
+      const mockUser = {
+        id: 'user-id',
+        email: 'test@example.com',
+        tenant: {
+          id: 'tenant-id',
+          name: 'test-tenant',
+        },
+      };
+      mockUsersService.findOne.mockResolvedValue(mockUser);
       mockUsersService.resetPassword.mockResolvedValue(expectedResult);
 
       const result = await controller.resetPassword(
         'user-id',
         resetPasswordDto,
-        mockRequest
+        mockRequest,
       );
 
       expect(result).toEqual(expectedResult);
       expect(mockUsersService.resetPassword).toHaveBeenCalledWith(
         'user-id',
         resetPasswordDto.new_password,
-        mockRequest.user
+        mockRequest.user,
       );
     });
   });
@@ -187,12 +218,24 @@ describe('UsersController', () => {
   describe('remove', () => {
     it('should deactivate a user', async () => {
       const expectedResult = { message: 'User deactivated' };
+      const mockUser = {
+        id: 'user-id',
+        email: 'test@example.com',
+        tenant: {
+          id: 'tenant-id',
+          name: 'test-tenant',
+        },
+      };
+      mockUsersService.findOne.mockResolvedValue(mockUser);
       mockUsersService.remove.mockResolvedValue(expectedResult);
 
       const result = await controller.remove('user-id', mockRequest);
 
       expect(result).toEqual(expectedResult);
-      expect(mockUsersService.remove).toHaveBeenCalledWith('user-id', mockRequest.user);
+      expect(mockUsersService.remove).toHaveBeenCalledWith(
+        'user-id',
+        mockRequest.user,
+      );
     });
   });
 });

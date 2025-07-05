@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { TestAppModule } from './test-app.module';
 import { DataSource } from 'typeorm';
 import { UserRole } from '../src/auth/entities/user.entity';
 import * as bcrypt from 'bcrypt';
@@ -14,42 +14,58 @@ describe('Admin (e2e)', () => {
   let tenantId: string | null;
 
   // Helper to generate unique test data names
-  const getUniqueName = (prefix: string) => `test-e2e-${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const getUniqueName = (prefix: string) =>
+    `test-e2e-${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [TestAppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(DataSource);
-    
+
     // Clean up any existing test data first
     await cleanupTestData(dataSource);
-    
+
     // Use unique IDs for this test suite with timestamp to avoid conflicts
     const timestamp = Date.now();
     const adminTenantId = 'a1111111-1111-1111-1111-111111111111';
     const adminUserId = 'a2222222-2222-2222-2222-222222222222';
-    
+
     // Create super admin tenant and user
-    await dataSource.query(`
+    await dataSource.query(
+      `
       INSERT INTO tenants (id, name, display_name, is_active) 
       VALUES ($1, $2, 'Test E2E Super Admin Tenant', true)
-    `, [adminTenantId, `test-e2e-super-admin-tenant-${timestamp}`]);
-    
+    `,
+      [adminTenantId, `test-e2e-super-admin-tenant-${timestamp}`],
+    );
+
     const hashedPassword = await bcrypt.hash('testpassword', 12);
-    await dataSource.query(`
+    await dataSource.query(
+      `
       INSERT INTO users (id, email, password, first_name, last_name, role, tenant_id, is_active) 
       VALUES ($1, $2, $3, 'Super', 'Admin', $4, $5, true)
-    `, [adminUserId, `super@test-e2e-admin-${timestamp}.com`, hashedPassword, UserRole.SUPER_ADMIN, adminTenantId]);
+    `,
+      [
+        adminUserId,
+        `super@test-e2e-admin-${timestamp}.com`,
+        hashedPassword,
+        UserRole.SUPER_ADMIN,
+        adminTenantId,
+      ],
+    );
 
     // Login to get token
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: `super@test-e2e-admin-${timestamp}.com`, password: 'testpassword' })
+      .send({
+        email: `super@test-e2e-admin-${timestamp}.com`,
+        password: 'testpassword',
+      })
       .expect(200);
 
     superAdminToken = loginResponse.body.access_token;
@@ -64,7 +80,9 @@ describe('Admin (e2e)', () => {
   afterEach(async () => {
     // Clean up test tenants and their users
     if (tenantId) {
-      await dataSource.query('DELETE FROM users WHERE tenant_id = $1', [tenantId]);
+      await dataSource.query('DELETE FROM users WHERE tenant_id = $1', [
+        tenantId,
+      ]);
       await dataSource.query('DELETE FROM tenants WHERE id = $1', [tenantId]);
       tenantId = null;
     }
@@ -77,7 +95,7 @@ describe('Admin (e2e)', () => {
         .get('/auth/profile')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .expect(200);
-      
+
       expect(profileResponse.body.role).toBe(UserRole.SUPER_ADMIN);
       const timestamp = Date.now();
       const createTenantDto = {
@@ -204,8 +222,8 @@ describe('Admin (e2e)', () => {
 
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body.length).toBeGreaterThan(0);
-      
-      const testTenant = response.body.find(t => t.id === tenantId);
+
+      const testTenant = response.body.find((t: any) => t.id === tenantId);
       expect(testTenant).toBeDefined();
       expect(testTenant).toBeDefined();
     });
@@ -275,7 +293,10 @@ describe('Admin (e2e)', () => {
       expect(response.body).toHaveProperty('total_users', 1);
       expect(response.body).toHaveProperty('active_users', 1);
       expect(response.body).toHaveProperty('users_by_role');
-      expect(response.body.users_by_role).toHaveProperty(UserRole.GARAGE_ADMIN, 1);
+      expect(response.body.users_by_role).toHaveProperty(
+        UserRole.GARAGE_ADMIN,
+        1,
+      );
     });
   });
 

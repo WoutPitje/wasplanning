@@ -1,4 +1,10 @@
-import { IsOptional, IsEnum, IsString, IsUUID, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsString,
+  IsUUID,
+  IsBoolean,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { UserRole } from '../../auth/entities/user.entity';
@@ -11,16 +17,18 @@ export class GetUsersQueryDto extends PaginationDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ 
-    enum: UserRole, 
+  @ApiPropertyOptional({
+    enum: UserRole,
     description: 'Filter by role',
-    example: UserRole.WERKPLAATS
+    example: UserRole.WERKPLAATS,
   })
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
 
-  @ApiPropertyOptional({ description: 'Filter by tenant ID (super admin only)' })
+  @ApiPropertyOptional({
+    description: 'Filter by tenant ID (super admin only)',
+  })
   @IsOptional()
   @IsUUID()
   tenant?: string;
@@ -31,19 +39,19 @@ export class GetUsersQueryDto extends PaginationDto {
   @IsBoolean()
   is_active?: boolean;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Field to sort by',
     default: 'created_at',
-    enum: ['created_at', 'email', 'first_name', 'last_name', 'last_login']
+    enum: ['created_at', 'email', 'first_name', 'last_name', 'last_login'],
   })
   @IsOptional()
   @IsString()
   sortBy?: string = 'created_at';
 
-  @ApiPropertyOptional({ 
-    description: 'Sort order', 
+  @ApiPropertyOptional({
+    description: 'Sort order',
     enum: ['ASC', 'DESC'],
-    default: 'DESC' 
+    default: 'DESC',
   })
   @IsOptional()
   @IsEnum(['ASC', 'DESC'])

@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { UserRole } from './entities/user.entity';
+import { AuditService } from '../audit/audit.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -54,6 +55,12 @@ describe('AuthController', () => {
           provide: AuthService,
           useValue: mockAuthService,
         },
+        {
+          provide: AuditService,
+          useValue: {
+            logAction: jest.fn(),
+          },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -76,8 +83,14 @@ describe('AuthController', () => {
         email: 'test@example.com',
         password: 'testpassword',
       };
-      
-      const mockRequest = { user: mockUser };
+
+      const mockRequest = { 
+        user: mockUser,
+        ip: '127.0.0.1',
+        headers: {
+          'user-agent': 'test-agent',
+        },
+      };
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
       const result = await controller.login(loginDto, mockRequest);
@@ -102,14 +115,14 @@ describe('AuthController', () => {
       const refreshTokenDto = {
         refresh_token: 'valid-refresh-token',
       };
-      
+
       mockAuthService.refreshToken.mockResolvedValue(mockAuthResponse);
 
       const result = await controller.refresh(refreshTokenDto);
 
       expect(result).toEqual(mockAuthResponse);
       expect(mockAuthService.refreshToken).toHaveBeenCalledWith(
-        refreshTokenDto.refresh_token
+        refreshTokenDto.refresh_token,
       );
     });
 
@@ -153,9 +166,18 @@ describe('AuthController', () => {
     });
 
     it('should have correct API operations', () => {
-      const loginOperation = Reflect.getMetadata('swagger/apiOperation', controller.login);
-      const refreshOperation = Reflect.getMetadata('swagger/apiOperation', controller.refresh);
-      const profileOperation = Reflect.getMetadata('swagger/apiOperation', controller.getProfile);
+      const loginOperation = Reflect.getMetadata(
+        'swagger/apiOperation',
+        controller.login,
+      );
+      const refreshOperation = Reflect.getMetadata(
+        'swagger/apiOperation',
+        controller.refresh,
+      );
+      const profileOperation = Reflect.getMetadata(
+        'swagger/apiOperation',
+        controller.getProfile,
+      );
 
       expect(loginOperation).toEqual({ summary: 'User login' });
       expect(refreshOperation).toEqual({ summary: 'Refresh access token' });

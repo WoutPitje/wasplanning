@@ -60,12 +60,24 @@ export class CreateFilesTable1751706013745 implements MigrationInterface {
     `);
 
     // Create indexes for performance
-    await queryRunner.query(`CREATE INDEX "IDX_files_tenant_id" ON "files" ("tenant_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_files_user_id" ON "files" ("user_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_files_category" ON "files" ("category")`);
-    await queryRunner.query(`CREATE INDEX "IDX_files_created_at" ON "files" ("created_at")`);
-    await queryRunner.query(`CREATE INDEX "IDX_files_stored_filename" ON "files" ("stored_filename")`);
-    await queryRunner.query(`CREATE INDEX "IDX_files_bucket_object" ON "files" ("bucket_name", "object_key")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_files_tenant_id" ON "files" ("tenant_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_files_user_id" ON "files" ("user_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_files_category" ON "files" ("category")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_files_created_at" ON "files" ("created_at")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_files_stored_filename" ON "files" ("stored_filename")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_files_bucket_object" ON "files" ("bucket_name", "object_key")`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -78,8 +90,12 @@ export class CreateFilesTable1751706013745 implements MigrationInterface {
     await queryRunner.query(`DROP INDEX "IDX_files_tenant_id"`);
 
     // Drop foreign key constraints
-    await queryRunner.query(`ALTER TABLE "files" DROP CONSTRAINT "FK_files_user_id"`);
-    await queryRunner.query(`ALTER TABLE "files" DROP CONSTRAINT "FK_files_tenant_id"`);
+    await queryRunner.query(
+      `ALTER TABLE "files" DROP CONSTRAINT "FK_files_user_id"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "files" DROP CONSTRAINT "FK_files_tenant_id"`,
+    );
 
     // Drop table
     await queryRunner.query(`DROP TABLE "files"`);

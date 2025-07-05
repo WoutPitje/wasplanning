@@ -1,4 +1,8 @@
-import { generateStoragePath, sanitizeFilename, generateUniqueFilename } from './file-naming.util';
+import {
+  generateStoragePath,
+  sanitizeFilename,
+  generateUniqueFilename,
+} from './file-naming.util';
 import { v4 as uuidv4 } from 'uuid';
 
 // Mock uuid to have predictable tests
@@ -8,7 +12,7 @@ jest.mock('uuid', () => ({
 
 describe('File Naming Utilities', () => {
   const mockUuid = '123e4567-e89b-12d3-a456-426614174000';
-  
+
   beforeEach(() => {
     jest.clearAllMocks();
     (uuidv4 as jest.Mock).mockReturnValue(mockUuid);
@@ -23,46 +27,70 @@ describe('File Naming Utilities', () => {
 
   describe('generateStoragePath', () => {
     it('should generate correct storage path with all parameters (tenant isolation at bucket level)', () => {
-      const result = generateStoragePath('tenant-123', 'documents', 'report.pdf');
-      expect(result).toBe('documents/2024/03/123e4567-e89b-12d3-a456-426614174000-report.pdf');
+      const result = generateStoragePath(
+        'tenant-123',
+        'documents',
+        'report.pdf',
+      );
+      expect(result).toBe(
+        'documents/2024/03/123e4567-e89b-12d3-a456-426614174000-report.pdf',
+      );
     });
 
     it('should handle different categories', () => {
       const result = generateStoragePath('tenant-456', 'images', 'photo.jpg');
-      expect(result).toBe('images/2024/03/123e4567-e89b-12d3-a456-426614174000-photo.jpg');
+      expect(result).toBe(
+        'images/2024/03/123e4567-e89b-12d3-a456-426614174000-photo.jpg',
+      );
     });
 
     it('should handle filenames with special characters', () => {
-      const result = generateStoragePath('tenant-789', 'receipts', 'receipt #123 (copy).pdf');
-      expect(result).toBe('receipts/2024/03/123e4567-e89b-12d3-a456-426614174000-receipt-123-copy.pdf');
+      const result = generateStoragePath(
+        'tenant-789',
+        'receipts',
+        'receipt #123 (copy).pdf',
+      );
+      expect(result).toBe(
+        'receipts/2024/03/123e4567-e89b-12d3-a456-426614174000-receipt-123-copy.pdf',
+      );
     });
 
     it('should pad single-digit months with zero', () => {
       jest.setSystemTime(new Date('2024-01-05T10:00:00.000Z'));
       const result = generateStoragePath('tenant-001', 'documents', 'file.txt');
-      expect(result).toBe('documents/2024/01/123e4567-e89b-12d3-a456-426614174000-file.txt');
+      expect(result).toBe(
+        'documents/2024/01/123e4567-e89b-12d3-a456-426614174000-file.txt',
+      );
     });
 
     it('should handle December correctly', () => {
       jest.setSystemTime(new Date('2024-12-25T10:00:00.000Z'));
       const result = generateStoragePath('tenant-002', 'images', 'holiday.png');
-      expect(result).toBe('images/2024/12/123e4567-e89b-12d3-a456-426614174000-holiday.png');
+      expect(result).toBe(
+        'images/2024/12/123e4567-e89b-12d3-a456-426614174000-holiday.png',
+      );
     });
 
     it('should handle empty tenant ID (tenant isolation at bucket level)', () => {
       const result = generateStoragePath('', 'documents', 'file.pdf');
-      expect(result).toBe('documents/2024/03/123e4567-e89b-12d3-a456-426614174000-file.pdf');
+      expect(result).toBe(
+        'documents/2024/03/123e4567-e89b-12d3-a456-426614174000-file.pdf',
+      );
     });
 
     it('should handle empty category', () => {
       const result = generateStoragePath('tenant-123', '', 'file.pdf');
-      expect(result).toBe('/2024/03/123e4567-e89b-12d3-a456-426614174000-file.pdf');
+      expect(result).toBe(
+        '/2024/03/123e4567-e89b-12d3-a456-426614174000-file.pdf',
+      );
     });
   });
 
   describe('sanitizeFilename', () => {
     it('should keep alphanumeric characters, hyphens, and underscores', () => {
-      expect(sanitizeFilename('valid-file_name123.pdf')).toBe('valid-file_name123.pdf');
+      expect(sanitizeFilename('valid-file_name123.pdf')).toBe(
+        'valid-file_name123.pdf',
+      );
     });
 
     it('should replace special characters with hyphens', () => {
@@ -133,7 +161,9 @@ describe('File Naming Utilities', () => {
 
     it('should sanitize filename before adding UUID', () => {
       const result = generateUniqueFilename('My Document #1.pdf');
-      expect(result).toBe('123e4567-e89b-12d3-a456-426614174000-my-document-1.pdf');
+      expect(result).toBe(
+        '123e4567-e89b-12d3-a456-426614174000-my-document-1.pdf',
+      );
     });
 
     it('should handle filenames that become empty after sanitization', () => {
@@ -145,10 +175,10 @@ describe('File Naming Utilities', () => {
       (uuidv4 as jest.Mock)
         .mockReturnValueOnce('uuid-1')
         .mockReturnValueOnce('uuid-2');
-      
+
       const result1 = generateUniqueFilename('file.pdf');
       const result2 = generateUniqueFilename('file.pdf');
-      
+
       expect(result1).toBe('uuid-1-file.pdf');
       expect(result2).toBe('uuid-2-file.pdf');
     });
@@ -169,10 +199,16 @@ describe('File Naming Utilities', () => {
       const tenantId = 'tenant-abc';
       const category = 'uploads';
       const originalFilename = 'Invoice #2024-001 (final).PDF';
-      
-      const storagePath = generateStoragePath(tenantId, category, originalFilename);
-      
-      expect(storagePath).toBe('uploads/2024/03/123e4567-e89b-12d3-a456-426614174000-invoice-2024-001-final.PDF');
+
+      const storagePath = generateStoragePath(
+        tenantId,
+        category,
+        originalFilename,
+      );
+
+      expect(storagePath).toBe(
+        'uploads/2024/03/123e4567-e89b-12d3-a456-426614174000-invoice-2024-001-final.PDF',
+      );
       // Tenant isolation is now handled at bucket level, not path level
       expect(storagePath).not.toContain(tenantId);
       expect(storagePath).toContain(category);

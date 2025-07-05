@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreateTenantAndUserTables1720000000001 implements MigrationInterface {
+export class CreateTenantAndUserTables1720000000001
+  implements MigrationInterface
+{
   name = 'CreateTenantAndUserTables1720000000001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -62,10 +64,18 @@ export class CreateTenantAndUserTables1720000000001 implements MigrationInterfac
     `);
 
     // Create indexes for performance
-    await queryRunner.query(`CREATE INDEX "IDX_users_tenant_id" ON "users" ("tenant_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_users_email" ON "users" ("email")`);
-    await queryRunner.query(`CREATE INDEX "IDX_users_role" ON "users" ("role")`);
-    await queryRunner.query(`CREATE INDEX "IDX_tenants_name" ON "tenants" ("name")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_users_tenant_id" ON "users" ("tenant_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_users_email" ON "users" ("email")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_users_role" ON "users" ("role")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_tenants_name" ON "tenants" ("name")`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -76,7 +86,9 @@ export class CreateTenantAndUserTables1720000000001 implements MigrationInterfac
     await queryRunner.query(`DROP INDEX "IDX_users_tenant_id"`);
 
     // Drop foreign key constraint
-    await queryRunner.query(`ALTER TABLE "users" DROP CONSTRAINT "FK_users_tenant_id"`);
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP CONSTRAINT "FK_users_tenant_id"`,
+    );
 
     // Drop tables
     await queryRunner.query(`DROP TABLE "users"`);

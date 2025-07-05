@@ -15,7 +15,13 @@ export default {
     inactive: 'Inactive',
     yes: 'Yes',
     no: 'No',
-    login: 'Login'
+    login: 'Login',
+    all: 'All',
+    actions: 'Actions',
+    showing: 'Showing',
+    of: 'of',
+    previous: 'Previous',
+    next: 'Next'
   },
   
   // App
@@ -208,6 +214,47 @@ export default {
         user_not_found: 'User not found',
         not_impersonating: 'You are not currently impersonating anyone'
       }
+    },
+    
+    // Audit logs
+    audit: {
+      title: 'Audit Logs',
+      filters: 'Filters',
+      action: 'Action',
+      resource: 'Resource',
+      user: 'User',
+      date: 'Date',
+      time: 'Time',
+      ip_address: 'IP Address',
+      details: 'Details',
+      no_logs: 'No audit logs found',
+      export: 'Export',
+      export_csv: 'Export as CSV',
+      view_details: 'View details',
+      filter_by_date: 'Filter by date',
+      filter_by_action: 'Filter by action',
+      filter_by_user: 'Filter by user',
+      start_date: 'Start date',
+      end_date: 'End date',
+      apply_filters: 'Apply filters',
+      clear_filters: 'Clear filters',
+      actions: {
+        'auth.login': 'Logged in',
+        'auth.logout': 'Logged out',
+        'auth.impersonate.start': 'Started impersonation',
+        'auth.impersonate.stop': 'Stopped impersonation',
+        'user.created': 'Created user',
+        'user.updated': 'Updated user',
+        'user.deactivated': 'Deactivated user',
+        'user.password_reset': 'Reset password',
+        'tenant.created': 'Created garage',
+        'tenant.updated': 'Updated garage',
+        'tenant.deactivated': 'Deactivated garage'
+      },
+      resource_types: {
+        user: 'User',
+        tenant: 'Garage'
+      }
     }
   },
   
@@ -298,6 +345,7 @@ export default {
     logout: 'Logout',
     tenants: 'Tenants',
     users: 'Users',
+    auditLogs: 'Audit Logs',
     queue: 'Queue',
     planning: 'Planning',
     myTasks: 'My Tasks',

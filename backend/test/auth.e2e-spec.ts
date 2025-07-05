@@ -47,9 +47,13 @@ describe('Auth (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
-    
-    userRepository = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
-    tenantRepository = moduleFixture.get<Repository<Tenant>>(getRepositoryToken(Tenant));
+
+    userRepository = moduleFixture.get<Repository<User>>(
+      getRepositoryToken(User),
+    );
+    tenantRepository = moduleFixture.get<Repository<Tenant>>(
+      getRepositoryToken(Tenant),
+    );
 
     await app.init();
   });
@@ -168,7 +172,7 @@ describe('Auth (e2e)', () => {
 
     it('should update last_login on successful login', async () => {
       const beforeLogin = new Date();
-      
+
       await request(app.getHttpServer())
         .post('/auth/login')
         .send({
@@ -183,7 +187,9 @@ describe('Auth (e2e)', () => {
 
       expect(updatedUser).toBeDefined();
       expect(updatedUser!.last_login).toBeDefined();
-      expect(updatedUser!.last_login!.getTime()).toBeGreaterThanOrEqual(beforeLogin.getTime());
+      expect(updatedUser!.last_login.getTime()).toBeGreaterThanOrEqual(
+        beforeLogin.getTime(),
+      );
     });
   });
 
@@ -268,9 +274,7 @@ describe('Auth (e2e)', () => {
     });
 
     it('should fail without token', async () => {
-      await request(app.getHttpServer())
-        .get('/auth/profile')
-        .expect(401);
+      await request(app.getHttpServer()).get('/auth/profile').expect(401);
     });
 
     it('should fail with invalid token', async () => {
@@ -343,7 +347,7 @@ describe('Auth (e2e)', () => {
         });
 
       expect(firstResponse.body.user.tenant.id).not.toBe(
-        secondResponse.body.user.tenant.id
+        secondResponse.body.user.tenant.id,
       );
     });
   });
@@ -432,10 +436,10 @@ describe('Auth (e2e)', () => {
           password: 'superadminpass',
         })
         .expect(200);
-      
+
       expect(loginResponse.body).toHaveProperty('access_token');
       expect(loginResponse.body.user.role).toBe(UserRole.SUPER_ADMIN);
-      
+
       superAdminToken = loginResponse.body.access_token;
     });
 
@@ -446,9 +450,9 @@ describe('Auth (e2e)', () => {
           .get('/auth/profile')
           .set('Authorization', `Bearer ${superAdminToken}`)
           .expect(200);
-        
+
         expect(profileResponse.body.role).toBe(UserRole.SUPER_ADMIN);
-        
+
         const response = await request(app.getHttpServer())
           .post(`/auth/impersonate/${targetUser.id}`)
           .set('Authorization', `Bearer ${superAdminToken}`)
@@ -484,7 +488,7 @@ describe('Auth (e2e)', () => {
             email: 'test@example.com',
             password: 'testpassword',
           });
-        
+
         const regularToken = regularLoginResponse.body.access_token;
 
         await request(app.getHttpServer())
@@ -495,7 +499,10 @@ describe('Auth (e2e)', () => {
 
       it('should fail when trying to impersonate another super admin', async () => {
         // Create another super admin
-        const anotherSuperAdminPassword = await bcrypt.hash('anothersuperpass', 12);
+        const anotherSuperAdminPassword = await bcrypt.hash(
+          'anothersuperpass',
+          12,
+        );
         const anotherSuperAdmin = userRepository.create({
           email: 'anothersuperadmin@example.com',
           password: anotherSuperAdminPassword,
@@ -515,7 +522,7 @@ describe('Auth (e2e)', () => {
 
       it('should fail when trying to impersonate non-existent user', async () => {
         const fakeUserId = '00000000-0000-0000-0000-000000000000';
-        
+
         await request(app.getHttpServer())
           .post(`/auth/impersonate/${fakeUserId}`)
           .set('Authorization', `Bearer ${superAdminToken}`)
@@ -540,7 +547,7 @@ describe('Auth (e2e)', () => {
           .post(`/auth/impersonate/${targetUser.id}`)
           .set('Authorization', `Bearer ${superAdminToken}`)
           .expect(201);
-        
+
         const impersonatedToken = impersonateResponse.body.access_token;
 
         // Then stop impersonation

@@ -1,4 +1,10 @@
-import { IsOptional, IsString, ValidateNested, IsObject, IsEnum } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  ValidateNested,
+  IsObject,
+  IsEnum,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -12,34 +18,34 @@ export enum FileCategory {
 }
 
 export class FileMetadataDto {
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'File category',
     enum: FileCategory,
-    example: FileCategory.INVOICE
+    example: FileCategory.INVOICE,
   })
   @IsOptional()
   @IsEnum(FileCategory)
   category?: FileCategory;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Related entity type',
-    example: 'wash-task'
+    example: 'wash-task',
   })
   @IsOptional()
   @IsString()
   related_entity?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Related entity ID',
-    example: '123e4567-e89b-12d3-a456-426614174000'
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsOptional()
   @IsString()
   entity_id?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Additional metadata',
-    example: { custom_field: 'value' }
+    example: { custom_field: 'value' },
   })
   @IsOptional()
   @IsObject()
@@ -54,26 +60,26 @@ export class FileUploadDto {
   })
   file: any;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Custom path within the tenant bucket',
-    example: 'documents/2024/invoices'
+    example: 'documents/2024/invoices',
   })
   @IsOptional()
   @IsString()
   path?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'File metadata',
-    type: FileMetadataDto
+    type: FileMetadataDto,
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => FileMetadataDto)
   metadata?: FileMetadataDto;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'File description',
-    example: 'Invoice for wash service on 2024-01-15'
+    example: 'Invoice for wash service on 2024-01-15',
   })
   @IsOptional()
   @IsString()

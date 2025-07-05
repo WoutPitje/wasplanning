@@ -4,7 +4,7 @@ import { NoImpersonationGuard } from '../guards/no-impersonation.guard';
 /**
  * Decorator that prevents access to an endpoint while impersonating another user.
  * Use this on sensitive operations like password changes, user deletion, etc.
- * 
+ *
  * @example
  * ```typescript
  * @NoImpersonation()

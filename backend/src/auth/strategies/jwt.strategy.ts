@@ -16,9 +16,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private userRepository: Repository<User>,
   ) {
     const jwtSecret = configService.get<string>('JWT_SECRET');
-    
+
     if (!jwtSecret) {
-      throw new Error('JWT_SECRET environment variable is required but not set');
+      throw new Error(
+        'JWT_SECRET environment variable is required but not set',
+      );
     }
 
     super({
@@ -38,7 +40,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
 
       if (!impersonatedUser) {
-        throw new UnauthorizedException('Impersonated user not found or inactive');
+        throw new UnauthorizedException(
+          'Impersonated user not found or inactive',
+        );
       }
 
       // Verify the impersonator still exists and is active
@@ -52,12 +56,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
 
       // Check if impersonator's tenant is active (unless they're super admin)
-      if (impersonator.role !== UserRole.SUPER_ADMIN && !impersonator.tenant.is_active) {
+      if (
+        impersonator.role !== UserRole.SUPER_ADMIN &&
+        !impersonator.tenant.is_active
+      ) {
         throw new UnauthorizedException('Impersonator tenant is inactive');
       }
 
       // Check if impersonated user's tenant is active (unless they're super admin)
-      if (impersonatedUser.role !== UserRole.SUPER_ADMIN && !impersonatedUser.tenant.is_active) {
+      if (
+        impersonatedUser.role !== UserRole.SUPER_ADMIN &&
+        !impersonatedUser.tenant.is_active
+      ) {
         throw new UnauthorizedException('Impersonated user tenant is inactive');
       }
 

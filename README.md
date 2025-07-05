@@ -10,6 +10,7 @@ A real-time vehicle wash management system for auto service centers, coordinatin
 - **Mobile Responsive** - Fully responsive from 320px width, optimized for all devices
 - **Real-time Updates** - WebSocket notifications for instant status changes
 - **Multi-language Support** - Dutch (primary) and English interface translations
+- **Audit Logging** - Complete audit trail for compliance and security monitoring
 
 ## Tech Stack
 
@@ -68,6 +69,7 @@ wasplanning/
 ├── backend/              # NestJS API
 │   ├── src/
 │   │   ├── admin/       # Admin/tenant management
+│   │   ├── audit/       # Audit logging module
 │   │   ├── auth/        # Authentication & authorization
 │   │   ├── users/       # User management
 │   │   ├── storage/     # File storage (MinIO)
@@ -260,6 +262,54 @@ The frontend is designed to be fully responsive and functional on all devices:
 - **Navigation**: Hamburger menu pattern for mobile
 - **Typography**: Minimum 14px font size on mobile
 - **Spacing**: Touch-friendly padding and margins
+
+## Audit Logging
+
+The system includes comprehensive audit logging for security and compliance:
+
+### Features
+- **Complete Activity Tracking**: All user actions are logged with timestamp, IP address, and details
+- **Multi-tenant Isolation**: Each tenant's audit logs are completely isolated
+- **Role-based Access**: Super admins and garage admins can view audit logs
+- **Advanced Filtering**: Filter by user, action type, resource, or date range
+- **CSV Export**: Export audit logs for compliance reporting
+- **Non-blocking**: Audit failures don't impact application functionality
+
+### Tracked Actions
+- **Authentication**: Login, logout, impersonation start/stop
+- **User Management**: Create, update, deactivate users, password resets
+- **Tenant Management**: Create, update, deactivate tenants
+- **File Operations**: Upload, download, delete files (planned)
+- **Vehicle Operations**: Create, update wash requests (planned)
+
+### Implementation for Developers
+When adding new features that require audit logging:
+
+1. Inject the `AuditService` into your controller:
+```typescript
+constructor(private readonly auditService: AuditService) {}
+```
+
+2. Log actions after successful operations:
+```typescript
+await this.auditService.logAction({
+  tenant_id: req.user.tenant.id,
+  user_id: req.user.id,
+  action: 'resource.created',
+  resource_type: 'resource_name',
+  resource_id: resource.id,
+  details: { /* additional context */ },
+  ip_address: req.ip,
+  user_agent: req.headers['user-agent']
+});
+```
+
+3. Use consistent action naming: `resource.action` (e.g., `user.created`, `tenant.updated`)
+
+### Viewing Audit Logs
+- **Super Admin**: Can view all audit logs at `/admin/audit`
+- **Garage Admin**: Can view their tenant's logs at `/garage-admin/audit` (planned)
+- **API Endpoint**: `GET /api/v1/audit` with query parameters for filtering
 
 ## Technical Documentation
 

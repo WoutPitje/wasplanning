@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tenant } from '../auth/entities/tenant.entity';
@@ -22,7 +27,8 @@ export class TenantsService {
   ) {}
 
   private generateTemporaryPassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    const chars =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
     let password = '';
     for (let i = 0; i < 12; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -30,14 +36,18 @@ export class TenantsService {
     return password;
   }
 
-  async create(createTenantDto: CreateTenantDto): Promise<CreateTenantResponseDto> {
+  async create(
+    createTenantDto: CreateTenantDto,
+  ): Promise<CreateTenantResponseDto> {
     // Check if tenant name already exists
     const existingTenant = await this.tenantRepository.findOne({
       where: { name: createTenantDto.name },
     });
 
     if (existingTenant) {
-      throw new ConflictException(`Tenant with name ${createTenantDto.name} already exists`);
+      throw new ConflictException(
+        `Tenant with name ${createTenantDto.name} already exists`,
+      );
     }
 
     // Check if admin email already exists
@@ -46,7 +56,9 @@ export class TenantsService {
     });
 
     if (existingUser) {
-      throw new ConflictException(`User with email ${createTenantDto.admin_email} already exists`);
+      throw new ConflictException(
+        `User with email ${createTenantDto.admin_email} already exists`,
+      );
     }
 
     // Create tenant
@@ -94,7 +106,16 @@ export class TenantsService {
 
   async findAll() {
     const tenants = await this.tenantRepository.find({
-      select: ['id', 'name', 'display_name', 'logo_url', 'language', 'is_active', 'created_at', 'updated_at'],
+      select: [
+        'id',
+        'name',
+        'display_name',
+        'logo_url',
+        'language',
+        'is_active',
+        'created_at',
+        'updated_at',
+      ],
       order: { created_at: 'DESC' },
     });
 
@@ -102,7 +123,7 @@ export class TenantsService {
     const tenantsWithLogos = await Promise.all(
       tenants.map(async (tenant) => {
         let actualLogoUrl = tenant.logo_url;
-        
+
         // If logo is stored in MinIO, generate presigned URL
         if (tenant.logo_url && tenant.logo_url.startsWith('minio:')) {
           try {
@@ -113,12 +134,12 @@ export class TenantsService {
             actualLogoUrl = undefined;
           }
         }
-        
+
         return {
           ...tenant,
           logo_url: actualLogoUrl,
         };
-      })
+      }),
     );
 
     return tenantsWithLogos;
@@ -135,7 +156,7 @@ export class TenantsService {
     }
 
     // Remove password from users
-    tenant.users = tenant.users.map(user => {
+    tenant.users = tenant.users.map((user) => {
       const { password, ...userWithoutPassword } = user;
       return userWithoutPassword as User;
     });
@@ -189,25 +210,34 @@ export class TenantsService {
       throw new NotFoundException(`Tenant with ID ${id} not found`);
     }
 
-    const usersByRole = tenant.users.reduce((acc, user) => {
-      acc[user.role] = (acc[user.role] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const usersByRole = tenant.users.reduce(
+      (acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       tenant_id: tenant.id,
       tenant_name: tenant.name,
       total_users: tenant.users.length,
-      active_users: tenant.users.filter(u => u.is_active).length,
+      active_users: tenant.users.filter((u) => u.is_active).length,
       users_by_role: usersByRole,
       created_at: tenant.created_at,
       last_updated: tenant.updated_at,
     };
   }
 
-  async uploadLogo(tenantId: string, file: Express.Multer.File, userId: string) {
+  async uploadLogo(
+    tenantId: string,
+    file: Express.Multer.File,
+    userId: string,
+  ) {
     // Check if tenant exists
-    const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
+    const tenant = await this.tenantRepository.findOne({
+      where: { id: tenantId },
+    });
     if (!tenant) {
       throw new NotFoundException(`Tenant with ID ${tenantId} not found`);
     }
@@ -224,7 +254,12 @@ export class TenantsService {
           tenant_name: tenant.name,
           previous_logo_url: tenant.logo_url || null,
         },
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        allowedMimeTypes: [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+        ],
         maxSizeBytes: 2 * 1024 * 1024, // 2MB
       });
 
@@ -242,7 +277,9 @@ export class TenantsService {
           await this.storageService.deleteFile(oldFileId, tenantId, userId);
         } catch (error) {
           // Log but don't fail the upload if old logo deletion fails
-          console.warn(`Failed to delete old logo: ${error instanceof Error ? error.message : String(error)}`);
+          console.warn(
+            `Failed to delete old logo: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       }
 
@@ -257,10 +294,15 @@ export class TenantsService {
         logo_url: logoUrl,
         mime_type: uploadedFile.mime_type,
         size_bytes: uploadedFile.size_bytes,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        expires_at: new Date(
+          Date.now() + 7 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
       };
     } catch (error) {
-      if (error instanceof ConflictException || error instanceof NotFoundException) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
       throw new InternalServerErrorException('Failed to upload logo');
@@ -271,7 +313,9 @@ export class TenantsService {
    * Get logo URL for a tenant, handling both external URLs and MinIO-stored files
    */
   async getLogoUrl(tenantId: string): Promise<string | null> {
-    const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
+    const tenant = await this.tenantRepository.findOne({
+      where: { id: tenantId },
+    });
     if (!tenant || !tenant.logo_url) {
       return null;
     }

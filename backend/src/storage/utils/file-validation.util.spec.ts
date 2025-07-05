@@ -1,4 +1,9 @@
-import { validateFileType, validateFileSize, getFileCategory, FileValidationResult } from './file-validation.util';
+import {
+  validateFileType,
+  validateFileSize,
+  getFileCategory,
+  FileValidationResult,
+} from './file-validation.util';
 
 describe('File Validation Utilities', () => {
   describe('validateFileType', () => {
@@ -10,7 +15,7 @@ describe('File Validation Utilities', () => {
     });
 
     it('should return valid for all allowed types', () => {
-      allowedTypes.forEach(type => {
+      allowedTypes.forEach((type) => {
         const result = validateFileType(type, allowedTypes);
         expect(result).toEqual({ isValid: true });
       });
@@ -20,7 +25,8 @@ describe('File Validation Utilities', () => {
       const result = validateFileType('text/plain', allowedTypes);
       expect(result).toEqual({
         isValid: false,
-        error: 'File type text/plain is not allowed. Allowed types: image/jpeg, image/png, application/pdf',
+        error:
+          'File type text/plain is not allowed. Allowed types: image/jpeg, image/png, application/pdf',
       });
     });
 
@@ -36,7 +42,8 @@ describe('File Validation Utilities', () => {
       const result = validateFileType('IMAGE/JPEG', allowedTypes);
       expect(result).toEqual({
         isValid: false,
-        error: 'File type IMAGE/JPEG is not allowed. Allowed types: image/jpeg, image/png, application/pdf',
+        error:
+          'File type IMAGE/JPEG is not allowed. Allowed types: image/jpeg, image/png, application/pdf',
       });
     });
 
@@ -44,7 +51,8 @@ describe('File Validation Utilities', () => {
       const result = validateFileType('', allowedTypes);
       expect(result).toEqual({
         isValid: false,
-        error: 'File type  is not allowed. Allowed types: image/jpeg, image/png, application/pdf',
+        error:
+          'File type  is not allowed. Allowed types: image/jpeg, image/png, application/pdf',
       });
     });
 
@@ -142,8 +150,14 @@ describe('File Validation Utilities', () => {
   describe('getFileCategory', () => {
     describe('Image types', () => {
       it('should categorize image MIME types as images', () => {
-        const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-        imageTypes.forEach(type => {
+        const imageTypes = [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'image/svg+xml',
+        ];
+        imageTypes.forEach((type) => {
           expect(getFileCategory(type)).toBe('images');
         });
       });
@@ -161,12 +175,20 @@ describe('File Validation Utilities', () => {
 
       it('should categorize Microsoft Word documents', () => {
         expect(getFileCategory('application/msword')).toBe('documents');
-        expect(getFileCategory('application/vnd.openxmlformats-officedocument.wordprocessingml.document')).toBe('documents');
+        expect(
+          getFileCategory(
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          ),
+        ).toBe('documents');
       });
 
       it('should categorize Microsoft Excel documents', () => {
         expect(getFileCategory('application/vnd.ms-excel')).toBe('documents');
-        expect(getFileCategory('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')).toBe('documents');
+        expect(
+          getFileCategory(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ),
+        ).toBe('documents');
       });
 
       it('should categorize text files as documents', () => {
@@ -177,8 +199,14 @@ describe('File Validation Utilities', () => {
 
     describe('Video types', () => {
       it('should categorize video MIME types as videos', () => {
-        const videoTypes = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
-        videoTypes.forEach(type => {
+        const videoTypes = [
+          'video/mp4',
+          'video/mpeg',
+          'video/quicktime',
+          'video/x-msvideo',
+          'video/webm',
+        ];
+        videoTypes.forEach((type) => {
           expect(getFileCategory(type)).toBe('videos');
         });
       });
@@ -186,8 +214,14 @@ describe('File Validation Utilities', () => {
 
     describe('Audio types', () => {
       it('should categorize audio MIME types as audio', () => {
-        const audioTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/webm'];
-        audioTypes.forEach(type => {
+        const audioTypes = [
+          'audio/mpeg',
+          'audio/wav',
+          'audio/ogg',
+          'audio/mp3',
+          'audio/webm',
+        ];
+        audioTypes.forEach((type) => {
           expect(getFileCategory(type)).toBe('audio');
         });
       });
@@ -203,7 +237,7 @@ describe('File Validation Utilities', () => {
           'application/x-tar',
           'application/gzip',
         ];
-        archiveTypes.forEach(type => {
+        archiveTypes.forEach((type) => {
           expect(getFileCategory(type)).toBe('archives');
         });
       });

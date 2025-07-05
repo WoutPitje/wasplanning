@@ -50,6 +50,9 @@ describe('JwtStrategy', () => {
   };
 
   beforeEach(async () => {
+    // Set JWT_SECRET before creating module
+    mockConfigService.get.mockReturnValue('test-jwt-secret');
+    
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JwtStrategy,
@@ -67,8 +70,6 @@ describe('JwtStrategy', () => {
     strategy = module.get<JwtStrategy>(JwtStrategy);
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
     configService = module.get<ConfigService>(ConfigService);
-
-    mockConfigService.get.mockReturnValue('test-jwt-secret');
   });
 
   afterEach(() => {
@@ -104,10 +105,10 @@ describe('JwtStrategy', () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(strategy.validate(mockJwtPayload)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
       await expect(strategy.validate(mockJwtPayload)).rejects.toThrow(
-        'User not found or inactive'
+        'User not found or inactive',
       );
     });
 
@@ -115,7 +116,7 @@ describe('JwtStrategy', () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(strategy.validate(mockJwtPayload)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
     });
 
@@ -127,10 +128,10 @@ describe('JwtStrategy', () => {
       mockUserRepository.findOne.mockResolvedValue(userWithInactiveTenant);
 
       await expect(strategy.validate(mockJwtPayload)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
       await expect(strategy.validate(mockJwtPayload)).rejects.toThrow(
-        'Tenant is inactive'
+        'Tenant is inactive',
       );
     });
 
@@ -144,7 +145,9 @@ describe('JwtStrategy', () => {
         ...mockJwtPayload,
         role: UserRole.SUPER_ADMIN,
       };
-      mockUserRepository.findOne.mockResolvedValue(superAdminWithInactiveTenant);
+      mockUserRepository.findOne.mockResolvedValue(
+        superAdminWithInactiveTenant,
+      );
 
       const result = await strategy.validate(superAdminPayload);
 
@@ -165,7 +168,7 @@ describe('JwtStrategy', () => {
       for (const role of roles) {
         const userWithRole = { ...mockUser, role };
         const payloadWithRole = { ...mockJwtPayload, role };
-        
+
         mockUserRepository.findOne.mockResolvedValue(userWithRole);
 
         const result = await strategy.validate(payloadWithRole);

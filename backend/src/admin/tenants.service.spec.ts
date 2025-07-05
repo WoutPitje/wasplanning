@@ -83,7 +83,9 @@ describe('TenantsService', () => {
     }).compile();
 
     service = module.get<TenantsService>(TenantsService);
-    tenantRepository = module.get<Repository<Tenant>>(getRepositoryToken(Tenant));
+    tenantRepository = module.get<Repository<Tenant>>(
+      getRepositoryToken(Tenant),
+    );
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
     authService = module.get<AuthService>(AuthService);
   });
@@ -138,10 +140,10 @@ describe('TenantsService', () => {
       mockTenantRepository.findOne.mockResolvedValue(mockTenant);
 
       await expect(service.create(createTenantDto)).rejects.toThrow(
-        ConflictException
+        ConflictException,
       );
       await expect(service.create(createTenantDto)).rejects.toThrow(
-        `Tenant with name ${createTenantDto.name} already exists`
+        `Tenant with name ${createTenantDto.name} already exists`,
       );
     });
 
@@ -150,24 +152,36 @@ describe('TenantsService', () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
 
       await expect(service.create(createTenantDto)).rejects.toThrow(
-        ConflictException
+        ConflictException,
       );
       await expect(service.create(createTenantDto)).rejects.toThrow(
-        `User with email ${createTenantDto.admin_email} already exists`
+        `User with email ${createTenantDto.admin_email} already exists`,
       );
     });
   });
 
   describe('findAll', () => {
     it('should return all tenants', async () => {
-      const tenants = [mockTenant, { ...mockTenant, id: 'tenant-2', name: 'garage-2' }];
+      const tenants = [
+        mockTenant,
+        { ...mockTenant, id: 'tenant-2', name: 'garage-2' },
+      ];
       mockTenantRepository.find.mockResolvedValue(tenants);
 
       const result = await service.findAll();
 
       expect(result).toEqual(tenants);
       expect(mockTenantRepository.find).toHaveBeenCalledWith({
-        select: ['id', 'name', 'display_name', 'logo_url', 'language', 'is_active', 'created_at', 'updated_at'],
+        select: [
+          'id',
+          'name',
+          'display_name',
+          'logo_url',
+          'language',
+          'is_active',
+          'created_at',
+          'updated_at',
+        ],
         order: { created_at: 'DESC' },
       });
     });
@@ -194,7 +208,7 @@ describe('TenantsService', () => {
       mockTenantRepository.findOne.mockResolvedValue(null);
 
       await expect(service.findOne('invalid-id')).rejects.toThrow(
-        NotFoundException
+        NotFoundException,
       );
     });
   });
@@ -216,7 +230,7 @@ describe('TenantsService', () => {
       expect(result).toMatchObject(updateTenantDto);
       expect(mockTenantRepository.update).toHaveBeenCalledWith(
         mockTenant.id,
-        updateTenantDto
+        updateTenantDto,
       );
     });
 
@@ -224,7 +238,7 @@ describe('TenantsService', () => {
       mockTenantRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.update('invalid-id', updateTenantDto)
+        service.update('invalid-id', updateTenantDto),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -239,17 +253,16 @@ describe('TenantsService', () => {
       expect(result).toEqual({
         message: `Tenant ${mockTenant.name} has been deactivated`,
       });
-      expect(mockTenantRepository.update).toHaveBeenCalledWith(
-        mockTenant.id,
-        { is_active: false }
-      );
+      expect(mockTenantRepository.update).toHaveBeenCalledWith(mockTenant.id, {
+        is_active: false,
+      });
     });
 
     it('should throw NotFoundException if tenant not found', async () => {
       mockTenantRepository.findOne.mockResolvedValue(null);
 
       await expect(service.remove('invalid-id')).rejects.toThrow(
-        NotFoundException
+        NotFoundException,
       );
     });
   });
@@ -261,7 +274,12 @@ describe('TenantsService', () => {
         users: [
           { ...mockUser, role: UserRole.GARAGE_ADMIN },
           { ...mockUser, id: 'user-2', role: UserRole.WASSERS },
-          { ...mockUser, id: 'user-3', role: UserRole.WASSERS, is_active: false },
+          {
+            ...mockUser,
+            id: 'user-3',
+            role: UserRole.WASSERS,
+            is_active: false,
+          },
         ],
       };
       mockTenantRepository.findOne.mockResolvedValue(tenantWithUsers);
@@ -286,7 +304,7 @@ describe('TenantsService', () => {
       mockTenantRepository.findOne.mockResolvedValue(null);
 
       await expect(service.getStats('invalid-id')).rejects.toThrow(
-        NotFoundException
+        NotFoundException,
       );
     });
   });
@@ -295,7 +313,7 @@ describe('TenantsService', () => {
     it('should generate a 12-character password', () => {
       // Access private method through instance
       const password = (service as any).generateTemporaryPassword();
-      
+
       expect(password).toHaveLength(12);
       expect(password).toMatch(/^[A-HJ-NP-Za-hj-kmnp-z2-9!@#$%]+$/);
     });

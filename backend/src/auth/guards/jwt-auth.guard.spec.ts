@@ -14,7 +14,7 @@ describe('JwtAuthGuard', () => {
   const createMockExecutionContext = (isPublic = false): ExecutionContext => {
     const mockHandler = {};
     const mockClass = {};
-    
+
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(isPublic);
 
     return {
@@ -32,9 +32,9 @@ describe('JwtAuthGuard', () => {
   describe('canActivate', () => {
     it('should return true for public routes', () => {
       const context = createMockExecutionContext(true);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
       expect(reflector.getAllAndOverride).toHaveBeenCalledWith('isPublic', [
         context.getHandler(),
@@ -44,11 +44,14 @@ describe('JwtAuthGuard', () => {
 
     it('should call super.canActivate for protected routes', () => {
       const context = createMockExecutionContext(false);
-      const superCanActivate = jest.spyOn(Object.getPrototypeOf(JwtAuthGuard.prototype), 'canActivate');
+      const superCanActivate = jest.spyOn(
+        Object.getPrototypeOf(JwtAuthGuard.prototype),
+        'canActivate',
+      );
       superCanActivate.mockReturnValue(true);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(superCanActivate).toHaveBeenCalledWith(context);
       expect(reflector.getAllAndOverride).toHaveBeenCalledWith('isPublic', [
         context.getHandler(),
@@ -58,9 +61,9 @@ describe('JwtAuthGuard', () => {
 
     it('should check metadata keys in correct order', () => {
       const context = createMockExecutionContext(false);
-      
+
       guard.canActivate(context);
-      
+
       expect(reflector.getAllAndOverride).toHaveBeenCalledWith('isPublic', [
         context.getHandler(),
         context.getClass(),

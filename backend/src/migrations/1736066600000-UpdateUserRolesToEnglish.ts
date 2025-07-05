@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class UpdateUserRolesToEnglish1736066600000 implements MigrationInterface {
+export class UpdateUserRolesToEnglish1736066600000
+  implements MigrationInterface
+{
   name = 'UpdateUserRolesToEnglish1736066600000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -17,7 +19,9 @@ export class UpdateUserRolesToEnglish1736066600000 implements MigrationInterface
     `);
 
     // Update the default value constraint to null temporarily
-    await queryRunner.query(`ALTER TABLE "users" ALTER COLUMN "role" DROP DEFAULT`);
+    await queryRunner.query(
+      `ALTER TABLE "users" ALTER COLUMN "role" DROP DEFAULT`,
+    );
 
     // Change the column to use the new enum, mapping old values to new ones
     await queryRunner.query(`
@@ -34,7 +38,9 @@ export class UpdateUserRolesToEnglish1736066600000 implements MigrationInterface
     `);
 
     // Set the new default
-    await queryRunner.query(`ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'workshop'`);
+    await queryRunner.query(
+      `ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'workshop'`,
+    );
 
     // Drop the old enum type
     await queryRunner.query(`DROP TYPE "user_role"`);
@@ -57,7 +63,9 @@ export class UpdateUserRolesToEnglish1736066600000 implements MigrationInterface
     `);
 
     // Drop the default value constraint temporarily
-    await queryRunner.query(`ALTER TABLE "users" ALTER COLUMN "role" DROP DEFAULT`);
+    await queryRunner.query(
+      `ALTER TABLE "users" ALTER COLUMN "role" DROP DEFAULT`,
+    );
 
     // Change the column to use the old enum
     await queryRunner.query(`
@@ -74,7 +82,9 @@ export class UpdateUserRolesToEnglish1736066600000 implements MigrationInterface
     `);
 
     // Set the old default
-    await queryRunner.query(`ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'werkplaats'`);
+    await queryRunner.query(
+      `ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'werkplaats'`,
+    );
 
     // Drop the new enum type
     await queryRunner.query(`DROP TYPE "user_role"`);

@@ -11,9 +11,7 @@ describe('NoImpersonationGuard', () => {
     guard = new NoImpersonationGuard(reflector);
   });
 
-  const createMockExecutionContext = (
-    user: any = null
-  ): ExecutionContext => {
+  const createMockExecutionContext = (user: any = null): ExecutionContext => {
     const mockRequest = { user };
 
     return {
@@ -31,50 +29,48 @@ describe('NoImpersonationGuard', () => {
   };
 
   describe('canActivate', () => {
-
     it('should return false when user is not present', () => {
       const context = createMockExecutionContext(null);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(false);
     });
 
     it('should return true when user is not impersonating', () => {
       const user = { id: '123', email: 'user@example.com' };
       const context = createMockExecutionContext(user);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
     });
 
     it('should return true when is_impersonating is false', () => {
       const user = { id: '123', impersonation: { is_impersonating: false } };
       const context = createMockExecutionContext(user);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
     });
 
     it('should throw ForbiddenException when user is impersonating', () => {
-      const user = { 
-        id: '123', 
+      const user = {
+        id: '123',
         email: 'target@example.com',
         impersonation: {
           is_impersonating: true,
           impersonator_id: '456',
-          impersonator_email: 'admin@example.com'
-        }
+          impersonator_email: 'admin@example.com',
+        },
       };
       const context = createMockExecutionContext(user);
-      
+
       expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
       expect(() => guard.canActivate(context)).toThrow(
-        'This action is not allowed while impersonating another user'
+        'This action is not allowed while impersonating another user',
       );
     });
-
   });
 });

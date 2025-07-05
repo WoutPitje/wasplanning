@@ -89,7 +89,7 @@ export class AuthTestUtils {
   static createMockExecutionContext(
     user: any = null,
     params: any = {},
-    requiredRoles: UserRole[] | null = null
+    requiredRoles: UserRole[] | null = null,
   ) {
     const mockRequest = { user, params };
     const mockHandler = {};
@@ -154,7 +154,7 @@ export class AuthTestUtils {
         role,
         tenant,
         tenant_id: tenant.id,
-      })
+      }),
     );
   }
 
@@ -178,7 +178,7 @@ export class AuthTestUtils {
         email: `user${index}@${tenant.name}.com`,
         tenant,
         tenant_id: tenant.id,
-      })
+      }),
     );
 
     return { tenants, users };

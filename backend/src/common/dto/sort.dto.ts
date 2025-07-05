@@ -7,10 +7,10 @@ export class SortDto {
   @IsString()
   sortBy?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Sort order', 
+  @ApiPropertyOptional({
+    description: 'Sort order',
     enum: ['ASC', 'DESC'],
-    default: 'DESC' 
+    default: 'DESC',
   })
   @IsOptional()
   @IsIn(['ASC', 'DESC'])

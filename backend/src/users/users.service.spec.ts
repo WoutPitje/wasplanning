@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User, UserRole } from '../auth/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
@@ -120,10 +124,10 @@ describe('UsersService', () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
 
       await expect(service.create(createUserDto)).rejects.toThrow(
-        ConflictException
+        ConflictException,
       );
       await expect(service.create(createUserDto)).rejects.toThrow(
-        `User with email ${createUserDto.email} already exists`
+        `User with email ${createUserDto.email} already exists`,
       );
     });
   });
@@ -152,8 +156,8 @@ describe('UsersService', () => {
           total: 2,
           page: 1,
           limit: 20,
-          totalPages: 1
-        }
+          totalPages: 1,
+        },
       });
       expect(queryBuilder.skip).toHaveBeenCalledWith(0);
       expect(queryBuilder.take).toHaveBeenCalledWith(20);
@@ -179,7 +183,7 @@ describe('UsersService', () => {
       expect(result.data).toEqual(users);
       expect(queryBuilder.andWhere).toHaveBeenCalledWith(
         'user.tenant_id = :tenantId',
-        { tenantId: 'tenant-uuid' }
+        { tenantId: 'tenant-uuid' },
       );
     });
   });
@@ -201,7 +205,7 @@ describe('UsersService', () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.findOne('invalid-id', mockCurrentUser)
+        service.findOne('invalid-id', mockCurrentUser),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -210,7 +214,7 @@ describe('UsersService', () => {
       mockUserRepository.findOne.mockResolvedValue(otherTenantUser);
 
       await expect(
-        service.findOne(mockUser.id, mockCurrentUser)
+        service.findOne(mockUser.id, mockCurrentUser),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -239,12 +243,16 @@ describe('UsersService', () => {
         .mockResolvedValueOnce({ ...mockUser, ...updateUserDto });
       mockUserRepository.update.mockResolvedValue({ affected: 1 });
 
-      const result = await service.update(mockUser.id, updateUserDto, mockCurrentUser);
+      const result = await service.update(
+        mockUser.id,
+        updateUserDto,
+        mockCurrentUser,
+      );
 
       expect(result).toMatchObject(updateUserDto);
       expect(mockUserRepository.update).toHaveBeenCalledWith(
         mockUser.id,
-        updateUserDto
+        updateUserDto,
       );
     });
 
@@ -253,10 +261,10 @@ describe('UsersService', () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
 
       await expect(
-        service.update(mockUser.id, dtoWithRole, mockCurrentUser)
+        service.update(mockUser.id, dtoWithRole, mockCurrentUser),
       ).rejects.toThrow(ForbiddenException);
       await expect(
-        service.update(mockUser.id, dtoWithRole, mockCurrentUser)
+        service.update(mockUser.id, dtoWithRole, mockCurrentUser),
       ).rejects.toThrow('Only super admin can change user roles');
     });
 
@@ -272,7 +280,6 @@ describe('UsersService', () => {
 
       expect(result.role).toBe(UserRole.GARAGE_ADMIN);
     });
-
   });
 
   describe('resetPassword', () => {
@@ -286,7 +293,7 @@ describe('UsersService', () => {
       const result = await service.resetPassword(
         mockUser.id,
         newPassword,
-        mockCurrentUser
+        mockCurrentUser,
       );
 
       expect(result).toEqual({ message: 'Password reset successfully' });
@@ -301,7 +308,7 @@ describe('UsersService', () => {
       mockUserRepository.findOne.mockResolvedValue(otherTenantUser);
 
       await expect(
-        service.resetPassword(mockUser.id, newPassword, mockCurrentUser)
+        service.resetPassword(mockUser.id, newPassword, mockCurrentUser),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -326,10 +333,10 @@ describe('UsersService', () => {
       mockUserRepository.findOne.mockResolvedValue(selfUser);
 
       await expect(
-        service.remove(selfUser.id, mockCurrentUser)
+        service.remove(selfUser.id, mockCurrentUser),
       ).rejects.toThrow(ForbiddenException);
       await expect(
-        service.remove(selfUser.id, mockCurrentUser)
+        service.remove(selfUser.id, mockCurrentUser),
       ).rejects.toThrow('Cannot deactivate your own account');
     });
 
@@ -337,7 +344,7 @@ describe('UsersService', () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.remove('invalid-id', mockCurrentUser)
+        service.remove('invalid-id', mockCurrentUser),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -345,7 +352,7 @@ describe('UsersService', () => {
   describe('generateTemporaryPassword', () => {
     it('should generate a 12-character password', () => {
       const password = (service as any).generateTemporaryPassword();
-      
+
       expect(password).toHaveLength(12);
       expect(password).toMatch(/^[A-HJ-NP-Za-hj-kmnp-z2-9!@#$%]+$/);
     });

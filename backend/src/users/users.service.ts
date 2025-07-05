@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from '../auth/entities/user.entity';
@@ -18,7 +23,8 @@ export class UsersService {
   ) {}
 
   private generateTemporaryPassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    const chars =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
     let password = '';
     for (let i = 0; i < 12; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -33,7 +39,9 @@ export class UsersService {
     });
 
     if (existingUser) {
-      throw new ConflictException(`User with email ${createUserDto.email} already exists`);
+      throw new ConflictException(
+        `User with email ${createUserDto.email} already exists`,
+      );
     }
 
     // Generate temporary password if not provided
@@ -67,7 +75,8 @@ export class UsersService {
       sortOrder = 'DESC',
     } = queryDto;
 
-    const query = this.userRepository.createQueryBuilder('user')
+    const query = this.userRepository
+      .createQueryBuilder('user')
       .leftJoinAndSelect('user.tenant', 'tenant')
       .select([
         'user.id',
@@ -99,15 +108,23 @@ export class UsersService {
     if (search) {
       query.andWhere(
         '(LOWER(user.email) LIKE LOWER(:search) OR ' +
-        'LOWER(user.first_name) LIKE LOWER(:search) OR ' +
-        'LOWER(user.last_name) LIKE LOWER(:search))',
-        { search: `%${search}%` }
+          'LOWER(user.first_name) LIKE LOWER(:search) OR ' +
+          'LOWER(user.last_name) LIKE LOWER(:search))',
+        { search: `%${search}%` },
       );
     }
 
     // Apply sorting
-    const allowedSortFields = ['created_at', 'email', 'first_name', 'last_name', 'last_login'];
-    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
+    const allowedSortFields = [
+      'created_at',
+      'email',
+      'first_name',
+      'last_name',
+      'last_login',
+    ];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : 'created_at';
     query.orderBy(`user.${sortField}`, sortOrder);
 
     // Apply pagination
@@ -139,7 +156,10 @@ export class UsersService {
     }
 
     // Check if user has access to view this user
-    if (currentUser.role !== UserRole.SUPER_ADMIN && user.tenant_id !== currentUser.tenant.id) {
+    if (
+      currentUser.role !== UserRole.SUPER_ADMIN &&
+      user.tenant_id !== currentUser.tenant.id
+    ) {
       throw new ForbiddenException('Cannot access users from other tenants');
     }
 
@@ -148,7 +168,11 @@ export class UsersService {
     return userWithoutPassword;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto, currentUser: CurrentUser) {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    currentUser: CurrentUser,
+  ) {
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
@@ -156,7 +180,10 @@ export class UsersService {
     }
 
     // Check if user has access to update this user
-    if (currentUser.role !== UserRole.SUPER_ADMIN && user.tenant_id !== currentUser.tenant.id) {
+    if (
+      currentUser.role !== UserRole.SUPER_ADMIN &&
+      user.tenant_id !== currentUser.tenant.id
+    ) {
       throw new ForbiddenException('Cannot update users from other tenants');
     }
 
@@ -173,7 +200,11 @@ export class UsersService {
     return this.findOne(id, currentUser);
   }
 
-  async resetPassword(id: string, newPassword: string, currentUser: CurrentUser) {
+  async resetPassword(
+    id: string,
+    newPassword: string,
+    currentUser: CurrentUser,
+  ) {
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
@@ -181,8 +212,13 @@ export class UsersService {
     }
 
     // Check if user has access to reset this user's password
-    if (currentUser.role !== UserRole.SUPER_ADMIN && user.tenant_id !== currentUser.tenant.id) {
-      throw new ForbiddenException('Cannot reset password for users from other tenants');
+    if (
+      currentUser.role !== UserRole.SUPER_ADMIN &&
+      user.tenant_id !== currentUser.tenant.id
+    ) {
+      throw new ForbiddenException(
+        'Cannot reset password for users from other tenants',
+      );
     }
 
     // Hash the new password
@@ -201,8 +237,13 @@ export class UsersService {
     }
 
     // Check if user has access to deactivate this user
-    if (currentUser.role !== UserRole.SUPER_ADMIN && user.tenant_id !== currentUser.tenant.id) {
-      throw new ForbiddenException('Cannot deactivate users from other tenants');
+    if (
+      currentUser.role !== UserRole.SUPER_ADMIN &&
+      user.tenant_id !== currentUser.tenant.id
+    ) {
+      throw new ForbiddenException(
+        'Cannot deactivate users from other tenants',
+      );
     }
 
     // Prevent deactivating yourself

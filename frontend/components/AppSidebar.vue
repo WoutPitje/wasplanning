@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { Menu, X, LogOut, Home, Users, Settings, Building2, Calendar, Package, Truck, Wrench } from 'lucide-vue-next'
+import { Menu, X, LogOut, Home, Users, Settings, Building2, Calendar, Package, Truck, Wrench, FileText } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { UserRole } from '~/types/auth'
@@ -170,6 +170,7 @@ const navigation = computed(() => {
       return [
         { label: t('nav.garages'), href: '/admin/tenants', icon: Building2 },
         { label: t('nav.users'), href: '/admin/users', icon: Users },
+        { label: t('nav.auditLogs'), href: '/admin/audit', icon: FileText },
         { label: t('nav.settings'), href: '/admin/settings', icon: Settings }
       ]
     case UserRole.GARAGE_ADMIN:

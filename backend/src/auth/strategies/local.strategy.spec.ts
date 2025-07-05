@@ -51,44 +51,47 @@ describe('LocalStrategy', () => {
     it('should return user when credentials are valid', async () => {
       const email = 'test@example.com';
       const password = 'testpassword';
-      
+
       mockAuthService.validateUser.mockResolvedValue(mockUser);
 
       const result = await strategy.validate(email, password);
 
       expect(result).toEqual(mockUser);
-      expect(mockAuthService.validateUser).toHaveBeenCalledWith(email, password);
+      expect(mockAuthService.validateUser).toHaveBeenCalledWith(
+        email,
+        password,
+      );
     });
 
     it('should throw UnauthorizedException when credentials are invalid', async () => {
       const email = 'test@example.com';
       const password = 'wrongpassword';
-      
+
       mockAuthService.validateUser.mockResolvedValue(null);
 
       await expect(strategy.validate(email, password)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
       await expect(strategy.validate(email, password)).rejects.toThrow(
-        'Invalid credentials'
+        'Invalid credentials',
       );
     });
 
     it('should throw UnauthorizedException when user is not found', async () => {
       const email = 'nonexistent@example.com';
       const password = 'testpassword';
-      
+
       mockAuthService.validateUser.mockResolvedValue(null);
 
       await expect(strategy.validate(email, password)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
     });
 
     it('should use email as username field', () => {
       // Test that the strategy is configured to use email field
       expect(strategy).toBeDefined();
-      // The actual configuration is done in the constructor, 
+      // The actual configuration is done in the constructor,
       // this test ensures the strategy is properly instantiated
     });
   });

@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from '../../auth/entities/tenant.entity';
 import { User } from '../../auth/entities/user.entity';
 
@@ -11,7 +19,7 @@ export enum FileCategory {
   DAMAGE_REPORT = 'damage_report',
   INVOICE = 'invoice',
   DOCUMENT = 'document',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 @Entity('files')
@@ -28,7 +36,7 @@ export class File {
   @Column({
     type: 'enum',
     enum: FileCategory,
-    default: FileCategory.OTHER
+    default: FileCategory.OTHER,
   })
   category: FileCategory;
 

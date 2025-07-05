@@ -14,9 +14,9 @@ describe('TenantGuard', () => {
 
   const createMockExecutionContext = (
     user: any = null,
-    tenantId: string | null = null
+    tenantId: string | null = null,
   ): ExecutionContext => {
-    const mockRequest = { 
+    const mockRequest = {
       user,
       params: tenantId ? { tenantId } : {},
     };
@@ -40,9 +40,9 @@ describe('TenantGuard', () => {
   describe('canActivate', () => {
     it('should return false when user is not present', () => {
       const context = createMockExecutionContext();
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(false);
     });
 
@@ -52,9 +52,9 @@ describe('TenantGuard', () => {
         tenant: { id: 'tenant-1', name: 'garage-1' },
       };
       const context = createMockExecutionContext(user, 'tenant-2');
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
     });
 
@@ -64,11 +64,11 @@ describe('TenantGuard', () => {
         tenant: { id: 'tenant-1', name: 'garage-1' },
       };
       const context = createMockExecutionContext(user);
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
-      
+
       const request = context.switchToHttp().getRequest();
       expect(request.tenantId).toBe('tenant-1');
       expect(request.tenantName).toBe('garage-1');
@@ -80,11 +80,11 @@ describe('TenantGuard', () => {
         tenant: { id: 'tenant-1', name: 'garage-1' },
       };
       const context = createMockExecutionContext(user, 'tenant-1');
-      
+
       const result = guard.canActivate(context);
-      
+
       expect(result).toBe(true);
-      
+
       const request = context.switchToHttp().getRequest();
       expect(request.tenantId).toBe('tenant-1');
       expect(request.tenantName).toBe('garage-1');
@@ -96,9 +96,11 @@ describe('TenantGuard', () => {
         tenant: { id: 'tenant-1', name: 'garage-1' },
       };
       const context = createMockExecutionContext(user, 'tenant-2');
-      
+
       expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
-      expect(() => guard.canActivate(context)).toThrow('Access denied to this tenant');
+      expect(() => guard.canActivate(context)).toThrow(
+        'Access denied to this tenant',
+      );
     });
 
     it('should add tenant context to request', () => {
@@ -107,9 +109,9 @@ describe('TenantGuard', () => {
         tenant: { id: 'tenant-1', name: 'garage-1' },
       };
       const context = createMockExecutionContext(user);
-      
+
       guard.canActivate(context);
-      
+
       const request = context.switchToHttp().getRequest();
       expect(request.tenantId).toBe('tenant-1');
       expect(request.tenantName).toBe('garage-1');
@@ -124,15 +126,15 @@ describe('TenantGuard', () => {
         UserRole.GARAGE_ADMIN,
       ];
 
-      roles.forEach(role => {
+      roles.forEach((role) => {
         const user = {
           role,
           tenant: { id: 'tenant-1', name: 'garage-1' },
         };
         const context = createMockExecutionContext(user, 'tenant-1');
-        
+
         const result = guard.canActivate(context);
-        
+
         expect(result).toBe(true);
       });
     });

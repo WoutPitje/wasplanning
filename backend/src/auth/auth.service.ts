@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, ForbiddenException, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -65,7 +71,7 @@ export class AuthService {
       relations: ['tenant'],
     });
 
-    if (user && await bcrypt.compare(password, user.password)) {
+    if (user && (await bcrypt.compare(password, user.password))) {
       // Update last login
       await this.userRepository.update(user.id, { last_login: new Date() });
       return user;
@@ -202,7 +208,7 @@ export class AuthService {
     tenant_id: string;
   }): Promise<User> {
     const hashedPassword = await this.hashPassword(userData.password);
-    
+
     const user = this.userRepository.create({
       ...userData,
       password: hashedPassword,
@@ -211,10 +217,15 @@ export class AuthService {
     return this.userRepository.save(user);
   }
 
-  async impersonateUser(currentUser: any, targetUserId: string): Promise<AuthResponse> {
+  async impersonateUser(
+    currentUser: any,
+    targetUserId: string,
+  ): Promise<AuthResponse> {
     // Prevent nested impersonation
     if (currentUser.impersonation?.is_impersonating) {
-      throw new ForbiddenException('Cannot impersonate while already impersonating another user');
+      throw new ForbiddenException(
+        'Cannot impersonate while already impersonating another user',
+      );
     }
 
     // Load the impersonator user to verify they are SUPER_ADMIN
@@ -251,7 +262,7 @@ export class AuthService {
 
     // Create JWT payload with impersonation fields
     const logoUrl = targetUser.tenant.logo_url || undefined;
-    
+
     const payload: JwtPayload = {
       id: targetUser.id,
       email: targetUser.email,
@@ -300,7 +311,10 @@ export class AuthService {
 
   async stopImpersonation(currentUser: any): Promise<AuthResponse> {
     // Verify user is currently impersonating
-    if (!currentUser.impersonation?.is_impersonating || !currentUser.impersonation?.impersonator_id) {
+    if (
+      !currentUser.impersonation?.is_impersonating ||
+      !currentUser.impersonation?.impersonator_id
+    ) {
       throw new ForbiddenException('User is not currently impersonating');
     }
 
@@ -323,7 +337,9 @@ export class AuthService {
   }
 
   async getTenantLogoUrl(tenantId: string): Promise<string | null> {
-    const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
+    const tenant = await this.tenantRepository.findOne({
+      where: { id: tenantId },
+    });
     if (!tenant || !tenant.logo_url) {
       return null;
     }

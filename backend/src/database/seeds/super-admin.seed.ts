@@ -11,7 +11,7 @@ export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
 
   // Check if super admin tenant already exists
   let superAdminTenant = await tenantRepository.findOne({
-    where: { name: 'super-admin-tenant' }
+    where: { name: 'super-admin-tenant' },
   });
 
   if (!superAdminTenant) {
@@ -29,7 +29,7 @@ export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
 
   // Check if super admin user already exists
   const existingSuperAdmin = await userRepository.findOne({
-    where: { email: 'admin@wasplanning.nl' }
+    where: { email: 'admin@wasplanning.nl' },
   });
 
   if (!existingSuperAdmin) {

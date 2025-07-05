@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tenant } from './tenant.entity';
 
 export enum UserRole {
@@ -7,7 +15,7 @@ export enum UserRole {
   HAAL_BRENG_PLANNERS = 'pickup_delivery_planners',
   WASPLANNERS = 'wash_planners',
   GARAGE_ADMIN = 'garage_admin',
-  SUPER_ADMIN = 'super_admin'
+  SUPER_ADMIN = 'super_admin',
 }
 
 @Entity('users')
@@ -30,7 +38,7 @@ export class User {
   @Column({
     type: 'enum',
     enum: UserRole,
-    default: UserRole.WERKPLAATS
+    default: UserRole.WERKPLAATS,
   })
   role: UserRole;
 
@@ -49,7 +57,7 @@ export class User {
   @Column('uuid')
   tenant_id: string;
 
-  @ManyToOne(() => Tenant, tenant => tenant.users)
+  @ManyToOne(() => Tenant, (tenant) => tenant.users)
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 }

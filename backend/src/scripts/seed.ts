@@ -23,7 +23,6 @@ async function bootstrap() {
     console.log('✅ Database connected');
 
     await runSeeds(dataSource);
-
   } catch (error) {
     console.error('❌ Seeding failed:', error);
     process.exit(1);

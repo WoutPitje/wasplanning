@@ -4,6 +4,7 @@ import { TenantsService } from './tenants.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { UserRole } from '../auth/entities/user.entity';
+import { AuditService } from '../audit/audit.service';
 
 describe('TenantsController', () => {
   let controller: TenantsController;
@@ -53,6 +54,21 @@ describe('TenantsController', () => {
     getStats: jest.fn(),
   };
 
+  const mockRequest = {
+    user: {
+      id: 'admin-user-id',
+      email: 'admin@example.com',
+      tenant: {
+        id: 'admin-tenant-id',
+        name: 'admin-tenant',
+      },
+    },
+    ip: '127.0.0.1',
+    headers: {
+      'user-agent': 'test-agent',
+    },
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TenantsController],
@@ -60,6 +76,12 @@ describe('TenantsController', () => {
         {
           provide: TenantsService,
           useValue: mockTenantsService,
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            logAction: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -84,7 +106,7 @@ describe('TenantsController', () => {
 
       mockTenantsService.create.mockResolvedValue(mockCreateResponse);
 
-      const result = await controller.create(createTenantDto);
+      const result = await controller.create(createTenantDto, mockRequest);
 
       expect(result).toEqual(mockCreateResponse);
       expect(mockTenantsService.create).toHaveBeenCalledWith(createTenantDto);
@@ -93,7 +115,10 @@ describe('TenantsController', () => {
 
   describe('findAll', () => {
     it('should return all tenants', async () => {
-      const tenants = [mockTenant, { ...mockTenant, id: 'tenant-2', name: 'garage-2' }];
+      const tenants = [
+        mockTenant,
+        { ...mockTenant, id: 'tenant-2', name: 'garage-2' },
+      ];
       mockTenantsService.findAll.mockResolvedValue(tenants);
 
       const result = await controller.findAll();
@@ -133,13 +158,16 @@ describe('TenantsController', () => {
         is_active: false,
       };
       const updatedTenant = { ...mockTenant, ...updateTenantDto };
-      
+
       mockTenantsService.update.mockResolvedValue(updatedTenant);
 
-      const result = await controller.update('tenant-uuid', updateTenantDto);
+      const result = await controller.update('tenant-uuid', updateTenantDto, mockRequest);
 
       expect(result).toEqual(updatedTenant);
-      expect(mockTenantsService.update).toHaveBeenCalledWith('tenant-uuid', updateTenantDto);
+      expect(mockTenantsService.update).toHaveBeenCalledWith(
+        'tenant-uuid',
+        updateTenantDto,
+      );
     });
   });
 
@@ -148,7 +176,9 @@ describe('TenantsController', () => {
       const response = { message: 'Tenant test-garage has been deactivated' };
       mockTenantsService.remove.mockResolvedValue(response);
 
-      const result = await controller.remove('tenant-uuid');
+      mockTenantsService.findOne.mockResolvedValue(mockTenant);
+      
+      const result = await controller.remove('tenant-uuid', mockRequest);
 
       expect(result).toEqual(response);
       expect(mockTenantsService.remove).toHaveBeenCalledWith('tenant-uuid');
@@ -159,13 +189,16 @@ describe('TenantsController', () => {
     it('should have correct decorators', () => {
       const guards = Reflect.getMetadata('__guards__', TenantsController);
       const roles = Reflect.getMetadata('roles', TenantsController);
-      
+
       expect(guards).toBeDefined();
       expect(roles).toContain(UserRole.SUPER_ADMIN);
     });
 
     it('should have API documentation', () => {
-      const apiTags = Reflect.getMetadata('swagger/apiUseTags', TenantsController);
+      const apiTags = Reflect.getMetadata(
+        'swagger/apiUseTags',
+        TenantsController,
+      );
       expect(apiTags).toEqual(['Admin - Tenants']);
     });
   });

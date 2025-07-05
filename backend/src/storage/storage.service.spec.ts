@@ -2,8 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NotFoundException, ForbiddenException, InternalServerErrorException } from '@nestjs/common';
-import { StorageService, UploadFileOptions, FileListResponse } from './storage.service';
+import {
+  NotFoundException,
+  ForbiddenException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import {
+  StorageService,
+  UploadFileOptions,
+  FileListResponse,
+} from './storage.service';
 import { File, FileCategory } from './entities/file.entity';
 import { FileQueryDto, FileType } from './dto/file-query.dto';
 import * as Minio from 'minio';
@@ -14,8 +22,8 @@ jest.mock('minio');
 
 // Mock utility functions
 jest.mock('./utils/file-naming.util', () => ({
-  generateStoragePath: jest.fn((tenantId, category, filename) => 
-    `${category}/2024/01/uuid-${filename}`
+  generateStoragePath: jest.fn(
+    (tenantId, category, filename) => `${category}/2024/01/uuid-${filename}`,
   ),
   generateUniqueFilename: jest.fn((filename) => `uuid-${filename}`),
 }));
@@ -71,7 +79,7 @@ describe('StorageService', () => {
 
   const mockConfigService = {
     get: jest.fn((key: string, defaultValue?: any) => {
-      const config = {
+      const config: Record<string, any> = {
         MINIO_ENDPOINT: 'localhost',
         MINIO_PORT: 9000,
         MINIO_USE_SSL: 'false',
@@ -136,8 +144,13 @@ describe('StorageService', () => {
 
       await (service as any).ensureTenantBucket('wasplanning-tenant-uuid');
 
-      expect(minioClient.bucketExists).toHaveBeenCalledWith('wasplanning-tenant-uuid');
-      expect(minioClient.makeBucket).toHaveBeenCalledWith('wasplanning-tenant-uuid', 'us-east-1');
+      expect(minioClient.bucketExists).toHaveBeenCalledWith(
+        'wasplanning-tenant-uuid',
+      );
+      expect(minioClient.makeBucket).toHaveBeenCalledWith(
+        'wasplanning-tenant-uuid',
+        'us-east-1',
+      );
     });
 
     it('should not create bucket if it already exists', async () => {
@@ -145,7 +158,9 @@ describe('StorageService', () => {
 
       await (service as any).ensureTenantBucket('wasplanning-tenant-uuid');
 
-      expect(minioClient.bucketExists).toHaveBeenCalledWith('wasplanning-tenant-uuid');
+      expect(minioClient.bucketExists).toHaveBeenCalledWith(
+        'wasplanning-tenant-uuid',
+      );
       expect(minioClient.makeBucket).not.toHaveBeenCalled();
     });
   });
@@ -163,7 +178,11 @@ describe('StorageService', () => {
     };
 
     beforeEach(() => {
-      const { validateFileType, validateFileSize, getFileCategory } = require('./utils/file-validation.util');
+      const {
+        validateFileType,
+        validateFileSize,
+        getFileCategory,
+      } = require('./utils/file-validation.util');
       validateFileType.mockReturnValue({ isValid: true });
       validateFileSize.mockReturnValue({ isValid: true });
       getFileCategory.mockReturnValue('documents');
@@ -171,7 +190,10 @@ describe('StorageService', () => {
 
     it('should successfully upload a file', async () => {
       minioClient.bucketExists.mockResolvedValue(true);
-      minioClient.putObject.mockResolvedValue({ etag: 'test-etag', versionId: null } as any);
+      minioClient.putObject.mockResolvedValue({
+        etag: 'test-etag',
+        versionId: null,
+      } as any);
       mockFileRepository.create.mockReturnValue(mockFile);
       mockFileRepository.save.mockResolvedValue(mockFile);
 
@@ -188,43 +210,53 @@ describe('StorageService', () => {
           'X-Tenant-Id': 'tenant-uuid',
           'X-User-Id': 'user-uuid',
           'X-Original-Filename': 'test.pdf',
-        })
+        }),
       );
       expect(mockFileRepository.save).toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException when file type is not allowed', async () => {
       const { validateFileType } = require('./utils/file-validation.util');
-      validateFileType.mockReturnValue({ 
-        isValid: false, 
-        error: 'File type not allowed' 
+      validateFileType.mockReturnValue({
+        isValid: false,
+        error: 'File type not allowed',
       });
 
-      await expect(service.uploadFile(uploadOptions)).rejects.toThrow(ForbiddenException);
+      await expect(service.uploadFile(uploadOptions)).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(minioClient.putObject).not.toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException when file size exceeds limit', async () => {
       const { validateFileSize } = require('./utils/file-validation.util');
-      validateFileSize.mockReturnValue({ 
-        isValid: false, 
-        error: 'File too large' 
+      validateFileSize.mockReturnValue({
+        isValid: false,
+        error: 'File too large',
       });
 
-      await expect(service.uploadFile(uploadOptions)).rejects.toThrow(ForbiddenException);
+      await expect(service.uploadFile(uploadOptions)).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(minioClient.putObject).not.toHaveBeenCalled();
     });
 
     it('should create tenant bucket if it does not exist', async () => {
       minioClient.bucketExists.mockResolvedValue(false);
       minioClient.makeBucket.mockResolvedValue(undefined);
-      minioClient.putObject.mockResolvedValue({ etag: 'test-etag', versionId: null } as any);
+      minioClient.putObject.mockResolvedValue({
+        etag: 'test-etag',
+        versionId: null,
+      } as any);
       mockFileRepository.create.mockReturnValue(mockFile);
       mockFileRepository.save.mockResolvedValue(mockFile);
 
       await service.uploadFile(uploadOptions);
 
-      expect(minioClient.makeBucket).toHaveBeenCalledWith('wasplanning-tenant-uuid', 'us-east-1');
+      expect(minioClient.makeBucket).toHaveBeenCalledWith(
+        'wasplanning-tenant-uuid',
+        'us-east-1',
+      );
     });
 
     it('should handle MinIO upload errors', async () => {
@@ -232,7 +264,7 @@ describe('StorageService', () => {
       minioClient.putObject.mockRejectedValue(new Error('MinIO error'));
 
       await expect(service.uploadFile(uploadOptions)).rejects.toThrow(
-        InternalServerErrorException
+        InternalServerErrorException,
       );
     });
   });
@@ -254,7 +286,7 @@ describe('StorageService', () => {
       mockFileRepository.findOne.mockResolvedValue(null);
 
       await expect(service.getFile('file-uuid', 'tenant-uuid')).rejects.toThrow(
-        NotFoundException
+        NotFoundException,
       );
     });
 
@@ -265,7 +297,7 @@ describe('StorageService', () => {
       });
 
       await expect(service.getFile('file-uuid', 'tenant-uuid')).rejects.toThrow(
-        ForbiddenException
+        ForbiddenException,
       );
     });
   });
@@ -273,37 +305,46 @@ describe('StorageService', () => {
   describe('generatePresignedUrl', () => {
     it('should generate presigned URL successfully', async () => {
       mockFileRepository.findOne.mockResolvedValue(mockFile);
-      minioClient.presignedGetObject.mockResolvedValue('https://example.com/signed-url');
+      minioClient.presignedGetObject.mockResolvedValue(
+        'https://example.com/signed-url',
+      );
 
-      const result = await service.generatePresignedUrl('file-uuid', 'tenant-uuid');
+      const result = await service.generatePresignedUrl(
+        'file-uuid',
+        'tenant-uuid',
+      );
 
       expect(result).toBe('https://example.com/signed-url');
       expect(minioClient.presignedGetObject).toHaveBeenCalledWith(
         'wasplanning-tenant-uuid',
         'document/2024/01/uuid-test.pdf',
-        7 * 24 * 60 * 60
+        7 * 24 * 60 * 60,
       );
     });
 
     it('should use custom expiry when provided', async () => {
       mockFileRepository.findOne.mockResolvedValue(mockFile);
-      minioClient.presignedGetObject.mockResolvedValue('https://example.com/signed-url');
+      minioClient.presignedGetObject.mockResolvedValue(
+        'https://example.com/signed-url',
+      );
 
       await service.generatePresignedUrl('file-uuid', 'tenant-uuid', 3600);
 
       expect(minioClient.presignedGetObject).toHaveBeenCalledWith(
         'wasplanning-tenant-uuid',
         'document/2024/01/uuid-test.pdf',
-        3600
+        3600,
       );
     });
 
     it('should handle MinIO errors', async () => {
       mockFileRepository.findOne.mockResolvedValue(mockFile);
-      minioClient.presignedGetObject.mockRejectedValue(new Error('MinIO error'));
+      minioClient.presignedGetObject.mockRejectedValue(
+        new Error('MinIO error'),
+      );
 
       await expect(
-        service.generatePresignedUrl('file-uuid', 'tenant-uuid')
+        service.generatePresignedUrl('file-uuid', 'tenant-uuid'),
       ).rejects.toThrow(InternalServerErrorException);
     });
   });
@@ -318,7 +359,7 @@ describe('StorageService', () => {
 
       expect(minioClient.removeObject).toHaveBeenCalledWith(
         'wasplanning-tenant-uuid',
-        'document/2024/01/uuid-test.pdf'
+        'document/2024/01/uuid-test.pdf',
       );
       expect(mockFileRepository.remove).toHaveBeenCalledWith(mockFile);
     });
@@ -330,7 +371,7 @@ describe('StorageService', () => {
       });
 
       await expect(
-        service.deleteFile('file-uuid', 'tenant-uuid', 'user-uuid')
+        service.deleteFile('file-uuid', 'tenant-uuid', 'user-uuid'),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -339,7 +380,7 @@ describe('StorageService', () => {
       minioClient.removeObject.mockRejectedValue(new Error('MinIO error'));
 
       await expect(
-        service.deleteFile('file-uuid', 'tenant-uuid', 'user-uuid')
+        service.deleteFile('file-uuid', 'tenant-uuid', 'user-uuid'),
       ).rejects.toThrow(InternalServerErrorException);
     });
   });
@@ -377,7 +418,9 @@ describe('StorageService', () => {
         page: 1,
         limit: 10,
       });
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith({ tenant_id: 'tenant-uuid' });
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith({
+        tenant_id: 'tenant-uuid',
+      });
       expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
       expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
     });
@@ -396,7 +439,7 @@ describe('StorageService', () => {
       expect(mockQueryBuilder.where).toHaveBeenCalledWith(
         expect.objectContaining({
           original_filename: expect.anything(),
-        })
+        }),
       );
     });
 
@@ -414,11 +457,11 @@ describe('StorageService', () => {
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'file.created_at >= :from_date',
-        { from_date: '2024-01-01' }
+        { from_date: '2024-01-01' },
       );
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'file.created_at <= :to_date',
-        { to_date: '2024-12-31' }
+        { to_date: '2024-12-31' },
       );
     });
 
@@ -435,7 +478,7 @@ describe('StorageService', () => {
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'file.mime_type LIKE :type',
-        { type: 'image/%' }
+        { type: 'image/%' },
       );
     });
 
@@ -452,15 +495,17 @@ describe('StorageService', () => {
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         "file.metadata->>'category' = :category",
-        { category: 'invoice' }
+        { category: 'invoice' },
       );
     });
 
     it('should handle query errors', async () => {
-      mockQueryBuilder.getManyAndCount.mockRejectedValue(new Error('Query error'));
+      mockQueryBuilder.getManyAndCount.mockRejectedValue(
+        new Error('Query error'),
+      );
 
       await expect(service.listFiles({}, 'tenant-uuid')).rejects.toThrow(
-        InternalServerErrorException
+        InternalServerErrorException,
       );
     });
   });
@@ -476,7 +521,7 @@ describe('StorageService', () => {
       expect(result).toBe(mockStream);
       expect(minioClient.getObject).toHaveBeenCalledWith(
         'wasplanning-tenant-uuid',
-        'document/2024/01/uuid-test.pdf'
+        'document/2024/01/uuid-test.pdf',
       );
     });
 
@@ -485,7 +530,7 @@ describe('StorageService', () => {
       minioClient.getObject.mockRejectedValue(new Error('MinIO error'));
 
       await expect(
-        service.getFileStream('file-uuid', 'tenant-uuid')
+        service.getFileStream('file-uuid', 'tenant-uuid'),
       ).rejects.toThrow(InternalServerErrorException);
     });
   });
@@ -493,15 +538,24 @@ describe('StorageService', () => {
   describe('copyFile', () => {
     it('should copy file successfully', async () => {
       mockFileRepository.findOne.mockResolvedValue(mockFile);
-      minioClient.copyObject.mockResolvedValue({ etag: 'new-etag', lastModified: new Date() } as any);
-      mockFileRepository.create.mockReturnValue({ ...mockFile, id: 'new-file-uuid' });
-      mockFileRepository.save.mockResolvedValue({ ...mockFile, id: 'new-file-uuid' });
+      minioClient.copyObject.mockResolvedValue({
+        etag: 'new-etag',
+        lastModified: new Date(),
+      } as any);
+      mockFileRepository.create.mockReturnValue({
+        ...mockFile,
+        id: 'new-file-uuid',
+      });
+      mockFileRepository.save.mockResolvedValue({
+        ...mockFile,
+        id: 'new-file-uuid',
+      });
 
       const result = await service.copyFile(
         'file-uuid',
         'tenant-uuid',
         'new-user-uuid',
-        { new: 'metadata' }
+        { new: 'metadata' },
       );
 
       expect(result.id).toBe('new-file-uuid');
@@ -514,7 +568,7 @@ describe('StorageService', () => {
       minioClient.copyObject.mockRejectedValue(new Error('Copy error'));
 
       await expect(
-        service.copyFile('file-uuid', 'tenant-uuid', 'user-uuid')
+        service.copyFile('file-uuid', 'tenant-uuid', 'user-uuid'),
       ).rejects.toThrow(InternalServerErrorException);
     });
   });
@@ -562,7 +616,9 @@ describe('StorageService', () => {
         where: jest.fn().mockReturnThis(),
         groupBy: jest.fn().mockReturnThis(),
         getRawMany: jest.fn().mockResolvedValue([]),
-        getRawOne: jest.fn().mockResolvedValue({ total_files: '0', total_size: null }),
+        getRawOne: jest
+          .fn()
+          .mockResolvedValue({ total_files: '0', total_size: null }),
       };
 
       mockFileRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
@@ -589,9 +645,9 @@ describe('StorageService', () => {
 
       mockFileRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
-      await expect(service.getTenantStorageStats('tenant-uuid')).rejects.toThrow(
-        InternalServerErrorException
-      );
+      await expect(
+        service.getTenantStorageStats('tenant-uuid'),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -616,25 +672,36 @@ describe('StorageService', () => {
         await (service as any).ensureTenantBucket('test-bucket');
 
         expect(minioClient.bucketExists).toHaveBeenCalledWith('test-bucket');
-        expect(minioClient.makeBucket).toHaveBeenCalledWith('test-bucket', 'us-east-1');
+        expect(minioClient.makeBucket).toHaveBeenCalledWith(
+          'test-bucket',
+          'us-east-1',
+        );
       });
 
       it('should throw InternalServerErrorException on bucket creation failure', async () => {
         minioClient.bucketExists.mockRejectedValue(new Error('MinIO error'));
 
         await expect(
-          (service as any).ensureTenantBucket('test-bucket')
+          (service as any).ensureTenantBucket('test-bucket'),
         ).rejects.toThrow(InternalServerErrorException);
       });
     });
 
     describe('mapSortField', () => {
       it('should map sort fields correctly', () => {
-        expect((service as any).mapSortField('created_at')).toBe('file.created_at');
-        expect((service as any).mapSortField('filename')).toBe('file.original_filename');
+        expect((service as any).mapSortField('created_at')).toBe(
+          'file.created_at',
+        );
+        expect((service as any).mapSortField('filename')).toBe(
+          'file.original_filename',
+        );
         expect((service as any).mapSortField('size')).toBe('file.size_bytes');
-        expect((service as any).mapSortField('mimetype')).toBe('file.mime_type');
-        expect((service as any).mapSortField('unknown')).toBe('file.created_at');
+        expect((service as any).mapSortField('mimetype')).toBe(
+          'file.mime_type',
+        );
+        expect((service as any).mapSortField('unknown')).toBe(
+          'file.created_at',
+        );
       });
     });
   });

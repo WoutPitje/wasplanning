@@ -11,9 +11,9 @@ export class FileResponseDto {
   @ApiProperty({ description: 'Uploader user ID', format: 'uuid' })
   user_id: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'File category',
-    enum: FileCategory
+    enum: FileCategory,
   })
   category: FileCategory;
 
@@ -55,9 +55,9 @@ export class FileResponseDto {
 }
 
 export class FileListResponseDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'List of files',
-    type: [FileResponseDto]
+    type: [FileResponseDto],
   })
   files: FileResponseDto[];
 

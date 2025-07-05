@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { getErrorMessage, getErrorStack } from '../common/utils/error.util';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,8 +12,15 @@ import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import * as Minio from 'minio';
 import { File, FileCategory } from './entities/file.entity';
 import { FileQueryDto } from './dto/file-query.dto';
-import { generateStoragePath, generateUniqueFilename } from './utils/file-naming.util';
-import { validateFileSize, validateFileType, getFileCategory } from './utils/file-validation.util';
+import {
+  generateStoragePath,
+  generateUniqueFilename,
+} from './utils/file-naming.util';
+import {
+  validateFileSize,
+  validateFileType,
+  getFileCategory,
+} from './utils/file-validation.util';
 import { Readable } from 'stream';
 
 export interface UploadFileOptions {
@@ -43,21 +56,27 @@ export class StorageService {
     // Validate required MinIO configuration
     const accessKey = this.configService.get<string>('MINIO_ACCESS_KEY');
     const secretKey = this.configService.get<string>('MINIO_SECRET_KEY');
-    
+
     if (!accessKey || !secretKey) {
-      throw new Error('MinIO credentials (MINIO_ACCESS_KEY, MINIO_SECRET_KEY) are required');
+      throw new Error(
+        'MinIO credentials (MINIO_ACCESS_KEY, MINIO_SECRET_KEY) are required',
+      );
     }
 
     this.minioClient = new Minio.Client({
       endPoint: this.configService.get<string>('MINIO_ENDPOINT', 'localhost'),
       port: this.configService.get<number>('MINIO_PORT', 9000),
-      useSSL: this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true',
+      useSSL:
+        this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true',
       accessKey,
       secretKey,
       region: this.configService.get<string>('MINIO_REGION', 'us-east-1'),
     });
 
-    this.bucketPrefix = this.configService.get<string>('MINIO_BUCKET_PREFIX', 'wasplanning');
+    this.bucketPrefix = this.configService.get<string>(
+      'MINIO_BUCKET_PREFIX',
+      'wasplanning',
+    );
   }
 
   /**
@@ -76,11 +95,16 @@ export class StorageService {
     try {
       const exists = await this.minioClient.bucketExists(bucketName);
       if (!exists) {
-        await this.minioClient.makeBucket(bucketName, this.configService.get<string>('MINIO_REGION', 'us-east-1'));
+        await this.minioClient.makeBucket(
+          bucketName,
+          this.configService.get<string>('MINIO_REGION', 'us-east-1'),
+        );
         this.logger.log(`Created MinIO bucket: ${bucketName}`);
       }
     } catch (error) {
-      this.logger.error(`Failed to create bucket ${bucketName}: ${getErrorMessage(error)}`);
+      this.logger.error(
+        `Failed to create bucket ${bucketName}: ${getErrorMessage(error)}`,
+      );
       throw new InternalServerErrorException(`Failed to create storage bucket`);
     }
   }
@@ -89,21 +113,24 @@ export class StorageService {
    * Upload file to MinIO with tenant isolation
    */
   async uploadFile(options: UploadFileOptions): Promise<File> {
-    const { 
-      file, 
-      tenantId, 
-      userId, 
+    const {
+      file,
+      tenantId,
+      userId,
       category = FileCategory.OTHER,
       isPublic = false,
       metadata = {},
       allowedMimeTypes = [],
-      maxSizeBytes = 10 * 1024 * 1024 // 10MB default
+      maxSizeBytes = 10 * 1024 * 1024, // 10MB default
     } = options;
 
     try {
       // Validate file type if restrictions are provided
       if (allowedMimeTypes.length > 0) {
-        const typeValidation = validateFileType(file.mimetype, allowedMimeTypes);
+        const typeValidation = validateFileType(
+          file.mimetype,
+          allowedMimeTypes,
+        );
         if (!typeValidation.isValid) {
           throw new ForbiddenException(typeValidation.error);
         }
@@ -116,7 +143,11 @@ export class StorageService {
       }
 
       // Generate storage path with tenant isolation
-      const storagePath = generateStoragePath(tenantId, category, file.originalname);
+      const storagePath = generateStoragePath(
+        tenantId,
+        category,
+        file.originalname,
+      );
       const bucketName = this.getTenantBucket(tenantId);
 
       // Ensure tenant bucket exists
@@ -134,7 +165,7 @@ export class StorageService {
           'X-Tenant-Id': tenantId,
           'X-User-Id': userId,
           'X-Original-Filename': file.originalname,
-        }
+        },
       );
 
       // Save file metadata to database
@@ -157,11 +188,16 @@ export class StorageService {
       });
 
       const savedFile = await this.fileRepository.save(fileRecord);
-      this.logger.log(`File uploaded successfully: ${savedFile.id} for tenant ${tenantId}`);
+      this.logger.log(
+        `File uploaded successfully: ${savedFile.id} for tenant ${tenantId}`,
+      );
 
       return savedFile;
     } catch (error) {
-      this.logger.error(`File upload failed: ${getErrorMessage(error)}`, getErrorStack(error));
+      this.logger.error(
+        `File upload failed: ${getErrorMessage(error)}`,
+        getErrorStack(error),
+      );
       if (error instanceof ForbiddenException) {
         throw error;
       }
@@ -193,7 +229,11 @@ export class StorageService {
   /**
    * Generate presigned URL for file download
    */
-  async generatePresignedUrl(fileId: string, tenantId: string, expiry?: number): Promise<string> {
+  async generatePresignedUrl(
+    fileId: string,
+    tenantId: string,
+    expiry?: number,
+  ): Promise<string> {
     const file = await this.getFile(fileId, tenantId);
 
     try {
@@ -205,7 +245,10 @@ export class StorageService {
 
       return url;
     } catch (error) {
-      this.logger.error(`Failed to generate presigned URL: ${getErrorMessage(error)}`, getErrorStack(error));
+      this.logger.error(
+        `Failed to generate presigned URL: ${getErrorMessage(error)}`,
+        getErrorStack(error),
+      );
       throw new InternalServerErrorException('Failed to generate download URL');
     }
   }
@@ -213,7 +256,11 @@ export class StorageService {
   /**
    * Delete file from MinIO and database
    */
-  async deleteFile(fileId: string, tenantId: string, userId: string): Promise<void> {
+  async deleteFile(
+    fileId: string,
+    tenantId: string,
+    userId: string,
+  ): Promise<void> {
     const file = await this.getFile(fileId, tenantId);
 
     // Check if user has permission to delete (owner or admin)
@@ -229,9 +276,14 @@ export class StorageService {
       // Delete from database
       await this.fileRepository.remove(file);
 
-      this.logger.log(`File deleted successfully: ${fileId} for tenant ${tenantId}`);
+      this.logger.log(
+        `File deleted successfully: ${fileId} for tenant ${tenantId}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to delete file: ${getErrorMessage(error)}`, getErrorStack(error));
+      this.logger.error(
+        `Failed to delete file: ${getErrorMessage(error)}`,
+        getErrorStack(error),
+      );
       throw new InternalServerErrorException('Failed to delete file');
     }
   }
@@ -239,7 +291,10 @@ export class StorageService {
   /**
    * List files with pagination and filters
    */
-  async listFiles(query: FileQueryDto, tenantId: string): Promise<FileListResponse> {
+  async listFiles(
+    query: FileQueryDto,
+    tenantId: string,
+  ): Promise<FileListResponse> {
     const {
       page = 1,
       limit = 10,
@@ -276,7 +331,8 @@ export class StorageService {
       }
 
       // Build query
-      const queryBuilder = this.fileRepository.createQueryBuilder('file')
+      const queryBuilder = this.fileRepository
+        .createQueryBuilder('file')
         .leftJoinAndSelect('file.tenant', 'tenant')
         .leftJoinAndSelect('file.user', 'user')
         .where(where);
@@ -293,7 +349,9 @@ export class StorageService {
       if (type) {
         switch (type) {
           case 'image':
-            queryBuilder.andWhere('file.mime_type LIKE :type', { type: 'image/%' });
+            queryBuilder.andWhere('file.mime_type LIKE :type', {
+              type: 'image/%',
+            });
             break;
           case 'document':
             queryBuilder.andWhere('file.mime_type IN (:...types)', {
@@ -309,19 +367,31 @@ export class StorageService {
             });
             break;
           case 'video':
-            queryBuilder.andWhere('file.mime_type LIKE :type', { type: 'video/%' });
+            queryBuilder.andWhere('file.mime_type LIKE :type', {
+              type: 'video/%',
+            });
             break;
           default:
-            queryBuilder.andWhere('file.mime_type NOT LIKE ALL(ARRAY[:...excludeTypes])', {
-              excludeTypes: ['image/%', 'video/%', 'application/pdf', 'application/msword'],
-            });
+            queryBuilder.andWhere(
+              'file.mime_type NOT LIKE ALL(ARRAY[:...excludeTypes])',
+              {
+                excludeTypes: [
+                  'image/%',
+                  'video/%',
+                  'application/pdf',
+                  'application/msword',
+                ],
+              },
+            );
         }
       }
 
       // Metadata filter (JSONB query)
       if (metadata && Object.keys(metadata).length > 0) {
         Object.entries(metadata).forEach(([key, value]) => {
-          queryBuilder.andWhere(`file.metadata->>'${key}' = :${key}`, { [key]: value });
+          queryBuilder.andWhere(`file.metadata->>'${key}' = :${key}`, {
+            [key]: value,
+          });
         });
       }
 
@@ -343,21 +413,23 @@ export class StorageService {
         limit,
       };
     } catch (error) {
-      this.logger.error(`Failed to list files: ${getErrorMessage(error)}`, getErrorStack(error));
+      this.logger.error(
+        `Failed to list files: ${getErrorMessage(error)}`,
+        getErrorStack(error),
+      );
       throw new InternalServerErrorException('Failed to list files');
     }
   }
-
 
   /**
    * Map sort field to database column
    */
   private mapSortField(field: string): string {
     const fieldMap: Record<string, string> = {
-      'created_at': 'file.created_at',
-      'filename': 'file.original_filename',
-      'size': 'file.size_bytes',
-      'mimetype': 'file.mime_type',
+      created_at: 'file.created_at',
+      filename: 'file.original_filename',
+      size: 'file.size_bytes',
+      mimetype: 'file.mime_type',
     };
     return fieldMap[field] || 'file.created_at';
   }
@@ -369,10 +441,16 @@ export class StorageService {
     const file = await this.getFile(fileId, tenantId);
 
     try {
-      const stream = await this.minioClient.getObject(file.bucket_name, file.object_key);
+      const stream = await this.minioClient.getObject(
+        file.bucket_name,
+        file.object_key,
+      );
       return stream;
     } catch (error) {
-      this.logger.error(`Failed to get file stream: ${getErrorMessage(error)}`, getErrorStack(error));
+      this.logger.error(
+        `Failed to get file stream: ${getErrorMessage(error)}`,
+        getErrorStack(error),
+      );
       throw new InternalServerErrorException('Failed to retrieve file');
     }
   }
@@ -380,12 +458,21 @@ export class StorageService {
   /**
    * Copy file within same tenant
    */
-  async copyFile(fileId: string, tenantId: string, userId: string, newMetadata?: Record<string, any>): Promise<File> {
+  async copyFile(
+    fileId: string,
+    tenantId: string,
+    userId: string,
+    newMetadata?: Record<string, any>,
+  ): Promise<File> {
     const sourceFile = await this.getFile(fileId, tenantId);
 
     try {
       // Generate new storage path
-      const newStoragePath = generateStoragePath(tenantId, sourceFile.category, sourceFile.original_filename);
+      const newStoragePath = generateStoragePath(
+        tenantId,
+        sourceFile.category,
+        sourceFile.original_filename,
+      );
 
       // Copy in MinIO
       await this.minioClient.copyObject(
@@ -416,7 +503,10 @@ export class StorageService {
 
       return savedFile;
     } catch (error) {
-      this.logger.error(`Failed to copy file: ${getErrorMessage(error)}`, getErrorStack(error));
+      this.logger.error(
+        `Failed to copy file: ${getErrorMessage(error)}`,
+        getErrorStack(error),
+      );
       throw new InternalServerErrorException('Failed to copy file');
     }
   }
@@ -457,13 +547,21 @@ export class StorageService {
       return {
         totalFiles: parseInt(totalStats.total_files) || 0,
         totalSizeBytes: parseInt(totalStats.total_size) || 0,
-        totalSizeMB: Math.round((parseInt(totalStats.total_size) || 0) / (1024 * 1024) * 100) / 100,
+        totalSizeMB:
+          Math.round(
+            ((parseInt(totalStats.total_size) || 0) / (1024 * 1024)) * 100,
+          ) / 100,
         filesByCategory,
         filesByType: {}, // Can be implemented similarly based on mime types
       };
     } catch (error) {
-      this.logger.error(`Failed to get storage stats: ${getErrorMessage(error)}`, getErrorStack(error));
-      throw new InternalServerErrorException('Failed to get storage statistics');
+      this.logger.error(
+        `Failed to get storage stats: ${getErrorMessage(error)}`,
+        getErrorStack(error),
+      );
+      throw new InternalServerErrorException(
+        'Failed to get storage statistics',
+      );
     }
   }
 }

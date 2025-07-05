@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
 import { UsersModule } from './users/users.module';
 import { StorageModule } from './storage/storage.module';
+import { AuditModule } from './audit/audit.module';
 
 import databaseConfig from './config/database.config';
 
@@ -20,13 +21,20 @@ import databaseConfig from './config/database.config';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const dbSyncValue = configService.get('DB_SYNC');
-        
+
         // Only allow synchronize if explicitly set to 'true' AND in development
-        const synchronize = dbSyncValue === 'true' && configService.get('NODE_ENV') === 'development';
-        
+        const synchronize =
+          dbSyncValue === 'true' &&
+          configService.get('NODE_ENV') === 'development';
+
         // Log warning if sync is disabled for safety
-        if (dbSyncValue === 'true' && configService.get('NODE_ENV') !== 'development') {
-          console.warn('⚠️  DB_SYNC=true ignored in non-development environment for safety');
+        if (
+          dbSyncValue === 'true' &&
+          configService.get('NODE_ENV') !== 'development'
+        ) {
+          console.warn(
+            '⚠️  DB_SYNC=true ignored in non-development environment for safety',
+          );
         }
 
         return {
@@ -47,6 +55,7 @@ import databaseConfig from './config/database.config';
     AuthModule,
     AdminModule,
     UsersModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],

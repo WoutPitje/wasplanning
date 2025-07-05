@@ -1,4 +1,10 @@
-import { IsOptional, IsString, IsUUID, IsDateString, IsEnum } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsDateString,
+  IsEnum,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -16,10 +22,10 @@ export class FileQueryDto extends PaginationDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Filter by file type',
     enum: FileType,
-    example: FileType.DOCUMENT
+    example: FileType.DOCUMENT,
   })
   @IsOptional()
   @IsEnum(FileType)
@@ -30,30 +36,32 @@ export class FileQueryDto extends PaginationDto {
   @IsUUID()
   uploaded_by?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by tenant ID (super admin only)' })
+  @ApiPropertyOptional({
+    description: 'Filter by tenant ID (super admin only)',
+  })
   @IsOptional()
   @IsUUID()
   tenant_id?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Filter files uploaded after this date',
-    example: '2024-01-01T00:00:00Z'
+    example: '2024-01-01T00:00:00Z',
   })
   @IsOptional()
   @IsDateString()
   from_date?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Filter files uploaded before this date',
-    example: '2024-12-31T23:59:59Z'
+    example: '2024-12-31T23:59:59Z',
   })
   @IsOptional()
   @IsDateString()
   to_date?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Filter by metadata key-value pairs',
-    example: '{"category":"invoice","related_entity":"wash-task"}'
+    example: '{"category":"invoice","related_entity":"wash-task"}',
   })
   @IsOptional()
   @Transform(({ value }) => {
@@ -68,19 +76,19 @@ export class FileQueryDto extends PaginationDto {
   })
   metadata?: Record<string, any>;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Field to sort by',
     default: 'created_at',
-    enum: ['created_at', 'filename', 'size', 'mimetype']
+    enum: ['created_at', 'filename', 'size', 'mimetype'],
   })
   @IsOptional()
   @IsString()
   sortBy?: string = 'created_at';
 
-  @ApiPropertyOptional({ 
-    description: 'Sort order', 
+  @ApiPropertyOptional({
+    description: 'Sort order',
     enum: ['ASC', 'DESC'],
-    default: 'DESC' 
+    default: 'DESC',
   })
   @IsOptional()
   @IsEnum(['ASC', 'DESC'])

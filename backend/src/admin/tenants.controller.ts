@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,6 +23,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -38,7 +40,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 @Roles(UserRole.SUPER_ADMIN)
 @ApiBearerAuth()
 export class TenantsController {
-  constructor(private readonly tenantsService: TenantsService) {}
+  constructor(
+    private readonly tenantsService: TenantsService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new tenant with admin user' })
@@ -46,9 +51,30 @@ export class TenantsController {
     status: 201,
     description: 'Tenant created successfully with admin user',
   })
-  @ApiResponse({ status: 409, description: 'Tenant name or email already exists' })
-  create(@Body() createTenantDto: CreateTenantDto) {
-    return this.tenantsService.create(createTenantDto);
+  @ApiResponse({
+    status: 409,
+    description: 'Tenant name or email already exists',
+  })
+  async create(@Body() createTenantDto: CreateTenantDto, @Request() req: any) {
+    const result = await this.tenantsService.create(createTenantDto);
+
+    // Log tenant creation
+    await this.auditService.logAction({
+      tenant_id: req.user.tenant.id,
+      user_id: req.user.id,
+      action: 'tenant.created',
+      resource_type: 'tenant',
+      resource_id: result.tenant.id,
+      details: {
+        tenant_name: result.tenant.name,
+        admin_email: result.admin_user.email,
+        created_by: req.user.email,
+      },
+      ip_address: req.ip || req.connection?.remoteAddress,
+      user_agent: req.headers['user-agent'],
+    });
+
+    return result;
   }
 
   @Get()
@@ -93,11 +119,31 @@ export class TenantsController {
     description: 'Tenant updated successfully',
   })
   @ApiResponse({ status: 404, description: 'Tenant not found' })
-  update(
+  async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTenantDto: UpdateTenantDto,
+    @Request() req: any,
   ) {
-    return this.tenantsService.update(id, updateTenantDto);
+    const tenant = await this.tenantsService.update(id, updateTenantDto);
+
+    if (tenant) {
+      // Log tenant update
+      await this.auditService.logAction({
+        tenant_id: req.user.tenant.id,
+        user_id: req.user.id,
+        action: 'tenant.updated',
+        resource_type: 'tenant',
+        resource_id: tenant.id,
+        details: {
+          updated_fields: Object.keys(updateTenantDto),
+          updated_by: req.user.email,
+        },
+        ip_address: req.ip || req.connection?.remoteAddress,
+        user_agent: req.headers['user-agent'],
+      });
+    }
+
+    return tenant;
   }
 
   @Delete(':id')
@@ -108,8 +154,28 @@ export class TenantsController {
     description: 'Tenant deactivated successfully',
   })
   @ApiResponse({ status: 404, description: 'Tenant not found' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.tenantsService.remove(id);
+  async remove(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
+    // Get tenant info before deactivation for logging
+    const tenant = await this.tenantsService.findOne(id);
+    
+    const result = await this.tenantsService.remove(id);
+
+    // Log tenant deactivation
+    await this.auditService.logAction({
+      tenant_id: req.user.tenant.id,
+      user_id: req.user.id,
+      action: 'tenant.deactivated',
+      resource_type: 'tenant',
+      resource_id: id,
+      details: {
+        tenant_name: tenant.name,
+        deactivated_by: req.user.email,
+      },
+      ip_address: req.ip || req.connection?.remoteAddress,
+      user_agent: req.headers['user-agent'],
+    });
+
+    return result;
   }
 
   @Post(':id/logo')
@@ -145,9 +211,16 @@ export class TenantsController {
     }
 
     // Validate file type
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    ];
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed');
+      throw new BadRequestException(
+        'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed',
+      );
     }
 
     // Validate file size (max 2MB)
@@ -171,7 +244,8 @@ export class TenantsController {
         logo_url: {
           type: 'string',
           nullable: true,
-          description: 'Presigned URL for the logo (expires in 7 days) or null if no logo',
+          description:
+            'Presigned URL for the logo (expires in 7 days) or null if no logo',
         },
       },
     },

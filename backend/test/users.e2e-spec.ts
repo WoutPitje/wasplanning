@@ -17,7 +17,8 @@ describe('Users (e2e)', () => {
   let testUserId: string | null;
 
   // Helper to generate unique test data names
-  const getUniqueName = (prefix: string) => `test-e2e-${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const getUniqueName = (prefix: string) =>
+    `test-e2e-${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   let testTimestamp: number;
   let garageAdminEmail: string;
@@ -31,10 +32,10 @@ describe('Users (e2e)', () => {
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(DataSource);
-    
+
     // Clean up any existing test data first
     await cleanupTestData(dataSource);
-    
+
     // Create unique test data for this suite with timestamp
     testTimestamp = Date.now();
     const superAdminTenantId = 'b1111111-1111-1111-1111-111111111111';
@@ -42,40 +43,60 @@ describe('Users (e2e)', () => {
     const superAdminUserId = 'b2222222-2222-2222-2222-222222222222';
     const garageAdminUserId = 'b4444444-4444-4444-4444-444444444444';
     const wasplannerUserId = 'b5555555-5555-5555-5555-555555555555';
-    
+
     garageAdminEmail = `garage@test-e2e-users-${testTimestamp}.com`;
-    
+
     // Create test tenants
-    await dataSource.query(`
+    await dataSource.query(
+      `
       INSERT INTO tenants (id, name, display_name, is_active) 
       VALUES 
         ($1, $2, 'Test E2E Users Super Admin Tenant', true),
         ($3, $4, 'Test E2E Users Test Garage', true)
-    `, [
-      superAdminTenantId, `test-e2e-users-super-admin-tenant-${testTimestamp}`,
-      testGarageTenantId, `test-e2e-users-test-garage-${testTimestamp}`
-    ]);
-    
+    `,
+      [
+        superAdminTenantId,
+        `test-e2e-users-super-admin-tenant-${testTimestamp}`,
+        testGarageTenantId,
+        `test-e2e-users-test-garage-${testTimestamp}`,
+      ],
+    );
+
     testTenantId = testGarageTenantId;
-    
+
     // Create test users
     const hashedPassword = await bcrypt.hash('testpassword', 12);
-    await dataSource.query(`
+    await dataSource.query(
+      `
       INSERT INTO users (id, email, password, first_name, last_name, role, tenant_id, is_active) 
       VALUES 
         ($1, $2, $3, 'Super', 'Admin', $4, $5, true),
         ($6, $7, $3, 'Garage', 'Admin', $8, $9, true),
         ($10, $11, $3, 'Was', 'Planner', $12, $9, true)
-    `, [
-      superAdminUserId, `super@test-e2e-users-${testTimestamp}.com`, hashedPassword, UserRole.SUPER_ADMIN, superAdminTenantId,
-      garageAdminUserId, garageAdminEmail, UserRole.GARAGE_ADMIN, testGarageTenantId,
-      wasplannerUserId, `wasplanner@test-e2e-users-${testTimestamp}.com`, UserRole.WASPLANNERS
-    ]);
+    `,
+      [
+        superAdminUserId,
+        `super@test-e2e-users-${testTimestamp}.com`,
+        hashedPassword,
+        UserRole.SUPER_ADMIN,
+        superAdminTenantId,
+        garageAdminUserId,
+        garageAdminEmail,
+        UserRole.GARAGE_ADMIN,
+        testGarageTenantId,
+        wasplannerUserId,
+        `wasplanner@test-e2e-users-${testTimestamp}.com`,
+        UserRole.WASPLANNERS,
+      ],
+    );
 
     // Login to get tokens
     const superAdminLogin = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: `super@test-e2e-users-${testTimestamp}.com`, password: 'testpassword' })
+      .send({
+        email: `super@test-e2e-users-${testTimestamp}.com`,
+        password: 'testpassword',
+      })
       .expect(200);
     superAdminToken = superAdminLogin.body.access_token;
 
@@ -87,7 +108,10 @@ describe('Users (e2e)', () => {
 
     const wasplannerLogin = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: `wasplanner@test-e2e-users-${testTimestamp}.com`, password: 'testpassword' })
+      .send({
+        email: `wasplanner@test-e2e-users-${testTimestamp}.com`,
+        password: 'testpassword',
+      })
       .expect(200);
     wasplannerToken = wasplannerLogin.body.access_token;
   });
@@ -243,7 +267,7 @@ describe('Users (e2e)', () => {
 
       expect(response.body).toHaveProperty('data');
       expect(Array.isArray(response.body.data)).toBe(true);
-      response.body.data.forEach(user => {
+      response.body.data.forEach((user: any) => {
         expect(user.tenant.id).toBe(testTenantId);
       });
     });
@@ -259,9 +283,7 @@ describe('Users (e2e)', () => {
     });
 
     it('should return 401 without authentication', async () => {
-      await request(app.getHttpServer())
-        .get('/users')
-        .expect(401);
+      await request(app.getHttpServer()).get('/users').expect(401);
     });
   });
 
@@ -279,7 +301,7 @@ describe('Users (e2e)', () => {
           tenant_id: testTenantId,
         })
         .expect(201);
-      
+
       testUserId = response.body.id;
     });
 
@@ -313,9 +335,13 @@ describe('Users (e2e)', () => {
           role: UserRole.WASSERS,
           tenant_id: 'b1111111-1111-1111-1111-111111111111',
         });
-      
+
       if (superResponse.status !== 201) {
-        console.error('Failed to create user in different tenant:', superResponse.status, superResponse.body);
+        console.error(
+          'Failed to create user in different tenant:',
+          superResponse.status,
+          superResponse.body,
+        );
         console.error('Super admin token present:', !!superAdminToken);
       }
       expect(superResponse.status).toBe(201);
@@ -329,7 +355,9 @@ describe('Users (e2e)', () => {
         .expect(403);
 
       // Clean up
-      await dataSource.query('DELETE FROM users WHERE id = $1', [otherTenantUserId]);
+      await dataSource.query('DELETE FROM users WHERE id = $1', [
+        otherTenantUserId,
+      ]);
     });
   });
 
@@ -346,7 +374,7 @@ describe('Users (e2e)', () => {
           tenant_id: testTenantId,
         })
         .expect(201);
-      
+
       testUserId = response.body.id;
     });
 
@@ -410,7 +438,7 @@ describe('Users (e2e)', () => {
           tenant_id: testTenantId,
         })
         .expect(201);
-      
+
       testUserId = response.body.id;
     });
 
@@ -450,7 +478,7 @@ describe('Users (e2e)', () => {
           tenant_id: testTenantId,
         })
         .expect(201);
-      
+
       testUserId = response.body.id;
     });
 

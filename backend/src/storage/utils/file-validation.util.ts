@@ -18,7 +18,7 @@ export function validateFileType(
   allowedTypes: string[],
 ): FileValidationResult {
   const isValid = allowedTypes.includes(mimetype);
-  
+
   if (!isValid) {
     return {
       isValid: false,
