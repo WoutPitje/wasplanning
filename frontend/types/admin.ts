@@ -1,9 +1,12 @@
 import type { Tenant, User, UserRole } from './auth'
 
+export type { Tenant }
+
 export interface CreateTenantDto {
   name: string
   display_name: string
   logo_url?: string
+  language?: string
   admin_email: string
   admin_first_name: string
   admin_last_name: string
@@ -12,6 +15,7 @@ export interface CreateTenantDto {
 export interface UpdateTenantDto {
   display_name?: string
   logo_url?: string
+  language?: string
   is_active?: boolean
   settings?: Record<string, any>
 }

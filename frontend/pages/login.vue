@@ -3,10 +3,10 @@
     <div class="max-w-md w-full space-y-8">
       <div>
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Inloggen bij Wasplanning
+          {{ t('login.title') }}
         </h2>
         <p class="mt-2 text-center text-sm text-gray-600">
-          Voer uw inloggegevens in
+          {{ t('login.subtitle') }}
         </p>
       </div>
       
@@ -14,7 +14,7 @@
         <div class="space-y-4">
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700">
-              E-mailadres
+              {{ t('login.email') }}
             </label>
             <Input
               id="email"
@@ -24,13 +24,13 @@
               autocomplete="email"
               required
               class="mt-1"
-              placeholder="uw@email.nl"
+              :placeholder="t('login.emailPlaceholder')"
             />
           </div>
           
           <div>
             <label for="password" class="block text-sm font-medium text-gray-700">
-              Wachtwoord
+              {{ t('login.password') }}
             </label>
             <Input
               id="password"
@@ -40,7 +40,7 @@
               autocomplete="current-password"
               required
               class="mt-1"
-              placeholder="Wachtwoord"
+              :placeholder="t('login.passwordPlaceholder')"
             />
           </div>
         </div>
@@ -50,7 +50,7 @@
           <div class="flex">
             <div class="ml-3">
               <h3 class="text-sm font-medium text-red-800">
-                Inloggen mislukt
+                {{ t('login.error') }}
               </h3>
               <div class="mt-2 text-sm text-red-700">
                 {{ authError }}
@@ -65,8 +65,8 @@
             :disabled="pending"
             class="w-full"
           >
-            <span v-if="pending">Bezig met inloggen...</span>
-            <span v-else>Inloggen</span>
+            <span v-if="pending">{{ t('login.loggingIn') }}</span>
+            <span v-else>{{ t('login.loginButton') }}</span>
           </Button>
         </div>
       </form>
@@ -75,9 +75,12 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { LoginDto } from '~/types/auth'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+
+const { t } = useI18n()
 
 // Meta
 definePageMeta({
@@ -106,7 +109,7 @@ const handleLogin = async () => {
     if (response) {
       console.log('✅ Login successful, setting auth data...')
       // Set auth data in store
-      authStore.setAuth(response.access_token, response.refresh_token, response.user)
+      authStore.setAuth(response)
       
       // Redirect based on user role
       const redirectPath = getRedirectPath(response.user.role)

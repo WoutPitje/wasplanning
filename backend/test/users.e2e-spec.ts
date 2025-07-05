@@ -76,19 +76,19 @@ describe('Users (e2e)', () => {
     const superAdminLogin = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: `super@test-e2e-users-${testTimestamp}.com`, password: 'testpassword' })
-      .expect(201);
+      .expect(200);
     superAdminToken = superAdminLogin.body.access_token;
 
     const garageAdminLogin = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: garageAdminEmail, password: 'testpassword' })
-      .expect(201);
+      .expect(200);
     garageAdminToken = garageAdminLogin.body.access_token;
 
     const wasplannerLogin = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: `wasplanner@test-e2e-users-${testTimestamp}.com`, password: 'testpassword' })
-      .expect(201);
+      .expect(200);
     wasplannerToken = wasplannerLogin.body.access_token;
   });
 
@@ -155,7 +155,7 @@ describe('Users (e2e)', () => {
       await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email: createUserDto.email, password: createUserDto.password })
-        .expect(201);
+        .expect(200);
     });
 
     it('should prevent garage admin from creating users in other tenants', async () => {
@@ -356,7 +356,7 @@ describe('Users (e2e)', () => {
         .patch(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
         .send(updateDto)
-        .expect(200);
+        .expect(201);
 
       expect(response.body.first_name).toBe(updateDto.first_name);
       expect(response.body.last_name).toBe(updateDto.last_name);
@@ -376,7 +376,7 @@ describe('Users (e2e)', () => {
         .patch(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ role: UserRole.WASPLANNERS })
-        .expect(200);
+        .expect(201);
 
       expect(response.body.role).toBe(UserRole.WASPLANNERS);
     });
@@ -386,7 +386,7 @@ describe('Users (e2e)', () => {
         .patch(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
         .send({ email: 'newemail@test.nl' })
-        .expect(200);
+        .expect(201);
 
       // Email should remain unchanged from what was created
     });
@@ -416,7 +416,7 @@ describe('Users (e2e)', () => {
         .patch(`/users/${testUserId}/password`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
         .send({ new_password: newPassword })
-        .expect(200);
+        .expect(201);
 
       expect(response.body.message).toBe('Password reset successfully');
 
@@ -453,7 +453,7 @@ describe('Users (e2e)', () => {
       const response = await request(app.getHttpServer())
         .delete(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
-        .expect(200);
+        .expect(201);
 
       expect(response.body.message).toContain('deactivated');
 
@@ -461,7 +461,7 @@ describe('Users (e2e)', () => {
       const checkResponse = await request(app.getHttpServer())
         .get(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
-        .expect(200);
+        .expect(201);
 
       expect(checkResponse.body.is_active).toBe(false);
     });

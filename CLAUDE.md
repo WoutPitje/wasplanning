@@ -60,6 +60,7 @@ Dutch car wash planning system for garages with pickup/delivery service. Coordin
 - **Pages structure**: `/pages/[role]/` for role-based routing
 - **Components**: Reusable UI components in `/components/ui/`
 - **Types**: Shared TypeScript interfaces in `/types/`
+- **Mobile Responsive** - All components must work on mobile devices (320px+)
 
 ### Mobile (Expo)
 - Expo Router for navigation
@@ -86,6 +87,50 @@ Dutch car wash planning system for garages with pickup/delivery service. Coordin
 - **API**: English endpoints (/api/v1/wash-tasks)
 - **Database**: English table/column names (wash_tasks, created_at)
 
+## Impersonation Feature
+- **Only SUPER_ADMIN** can impersonate other users
+- **API Endpoints**:
+  - `POST /auth/impersonate/:userId` - Start impersonating
+  - `POST /auth/stop-impersonation` - Return to original user
+- **Security Restrictions**:
+  - Cannot impersonate another SUPER_ADMIN
+  - Cannot impersonate inactive users
+  - Cannot perform nested impersonation
+  - Certain actions blocked while impersonating (password changes, user deletion, tenant management)
+- **JWT Structure** during impersonation:
+  ```typescript
+  {
+    id: string,              // Impersonated user's ID
+    email: string,           // Impersonated user's email
+    role: string,            // Impersonated user's role
+    tenant: {...},           // Impersonated user's tenant
+    impersonator_id: string, // Original SUPER_ADMIN's ID
+    is_impersonating: true   // Impersonation flag
+  }
+  ```
+- **Frontend Implementation** (TODO):
+  - Add impersonation types to auth.ts
+  - Create useImpersonation composable
+  - Add visual indicator in header
+  - Add impersonate button in user management
+
+## i18n Implementation (MANDATORY)
+- **All UI text** must use i18n translations - NO hardcoded strings
+- **Import** `import { useI18n } from 'vue-i18n'` in every component
+- **Setup** `const { t } = useI18n()` in script setup
+- **Use** `{{ t('key.path') }}` in templates
+- **Placeholders** `:placeholder="t('key.path')"`
+- **Email addresses** avoid @ symbols in translations (use descriptive text)
+- **Computed labels** Use `computed(() => t('key'))` for reactive translations
+- **Translation structure**:
+  - Common keys: `common.save`, `common.cancel`
+  - Page-specific: `[role].[page].[element]`
+  - Nested sections: `admin.tenants.form.title`
+- **Default locale**: Dutch (nl)
+- **Supported locales**: Dutch (nl), English (en)
+- **Config location**: `frontend/i18n/i18n.config.ts`
+- **Never hardcode** Dutch or English text in components
+
 ## File Organization
 ```
 backend/src/modules/[feature]/
@@ -106,6 +151,38 @@ mobile/app/(tabs)/
 - **Loading States**: Reactive loading/error states in composables
 - **Type Safety**: Full TypeScript coverage for API responses
 - **Caching**: Use Nuxt's built-in request caching where appropriate
+
+## UI/UX Patterns
+
+### Mobile Responsiveness (MANDATORY)
+- **All components** must be fully responsive from 320px width
+- **Tables**: Use horizontal scroll on mobile or switch to card layout
+- **Forms**: Stack inputs vertically on mobile (single column)
+- **Navigation**: Hamburger menu on mobile devices
+- **Touch targets**: Minimum 44x44px for clickable elements
+- **Text**: Readable font sizes (min 14px on mobile)
+- **Spacing**: Appropriate padding/margins for touch devices
+- **Breakpoints**: Use Tailwind's responsive prefixes (sm:, md:, lg:)
+
+### Button Positioning
+- **List/Index pages**: 
+  - "New/Create" button in top right header
+  - Action buttons in table rows (View Details only, edit via detail page)
+- **Detail/View pages**:
+  - "Edit" button in top right header
+  - "Back" button at bottom left
+  - No action cards - keep details clean
+- **Create/Edit Forms**:
+  - For Edit: Action buttons (Reset Password, Activate/Deactivate) in top right header
+  - "Cancel" button at bottom left
+  - "Save/Submit" button at bottom right
+  - Form buttons use `justify-between` flex layout
+  - On mobile: Stack buttons vertically with full width
+
+### Password Handling
+- **Empty passwords**: When creating users, if password field is empty, remove it from request body
+- **Backend behavior**: Backend auto-generates secure temporary password when not provided
+- **Display**: Show temporary password in dialog after successful creation
 
 ## Testing Requirements
 - Jest (backend) + Vitest (frontend) + Detox (mobile)

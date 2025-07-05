@@ -37,6 +37,7 @@ describe('JwtStrategy', () => {
       id: 'tenant-uuid',
       name: 'test-garage',
       display_name: 'Test Garage',
+      language: 'nl',
     },
   };
 

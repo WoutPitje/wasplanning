@@ -7,16 +7,16 @@
     <div class="md:flex md:items-center md:justify-between">
       <div class="flex-1">
         <h2 class="text-2xl font-bold leading-8 text-foreground sm:text-3xl">
-          {{ tenant?.display_name || 'Garage Details' }}
+          {{ tenant?.display_name || t('admin.tenants.details.title') }}
         </h2>
         <p class="mt-1 text-sm text-muted-foreground">
-          Bekijk garage informatie en gebruikers
+          {{ t('admin.tenants.details.subtitle') }}
         </p>
       </div>
       <div class="mt-4 flex space-x-3 md:ml-4 md:mt-0">
-        <Button variant="outline" asChild>
+        <Button asChild>
           <NuxtLink :to="`/admin/tenants/${$route.params.id}/edit`">
-            Bewerken
+            {{ t('common.edit') }}
           </NuxtLink>
         </Button>
       </div>
@@ -25,7 +25,7 @@
     <!-- Loading state -->
     <div v-if="pending" class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      <p class="mt-2 text-sm text-muted-foreground">Garage laden...</p>
+      <p class="mt-2 text-sm text-muted-foreground">{{ t('admin.tenants.details.loading') }}</p>
     </div>
 
     <!-- Error state -->
@@ -33,7 +33,7 @@
       <div class="flex">
         <div class="ml-3">
           <h3 class="text-sm font-medium text-destructive">
-            Fout bij laden
+            {{ t('admin.tenants.details.loadError') }}
           </h3>
           <div class="mt-2 text-sm text-destructive/80">
             {{ error }}
@@ -47,20 +47,20 @@
       <!-- Tenant Info -->
       <Card class="lg:col-span-2">
         <CardHeader>
-          <h3 class="text-lg font-medium text-foreground">Garage Informatie</h3>
+          <h3 class="text-lg font-medium text-foreground">{{ t('admin.tenants.details.garageInfo') }}</h3>
         </CardHeader>
         <CardContent class="space-y-6">
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <dt class="text-sm font-medium text-muted-foreground">Weergave Naam</dt>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.displayName') }}</dt>
               <dd class="mt-1 text-sm text-foreground">{{ tenant.display_name }}</dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-muted-foreground">Systeem Naam</dt>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.systemName') }}</dt>
               <dd class="mt-1 text-sm text-foreground">{{ tenant.name }}</dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-muted-foreground">Status</dt>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.status') }}</dt>
               <dd class="mt-1">
                 <span
                   :class="[
@@ -70,18 +70,18 @@
                       : 'bg-red-100 text-red-800'
                   ]"
                 >
-                  {{ tenant.is_active ? 'Actief' : 'Inactief' }}
+                  {{ tenant.is_active ? t('common.active') : t('common.inactive') }}
                 </span>
               </dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-muted-foreground">Aangemaakt</dt>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.createdAt') }}</dt>
               <dd class="mt-1 text-sm text-foreground">{{ formatDate(tenant.created_at) }}</dd>
             </div>
           </div>
           
           <div v-if="tenant.logo_url">
-            <dt class="text-sm font-medium text-muted-foreground">Logo</dt>
+            <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.logo') }}</dt>
             <dd class="mt-2">
               <img
                 :src="tenant.logo_url"
@@ -96,21 +96,21 @@
       <!-- Statistics -->
       <Card>
         <CardHeader>
-          <h3 class="text-lg font-medium text-foreground">Statistieken</h3>
+          <h3 class="text-lg font-medium text-foreground">{{ t('admin.tenants.details.statistics') }}</h3>
         </CardHeader>
         <CardContent>
           <div v-if="stats" class="space-y-4">
             <div>
-              <dt class="text-sm font-medium text-muted-foreground">Totaal Gebruikers</dt>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.totalUsers') }}</dt>
               <dd class="mt-1 text-2xl font-semibold text-foreground">{{ stats.total_users }}</dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-muted-foreground">Actieve Gebruikers</dt>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.activeUsers') }}</dt>
               <dd class="mt-1 text-2xl font-semibold text-foreground">{{ stats.active_users }}</dd>
             </div>
           </div>
           <div v-else class="text-sm text-muted-foreground">
-            Statistieken laden...
+            {{ t('admin.tenants.details.statsLoading') }}
           </div>
         </CardContent>
       </Card>
@@ -118,7 +118,7 @@
       <!-- Users list -->
       <Card class="lg:col-span-3">
         <CardHeader>
-          <h3 class="text-lg font-medium text-foreground">Gebruikers</h3>
+          <h3 class="text-lg font-medium text-foreground">{{ t('admin.tenants.details.users') }}</h3>
         </CardHeader>
         <CardContent>
           <div v-if="tenant.users?.length" class="divide-y divide-border">
@@ -149,27 +149,37 @@
                         : 'bg-red-100 text-red-800'
                     ]"
                   >
-                    {{ user.is_active ? 'Actief' : 'Inactief' }}
+                    {{ user.is_active ? t('common.active') : t('common.inactive') }}
                   </span>
                 </div>
               </div>
             </div>
           </div>
           <div v-else class="text-center py-8">
-            <p class="text-sm text-muted-foreground">Geen gebruikers gevonden</p>
+            <p class="text-sm text-muted-foreground">{{ t('admin.tenants.details.noUsers') }}</p>
           </div>
         </CardContent>
       </Card>
+    </div>
+
+    <!-- Back button at bottom -->
+    <div class="mt-6">
+      <Button variant="outline" @click="navigateTo('/admin/tenants')">
+        {{ t('common.back') }}
+      </Button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader } from '~/components/ui/card'
 import { Breadcrumb } from '~/components/ui/breadcrumb'
+
+const { t } = useI18n()
 
 // Meta
 definePageMeta({
@@ -187,9 +197,9 @@ const stats = ref(null)
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => [
-  { label: 'Admin', href: '/admin/tenants' },
-  { label: 'Garages', href: '/admin/tenants' },
-  { label: tenant.value?.display_name || 'Details' }
+  { label: t('admin.breadcrumb.admin'), href: '/admin/tenants' },
+  { label: t('admin.breadcrumb.garages'), href: '/admin/tenants' },
+  { label: tenant.value?.display_name || t('admin.breadcrumb.details') }
 ])
 
 // Methods

@@ -7,6 +7,11 @@ export interface LoginResponse {
   access_token: string
   refresh_token: string
   user: User
+  impersonation?: {
+    is_impersonating: boolean
+    impersonator_id: string
+    impersonator_email: string
+  }
 }
 
 export interface User {
@@ -25,6 +30,7 @@ export interface Tenant {
   name: string
   display_name: string
   logo_url: string | null
+  language: string
   is_active: boolean
   created_at: string
   updated_at: string

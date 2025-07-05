@@ -35,6 +35,28 @@
 - Components in /components/ui/ for reusable elements
 - Reactive loading/error states in composables
 
+## UI/UX Patterns
+- List pages: "New/Create" button in top right, table actions (View Details only)
+- Detail pages: "Edit" button in top right, "Back" button at bottom left
+- Edit/Create forms: Action buttons in top right (for Edit), Cancel at bottom left, Submit at bottom right
+- Password fields: Empty passwords removed from request, backend auto-generates secure temporary password
+- Temporary passwords: Display in dialog after successful user creation
+
+## i18n Requirements (MANDATORY)
+- ALWAYS use i18n for ALL user-facing text - NO hardcoded strings
+- Import: `import { useI18n } from 'vue-i18n'` in EVERY component
+- Setup: `const { t } = useI18n()` in script setup
+- Template: `{{ t('translation.key') }}`
+- Placeholders: `:placeholder="t('translation.key')"`
+- Avoid @ symbols in translation strings (use descriptive text)
+- Translation keys structure:
+  - Common: `common.save`, `common.cancel`
+  - Page-specific: `[role].[page].[element]`
+  - Nested: `admin.tenants.form.title`
+- Default locale: Dutch (nl)
+- Supported locales: Dutch (nl), English (en)
+- Config location: `frontend/i18n/i18n.config.ts`
+
 ## Mobile Rules
 - Expo SDK features preferred over native modules
 - NativeWind for styling (TailwindCSS syntax)

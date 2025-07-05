@@ -26,6 +26,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { NoImpersonation } from '../auth/decorators/no-impersonation.decorator';
 import { UserRole } from '../auth/entities/user.entity';
 
 @ApiTags('Users')
@@ -95,6 +96,7 @@ export class UsersController {
   }
 
   @Patch(':id/password')
+  @NoImpersonation()
   @Roles(UserRole.SUPER_ADMIN, UserRole.GARAGE_ADMIN)
   @ApiOperation({ summary: 'Reset user password' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
@@ -103,6 +105,7 @@ export class UsersController {
     description: 'Password reset successfully',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 403, description: 'Action not allowed while impersonating' })
   resetPassword(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() resetPasswordDto: ResetPasswordDto,
@@ -112,6 +115,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @NoImpersonation()
   @Roles(UserRole.SUPER_ADMIN, UserRole.GARAGE_ADMIN)
   @ApiOperation({ summary: 'Deactivate user' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
@@ -120,6 +124,7 @@ export class UsersController {
     description: 'User deactivated successfully',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 403, description: 'Action not allowed while impersonating' })
   remove(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
     return this.usersService.remove(id, req.user);
   }

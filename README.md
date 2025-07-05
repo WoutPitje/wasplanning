@@ -7,8 +7,9 @@ A real-time vehicle wash management system for auto service centers, coordinatin
 - **Real-time Status Tracking** - Track vehicles from workshop to wash station to completion
 - **Role-based Access** - Separate interfaces for Werkplaats, Wassers, Haal/Breng Planners, Wasplanners, and Admins
 - **Smart Task Assignment** - Match wash tasks to available washers based on skills
-- **Mobile Responsive** - Optimized for tablets and phones used by wash staff
+- **Mobile Responsive** - Fully responsive from 320px width, optimized for all devices
 - **Real-time Updates** - WebSocket notifications for instant status changes
+- **Multi-language Support** - Dutch (primary) and English interface translations
 
 ## Tech Stack
 
@@ -18,6 +19,7 @@ A real-time vehicle wash management system for auto service centers, coordinatin
 - **Storage**: MinIO (S3-compatible object storage)
 - **Real-time**: Socket.io
 - **API Docs**: Swagger/OpenAPI
+- **i18n**: Vue I18n (Dutch/English)
 
 ## Quick Start
 
@@ -180,6 +182,45 @@ The system supports multiple locations per tenant:
 - **Reporting**: Generate reports per location or aggregated across all locations
 - **User Assignment**: Users can be assigned to one or multiple locations based on their role
 
+## Internationalization (i18n)
+
+The frontend supports multiple languages using Vue I18n:
+
+- **Default Language**: Dutch (nl)
+- **Available Languages**: Dutch (nl), English (en)
+- **Configuration**: Located in `frontend/i18n/i18n.config.ts`
+
+### Adding Translations
+
+1. All UI text must use the `t()` function from Vue I18n
+2. Never hardcode Dutch or English text in components
+3. Translation keys follow a hierarchical structure:
+   - Common: `common.save`, `common.cancel`
+   - Page-specific: `[role].[page].[element]`
+   - Example: `admin.tenants.form.title`
+
+### Using i18n in Components
+
+```vue
+<template>
+  <h1>{{ t('page.title') }}</h1>
+  <Button>{{ t('common.save') }}</Button>
+  <Input :placeholder="t('form.email.placeholder')" />
+</template>
+
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
+</script>
+```
+
+### Important Notes
+
+- Avoid using @ symbols in translation strings (use descriptive text instead)
+- For email placeholders, use descriptive text like "Enter your email address"
+- Use computed properties for reactive translations
+- All new features must include both Dutch and English translations
+
 ## Environment Variables
 
 ### Backend (.env)
@@ -200,6 +241,19 @@ MINIO_USE_SSL=false
 NUXT_PUBLIC_API_URL=http://localhost:3000
 NUXT_PUBLIC_WS_URL=ws://localhost:3000
 ```
+
+## Mobile Responsiveness
+
+The frontend is designed to be fully responsive and functional on all devices:
+
+- **Minimum Support**: 320px width (iPhone SE)
+- **Breakpoints**: Uses Tailwind CSS responsive prefixes (sm:, md:, lg:, xl:)
+- **Touch Targets**: Minimum 44x44px for all interactive elements
+- **Tables**: Horizontal scroll on mobile or card-based layouts
+- **Forms**: Single column layout on mobile devices
+- **Navigation**: Hamburger menu pattern for mobile
+- **Typography**: Minimum 14px font size on mobile
+- **Spacing**: Touch-friendly padding and margins
 
 ## Technical Documentation
 

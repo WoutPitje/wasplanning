@@ -1,7 +1,30 @@
 <template>
-  <header class="border-b bg-card shadow-sm">
-    <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center">
+  <div>
+    <!-- Impersonation banner -->
+    <div v-if="isImpersonating" class="bg-yellow-500 text-black">
+      <div class="max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-medium">
+              {{ t('admin.users.impersonating_as', { email: authStore.user?.email || '' }) }}
+            </span>
+          </div>
+          <Button 
+            size="sm" 
+            variant="secondary"
+            @click="handleStopImpersonation"
+            :disabled="stoppingImpersonation"
+          >
+            {{ t('admin.users.stop_impersonation') }}
+          </Button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main header -->
+    <header class="border-b bg-card shadow-sm">
+      <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center">
         <!-- Left side: Logo/Title and Navigation -->
         <div class="flex items-center space-x-6">
           <div class="flex items-center">
@@ -47,67 +70,59 @@
             <!-- User menu dropdown (future enhancement) -->
             <Button variant="outline" size="sm" @click="logout" class="ml-3">
               <LogOut class="w-4 h-4 mr-2" />
-              Uitloggen
+              {{ t('nav.logout') }}
             </Button>
           </div>
         </div>
       </div>
     </div>
   </header>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { LogOut } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { UserRole } from '~/types/auth'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const router = useRouter()
+const { stopImpersonation } = useImpersonation()
+
+// Impersonation state
+const isImpersonating = computed(() => authStore.impersonation?.is_impersonating || false)
+const stoppingImpersonation = ref(false)
 
 // App title based on user role
 const appTitle = computed(() => {
-  if (!authStore.user) return 'Wasplanning'
+  if (!authStore.user) return t('app.name')
   
   switch (authStore.user.role) {
     case UserRole.SUPER_ADMIN:
-      return 'Wasplanning Admin'
+      return t('header.titles.superAdmin')
     case UserRole.GARAGE_ADMIN:
-      return 'Garage Beheer'
+      return t('header.titles.garageAdmin')
     case UserRole.WASPLANNERS:
-      return 'Was Planning'
+      return t('header.titles.wasplanner')
     case UserRole.WASSERS:
-      return 'Wasser Dashboard'
+      return t('header.titles.washer')
     case UserRole.WERKPLAATS:
-      return 'Werkplaats'
+      return t('header.titles.workshop')
     case UserRole.HAAL_BRENG_PLANNERS:
-      return 'Haal/Breng Planning'
+      return t('header.titles.deliveryPlanner')
     default:
-      return 'Wasplanning'
+      return t('app.name')
   }
 })
 
-// Role display name in Dutch
+// Role display name
 const roleDisplayName = computed(() => {
   if (!authStore.user) return ''
   
-  switch (authStore.user.role) {
-    case UserRole.SUPER_ADMIN:
-      return 'Super Administrator'
-    case UserRole.GARAGE_ADMIN:
-      return 'Garage Beheerder'
-    case UserRole.WASPLANNERS:
-      return 'Was Planner'
-    case UserRole.WASSERS:
-      return 'Wasser'
-    case UserRole.WERKPLAATS:
-      return 'Werkplaats Medewerker'
-    case UserRole.HAAL_BRENG_PLANNERS:
-      return 'Haal/Breng Planner'
-    default:
-      return authStore.user.role
-  }
+  const roleKey = authStore.user.role.toLowerCase().replace(/_/g, '_')
+  return t(`roles.${roleKey}`)
 })
 
 // Navigation items based on role
@@ -117,35 +132,36 @@ const navigation = computed(() => {
   switch (authStore.user.role) {
     case UserRole.SUPER_ADMIN:
       return [
-        { label: 'Tenants', href: '/admin/tenants' },
-        { label: 'Instellingen', href: '/admin/settings' }
+        { label: t('nav.tenants'), href: '/admin/tenants' },
+        { label: t('nav.users'), href: '/admin/users' },
+        { label: t('nav.settings'), href: '/admin/settings' }
       ]
     case UserRole.GARAGE_ADMIN:
       return [
-        { label: 'Dashboard', href: '/garage-admin/dashboard' },
-        { label: 'Gebruikers', href: '/garage-admin/users' },
-        { label: 'Instellingen', href: '/garage-admin/settings' }
+        { label: t('nav.dashboard'), href: '/garage-admin/dashboard' },
+        { label: t('nav.users'), href: '/garage-admin/users' },
+        { label: t('nav.settings'), href: '/garage-admin/settings' }
       ]
     case UserRole.WASPLANNERS:
       return [
-        { label: 'Dashboard', href: '/wasplanner/dashboard' },
-        { label: 'Wachtrij', href: '/wasplanner/queue' },
-        { label: 'Planning', href: '/wasplanner/schedule' }
+        { label: t('nav.dashboard'), href: '/wasplanner/dashboard' },
+        { label: t('nav.queue'), href: '/wasplanner/queue' },
+        { label: t('nav.planning'), href: '/wasplanner/schedule' }
       ]
     case UserRole.WASSERS:
       return [
-        { label: 'Mijn Taken', href: '/washer/queue' },
-        { label: 'Geschiedenis', href: '/washer/history' }
+        { label: t('nav.myTasks'), href: '/washer/queue' },
+        { label: t('nav.history'), href: '/washer/history' }
       ]
     case UserRole.WERKPLAATS:
       return [
-        { label: 'Nieuwe Verzoeken', href: '/workshop/requests' },
-        { label: 'Mijn Verzoeken', href: '/workshop/my-requests' }
+        { label: t('nav.newRequests'), href: '/workshop/requests' },
+        { label: t('nav.myRequests'), href: '/workshop/my-requests' }
       ]
     case UserRole.HAAL_BRENG_PLANNERS:
       return [
-        { label: 'Planning', href: '/delivery/schedule' },
-        { label: 'Routes', href: '/delivery/routes' }
+        { label: t('nav.planning'), href: '/delivery/schedule' },
+        { label: t('nav.routes'), href: '/delivery/routes' }
       ]
     default:
       return []
@@ -155,5 +171,15 @@ const navigation = computed(() => {
 const logout = async () => {
   authStore.clearAuth()
   await router.push('/login')
+}
+
+const handleStopImpersonation = async () => {
+  stoppingImpersonation.value = true
+  try {
+    await stopImpersonation()
+  } catch (error) {
+    // Error is already handled in the composable
+    stoppingImpersonation.value = false
+  }
 }
 </script>

@@ -6,17 +6,17 @@
     <!-- Header -->
     <div>
       <h2 class="text-2xl font-bold leading-8 text-foreground sm:text-3xl">
-        {{ tenant?.display_name ? `${tenant.display_name} Bewerken` : 'Garage Bewerken' }}
+        {{ tenant?.display_name ? t('admin.tenants.edit.titleWithName', { name: tenant.display_name }) : t('admin.tenants.edit.title') }}
       </h2>
       <p class="mt-1 text-sm text-muted-foreground">
-        Wijzig garage informatie
+        {{ t('admin.tenants.edit.subtitle') }}
       </p>
     </div>
 
     <!-- Loading state -->
     <div v-if="pending" class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      <p class="mt-2 text-sm text-muted-foreground">Garage laden...</p>
+      <p class="mt-2 text-sm text-muted-foreground">{{ t('admin.tenants.edit.loading') }}</p>
     </div>
 
     <!-- Error state -->
@@ -24,7 +24,7 @@
       <div class="flex">
         <div class="ml-3">
           <h3 class="text-sm font-medium text-destructive">
-            Fout bij laden
+            {{ t('admin.tenants.edit.loadError') }}
           </h3>
           <div class="mt-2 text-sm text-destructive/80">
             {{ error }}
@@ -41,30 +41,30 @@
             <!-- Garage Information -->
             <div class="sm:col-span-6">
               <h3 class="text-base font-semibold leading-7 text-foreground">
-                Garage Informatie
+                {{ t('admin.tenants.edit.garageInfo') }}
               </h3>
               <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                Basis informatie over de garage
+                {{ t('admin.tenants.edit.garageInfoDescription') }}
               </p>
             </div>
 
             <div class="sm:col-span-3">
               <label class="block text-sm font-medium leading-6 text-foreground">
-                Systeem Naam
+                {{ t('admin.tenants.edit.systemName') }}
               </label>
               <div class="mt-2">
                 <div class="px-3 py-2 bg-muted text-muted-foreground rounded-md text-sm">
                   {{ tenant?.name }}
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground">
-                  Systeem naam kan niet gewijzigd worden
+                  {{ t('admin.tenants.edit.systemNameInfo') }}
                 </p>
               </div>
             </div>
 
             <div class="sm:col-span-3">
               <label for="display_name" class="block text-sm font-medium leading-6 text-foreground">
-                Weergave Naam *
+                {{ t('admin.tenants.edit.displayName') }} *
               </label>
               <div class="mt-2">
                 <Input
@@ -73,14 +73,14 @@
                   type="text"
                   name="display_name"
                   required
-                  placeholder="Garage Amsterdam West"
+                  :placeholder="t('admin.tenants.edit.displayNamePlaceholder')"
                 />
               </div>
             </div>
 
             <div class="sm:col-span-6">
               <label for="logo_url" class="block text-sm font-medium leading-6 text-foreground">
-                Logo URL
+                {{ t('admin.tenants.edit.logoUrl') }}
               </label>
               <div class="mt-2">
                 <Input
@@ -88,15 +88,33 @@
                   v-model="form.logo_url"
                   type="url"
                   name="logo_url"
-                  placeholder="https://example.com/logo.png"
+                  :placeholder="t('admin.tenants.edit.logoUrlPlaceholder')"
                 />
               </div>
             </div>
 
+            <!-- Language -->
+            <div class="sm:col-span-3">
+              <label for="language" class="block text-sm font-medium leading-6 text-foreground">
+                {{ t('admin.tenants.form.language') }}
+              </label>
+              <div class="mt-2">
+                <select
+                  id="language"
+                  v-model="form.language"
+                  name="language"
+                  class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                >
+                  <option value="nl">{{ t('languages.nl') }}</option>
+                  <option value="en">{{ t('languages.en') }}</option>
+                </select>
+              </div>
+            </div>
+
             <!-- Status -->
-            <div class="sm:col-span-6">
+            <div class="sm:col-span-3">
               <label class="block text-sm font-medium leading-6 text-foreground">
-                Status
+                {{ t('admin.tenants.edit.status') }}
               </label>
               <div class="mt-2">
                 <label class="flex items-center">
@@ -105,7 +123,7 @@
                     type="checkbox"
                     class="rounded border-input text-primary focus:ring-primary"
                   />
-                  <span class="ml-2 text-sm text-foreground">Garage is actief</span>
+                  <span class="ml-2 text-sm text-foreground">{{ t('admin.tenants.edit.garageActive') }}</span>
                 </label>
               </div>
             </div>
@@ -116,7 +134,7 @@
             <div class="flex">
               <div class="ml-3">
                 <h3 class="text-sm font-medium text-destructive">
-                  Fout bij bijwerken garage
+                  {{ t('admin.tenants.edit.updateError') }}
                 </h3>
                 <div class="mt-2 text-sm text-destructive/80">
                   {{ error }}
@@ -126,15 +144,13 @@
           </div>
 
           <!-- Submit buttons -->
-          <div class="flex items-center justify-end gap-x-6">
-            <Button variant="ghost" asChild>
-              <NuxtLink :to="`/admin/tenants/${$route.params.id}`">
-                Annuleren
-              </NuxtLink>
+          <div class="flex items-center justify-between">
+            <Button type="button" variant="outline" @click="navigateTo(`/admin/tenants/${$route.params.id}`)">
+              {{ t('common.cancel') }}
             </Button>
             <Button type="submit" :disabled="updatePending">
-              <span v-if="updatePending">Bezig met bijwerken...</span>
-              <span v-else>Garage Bijwerken</span>
+              <span v-if="updatePending">{{ t('admin.tenants.edit.updating') }}</span>
+              <span v-else>{{ t('admin.tenants.edit.updateButton') }}</span>
             </Button>
           </div>
         </form>
@@ -146,10 +162,10 @@
       <div class="flex">
         <div class="ml-3">
           <h3 class="text-sm font-medium text-green-800">
-            Garage succesvol bijgewerkt
+            {{ t('admin.tenants.edit.updateSuccess') }}
           </h3>
           <div class="mt-2 text-sm text-green-700">
-            De wijzigingen zijn opgeslagen.
+            {{ t('admin.tenants.edit.updateSuccessDescription') }}
           </div>
         </div>
       </div>
@@ -158,11 +174,14 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { UpdateTenantDto } from '~/types/admin'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent } from '~/components/ui/card'
 import { Input } from '~/components/ui/input'
 import { Breadcrumb } from '~/components/ui/breadcrumb'
+
+const { t } = useI18n()
 
 // Meta
 definePageMeta({
@@ -182,15 +201,16 @@ const showSuccess = ref(false)
 const form = reactive<UpdateTenantDto>({
   display_name: '',
   logo_url: '',
+  language: 'nl',
   is_active: true
 })
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => [
-  { label: 'Admin', href: '/admin/tenants' },
-  { label: 'Garages', href: '/admin/tenants' },
-  { label: tenant.value?.display_name || 'Details', href: `/admin/tenants/${getTenantId()}` },
-  { label: 'Bewerken' }
+  { label: t('admin.breadcrumb.admin'), href: '/admin/tenants' },
+  { label: t('admin.breadcrumb.garages'), href: '/admin/tenants' },
+  { label: tenant.value?.display_name || t('admin.breadcrumb.details'), href: `/admin/tenants/${getTenantId()}` },
+  { label: t('admin.breadcrumb.edit') }
 ])
 
 // Methods
@@ -206,6 +226,7 @@ const loadTenant = async () => {
     // Populate form with existing data
     form.display_name = result.display_name
     form.logo_url = result.logo_url || ''
+    form.language = result.language || 'nl'
     form.is_active = result.is_active
   }
 }

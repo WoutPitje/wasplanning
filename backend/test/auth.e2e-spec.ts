@@ -64,6 +64,7 @@ describe('Auth (e2e)', () => {
       name: 'test-garage',
       display_name: 'Test Garage',
       is_active: true,
+      language: 'nl',
     });
     await tenantRepository.save(testTenant);
 
@@ -93,7 +94,7 @@ describe('Auth (e2e)', () => {
           email: 'test@example.com',
           password: 'testpassword',
         })
-        .expect(201);
+        .expect(200);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('refresh_token');
@@ -107,6 +108,7 @@ describe('Auth (e2e)', () => {
           id: testTenant.id,
           name: testTenant.name,
           display_name: testTenant.display_name,
+          language: 'nl',
         },
       });
 
@@ -173,7 +175,7 @@ describe('Auth (e2e)', () => {
           email: 'test@example.com',
           password: 'testpassword',
         })
-        .expect(201);
+        .expect(200);
 
       const updatedUser = await userRepository.findOne({
         where: { id: testUser.id },
@@ -206,7 +208,7 @@ describe('Auth (e2e)', () => {
         .send({
           refresh_token: refreshToken,
         })
-        .expect(201);
+        .expect(200);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('refresh_token');
@@ -260,6 +262,7 @@ describe('Auth (e2e)', () => {
           id: testTenant.id,
           name: testTenant.name,
           display_name: testTenant.display_name,
+          language: 'nl',
         },
       });
     });
@@ -288,6 +291,7 @@ describe('Auth (e2e)', () => {
         name: 'another-garage',
         display_name: 'Another Garage',
         is_active: true,
+        language: 'nl',
       });
       await tenantRepository.save(anotherTenant);
 
@@ -311,12 +315,13 @@ describe('Auth (e2e)', () => {
           email: 'another@example.com',
           password: 'anotherpassword',
         })
-        .expect(201);
+        .expect(200);
 
       expect(response.body.user.tenant).toEqual({
         id: anotherTenant.id,
         name: anotherTenant.name,
         display_name: anotherTenant.display_name,
+        language: 'nl',
       });
     });
 
@@ -375,7 +380,7 @@ describe('Auth (e2e)', () => {
             email: `${role}@example.com`,
             password: 'testpassword',
           })
-          .expect(201);
+          .expect(200);
 
         const profileResponse = await request(app.getHttpServer())
           .get('/auth/profile')
@@ -384,6 +389,188 @@ describe('Auth (e2e)', () => {
 
         expect(profileResponse.body.role).toBe(role);
       }
+    });
+  });
+
+  describe('Impersonation', () => {
+    let superAdminUser: User;
+    let superAdminToken: string;
+    let targetUser: User;
+
+    beforeEach(async () => {
+      // Create super admin user
+      const superAdminPassword = await bcrypt.hash('superadminpass', 12);
+      superAdminUser = userRepository.create({
+        email: 'superadmin@example.com',
+        password: superAdminPassword,
+        first_name: 'Super',
+        last_name: 'Admin',
+        role: UserRole.SUPER_ADMIN,
+        tenant_id: testTenant.id,
+        is_active: true,
+      });
+      await userRepository.save(superAdminUser);
+
+      // Create another regular user to impersonate
+      const targetPassword = await bcrypt.hash('targetpass', 12);
+      targetUser = userRepository.create({
+        email: 'target@example.com',
+        password: targetPassword,
+        first_name: 'Target',
+        last_name: 'User',
+        role: UserRole.WERKPLAATS,
+        tenant_id: testTenant.id,
+        is_active: true,
+      });
+      await userRepository.save(targetUser);
+
+      // Get super admin token
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'superadmin@example.com',
+          password: 'superadminpass',
+        })
+        .expect(200);
+      
+      expect(loginResponse.body).toHaveProperty('access_token');
+      expect(loginResponse.body.user.role).toBe(UserRole.SUPER_ADMIN);
+      
+      superAdminToken = loginResponse.body.access_token;
+    });
+
+    describe('/auth/impersonate/:userId (POST)', () => {
+      it('should successfully impersonate a user as super admin', async () => {
+        // First verify we have a valid super admin token
+        const profileResponse = await request(app.getHttpServer())
+          .get('/auth/profile')
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .expect(200);
+        
+        expect(profileResponse.body.role).toBe(UserRole.SUPER_ADMIN);
+        
+        const response = await request(app.getHttpServer())
+          .post(`/auth/impersonate/${targetUser.id}`)
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .expect(201);
+
+        expect(response.body).toHaveProperty('access_token');
+        expect(response.body.user).toEqual({
+          id: targetUser.id,
+          email: targetUser.email,
+          role: targetUser.role,
+          first_name: targetUser.first_name,
+          last_name: targetUser.last_name,
+          tenant: {
+            id: testTenant.id,
+            name: testTenant.name,
+            display_name: testTenant.display_name,
+            language: 'nl',
+          },
+        });
+        expect(response.body).toHaveProperty('impersonation');
+        expect(response.body.impersonation).toEqual({
+          is_impersonating: true,
+          impersonator_id: superAdminUser.id,
+          impersonator_email: superAdminUser.email,
+        });
+      });
+
+      it('should fail when non-super admin tries to impersonate', async () => {
+        // Login as regular user
+        const regularLoginResponse = await request(app.getHttpServer())
+          .post('/auth/login')
+          .send({
+            email: 'test@example.com',
+            password: 'testpassword',
+          });
+        
+        const regularToken = regularLoginResponse.body.access_token;
+
+        await request(app.getHttpServer())
+          .post(`/auth/impersonate/${targetUser.id}`)
+          .set('Authorization', `Bearer ${regularToken}`)
+          .expect(403);
+      });
+
+      it('should fail when trying to impersonate another super admin', async () => {
+        // Create another super admin
+        const anotherSuperAdminPassword = await bcrypt.hash('anothersuperpass', 12);
+        const anotherSuperAdmin = userRepository.create({
+          email: 'anothersuperadmin@example.com',
+          password: anotherSuperAdminPassword,
+          first_name: 'Another',
+          last_name: 'SuperAdmin',
+          role: UserRole.SUPER_ADMIN,
+          tenant_id: testTenant.id,
+          is_active: true,
+        });
+        await userRepository.save(anotherSuperAdmin);
+
+        await request(app.getHttpServer())
+          .post(`/auth/impersonate/${anotherSuperAdmin.id}`)
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .expect(403);
+      });
+
+      it('should fail when trying to impersonate non-existent user', async () => {
+        const fakeUserId = '00000000-0000-0000-0000-000000000000';
+        
+        await request(app.getHttpServer())
+          .post(`/auth/impersonate/${fakeUserId}`)
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .expect(404);
+      });
+
+      it('should fail when trying to impersonate inactive user', async () => {
+        // Make target user inactive
+        await userRepository.update(targetUser.id, { is_active: false });
+
+        await request(app.getHttpServer())
+          .post(`/auth/impersonate/${targetUser.id}`)
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .expect(403);
+      });
+    });
+
+    describe('/auth/stop-impersonation (POST)', () => {
+      it('should successfully stop impersonation', async () => {
+        // First impersonate
+        const impersonateResponse = await request(app.getHttpServer())
+          .post(`/auth/impersonate/${targetUser.id}`)
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .expect(201);
+        
+        const impersonatedToken = impersonateResponse.body.access_token;
+
+        // Then stop impersonation
+        const response = await request(app.getHttpServer())
+          .post('/auth/stop-impersonation')
+          .set('Authorization', `Bearer ${impersonatedToken}`)
+          .expect(201);
+
+        expect(response.body).toHaveProperty('access_token');
+        expect(response.body.user).toEqual({
+          id: superAdminUser.id,
+          email: superAdminUser.email,
+          role: superAdminUser.role,
+          first_name: superAdminUser.first_name,
+          last_name: superAdminUser.last_name,
+          tenant: {
+            id: testTenant.id,
+            name: testTenant.name,
+            display_name: testTenant.display_name,
+            language: 'nl',
+          },
+        });
+      });
+
+      it('should fail when not impersonating', async () => {
+        await request(app.getHttpServer())
+          .post('/auth/stop-impersonation')
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .expect(403);
+      });
     });
   });
 });

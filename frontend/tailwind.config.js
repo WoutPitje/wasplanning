@@ -52,6 +52,33 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Custom brand color
+        brand: {
+          DEFAULT: "#1E2C48",
+          50: "#e8eaf0",
+          100: "#d1d5e1",
+          200: "#a3abc3",
+          300: "#7581a5",
+          400: "#475787",
+          500: "#1E2C48",
+          600: "#18233a",
+          700: "#121a2b",
+          800: "#0c121d",
+          900: "#06090e",
+        },
+        // Status colors for badges
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -3,28 +3,28 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <Card>
         <CardHeader>
-          <h2 class="text-xl font-semibold">Gebruikers Beheer</h2>
+          <h2 class="text-xl font-semibold">{{ t('garageAdmin.dashboard.userManagement') }}</h2>
         </CardHeader>
         <CardContent>
-          <p class="text-muted-foreground">Beheer gebruikers en rollen</p>
+          <p class="text-muted-foreground">{{ t('garageAdmin.dashboard.userManagementDescription') }}</p>
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader>
-          <h2 class="text-xl font-semibold">Garage Instellingen</h2>
+          <h2 class="text-xl font-semibold">{{ t('garageAdmin.dashboard.garageSettings') }}</h2>
         </CardHeader>
         <CardContent>
-          <p class="text-muted-foreground">Configureer garage voorkeuren</p>
+          <p class="text-muted-foreground">{{ t('garageAdmin.dashboard.garageSettingsDescription') }}</p>
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader>
-          <h2 class="text-xl font-semibold">Rapporten</h2>
+          <h2 class="text-xl font-semibold">{{ t('garageAdmin.dashboard.reports') }}</h2>
         </CardHeader>
         <CardContent>
-          <p class="text-muted-foreground">Bekijk prestatie rapporten</p>
+          <p class="text-muted-foreground">{{ t('garageAdmin.dashboard.reportsDescription') }}</p>
         </CardContent>
       </Card>
     </div>
@@ -32,7 +32,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Card, CardContent, CardHeader } from '~/components/ui/card'
+
+const { t } = useI18n()
 
 definePageMeta({
   middleware: ['auth'],

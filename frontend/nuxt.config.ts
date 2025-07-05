@@ -8,6 +8,7 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@nuxtjs/i18n',
     '@vite-pwa/nuxt',
+    'shadcn-nuxt',
   ],
   ssr: true,
   css: ['~/assets/css/main.css'],
@@ -23,6 +24,8 @@ export default defineNuxtConfig({
     locales: ['nl', 'en'],
     defaultLocale: 'nl',
     vueI18n: './i18n.config.ts',
+    strategy: 'no_prefix',
+    detectBrowserLanguage: false,
     bundle: {
       optimizeTranslationDirective: false
     }
@@ -38,5 +41,9 @@ export default defineNuxtConfig({
   // Disable SSR for admin routes to prevent hydration issues
   routeRules: {
     '/admin/**': { ssr: false }
+  },
+  shadcn: {
+    prefix: '',
+    componentDir: './components/ui'
   }
 })

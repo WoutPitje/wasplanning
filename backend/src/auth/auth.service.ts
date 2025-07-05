@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException, NotFoundException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -44,6 +44,8 @@ export interface AuthResponse {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -196,10 +198,15 @@ export class AuthService {
     return this.userRepository.save(user);
   }
 
-  async impersonateUser(impersonatorId: string, targetUserId: string): Promise<AuthResponse> {
+  async impersonateUser(currentUser: any, targetUserId: string): Promise<AuthResponse> {
+    // Prevent nested impersonation
+    if (currentUser.impersonation?.is_impersonating) {
+      throw new ForbiddenException('Cannot impersonate while already impersonating another user');
+    }
+
     // Load the impersonator user to verify they are SUPER_ADMIN
     const impersonator = await this.userRepository.findOne({
-      where: { id: impersonatorId, is_active: true },
+      where: { id: currentUser.id, is_active: true },
       relations: ['tenant'],
     });
 
@@ -276,13 +283,13 @@ export class AuthService {
 
   async stopImpersonation(currentUser: any): Promise<AuthResponse> {
     // Verify user is currently impersonating
-    if (!currentUser.is_impersonating || !currentUser.impersonator_id) {
+    if (!currentUser.impersonation?.is_impersonating || !currentUser.impersonation?.impersonator_id) {
       throw new ForbiddenException('User is not currently impersonating');
     }
 
     // Load original superadmin user
     const superAdmin = await this.userRepository.findOne({
-      where: { id: currentUser.impersonator_id, is_active: true },
+      where: { id: currentUser.impersonation.impersonator_id, is_active: true },
       relations: ['tenant'],
     });
 

@@ -50,7 +50,7 @@ describe('Admin (e2e)', () => {
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: `super@test-e2e-admin-${timestamp}.com`, password: 'testpassword' })
-      .expect(201);
+      .expect(200);
 
     superAdminToken = loginResponse.body.access_token;
   });
@@ -72,6 +72,13 @@ describe('Admin (e2e)', () => {
 
   describe('/admin/tenants (POST)', () => {
     it('should create a new tenant with admin user', async () => {
+      // First verify we have a valid super admin token
+      const profileResponse = await request(app.getHttpServer())
+        .get('/auth/profile')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .expect(200);
+      
+      expect(profileResponse.body.role).toBe(UserRole.SUPER_ADMIN);
       const timestamp = Date.now();
       const createTenantDto = {
         name: `test-e2e-garage-${timestamp}`,

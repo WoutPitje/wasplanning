@@ -88,6 +88,7 @@ describe('TenantsService', () => {
       name: 'new-garage',
       display_name: 'New Garage',
       logo_url: 'https://example.com/logo.png',
+      language: 'nl',
       admin_email: 'admin@new-garage.nl',
       admin_first_name: 'Piet',
       admin_last_name: 'Bakker',
@@ -157,7 +158,7 @@ describe('TenantsService', () => {
 
       expect(result).toEqual(tenants);
       expect(mockTenantRepository.find).toHaveBeenCalledWith({
-        select: ['id', 'name', 'display_name', 'logo_url', 'is_active', 'created_at', 'updated_at'],
+        select: ['id', 'name', 'display_name', 'logo_url', 'language', 'is_active', 'created_at', 'updated_at'],
         order: { created_at: 'DESC' },
       });
     });

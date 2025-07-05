@@ -1,11 +1,16 @@
 import { defineStore } from 'pinia'
-import type { User, UserRole } from '~/types/auth'
+import type { User, UserRole, LoginResponse } from '~/types/auth'
 
 interface AuthState {
   user: User | null
   accessToken: string | null
   refreshToken: string | null
   isAuthenticated: boolean
+  impersonation: {
+    is_impersonating: boolean
+    impersonator_id: string
+    impersonator_email: string
+  } | null
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -13,7 +18,8 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     accessToken: null,
     refreshToken: null,
-    isAuthenticated: false
+    isAuthenticated: false,
+    impersonation: null
   }),
 
   getters: {
@@ -46,17 +52,23 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     // Set authentication data
-    setAuth(accessToken: string, refreshToken: string, user: User) {
-      this.accessToken = accessToken
-      this.refreshToken = refreshToken
-      this.user = user
+    setAuth(response: LoginResponse) {
+      this.accessToken = response.access_token
+      this.refreshToken = response.refresh_token
+      this.user = response.user
       this.isAuthenticated = true
+      this.impersonation = response.impersonation || null
       
       // Store in localStorage for persistence
       if (import.meta.client) {
-        localStorage.setItem('access_token', accessToken)
-        localStorage.setItem('refresh_token', refreshToken)
-        localStorage.setItem('user', JSON.stringify(user))
+        localStorage.setItem('access_token', response.access_token)
+        localStorage.setItem('refresh_token', response.refresh_token)
+        localStorage.setItem('user', JSON.stringify(response.user))
+        if (response.impersonation) {
+          localStorage.setItem('impersonation', JSON.stringify(response.impersonation))
+        } else {
+          localStorage.removeItem('impersonation')
+        }
       }
     },
 
@@ -66,12 +78,14 @@ export const useAuthStore = defineStore('auth', {
       this.accessToken = null
       this.refreshToken = null
       this.isAuthenticated = false
+      this.impersonation = null
       
       // Clear from localStorage
       if (import.meta.client) {
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
         localStorage.removeItem('user')
+        localStorage.removeItem('impersonation')
       }
     },
 
@@ -81,6 +95,7 @@ export const useAuthStore = defineStore('auth', {
         const accessToken = localStorage.getItem('access_token')
         const refreshToken = localStorage.getItem('refresh_token')
         const userData = localStorage.getItem('user')
+        const impersonationData = localStorage.getItem('impersonation')
         
         if (accessToken && refreshToken && userData) {
           try {
@@ -89,6 +104,10 @@ export const useAuthStore = defineStore('auth', {
             this.refreshToken = refreshToken
             this.user = user
             this.isAuthenticated = true
+            
+            if (impersonationData) {
+              this.impersonation = JSON.parse(impersonationData)
+            }
           } catch (error) {
             // Invalid stored data, clear everything
             this.clearAuth()
@@ -123,7 +142,7 @@ export const useAuthStore = defineStore('auth', {
       
       const response = await login(credentials)
       if (response) {
-        this.setAuth(response.access_token, response.refresh_token, response.user)
+        this.setAuth(response)
         return true
       }
       return false

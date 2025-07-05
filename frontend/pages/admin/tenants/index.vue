@@ -7,16 +7,16 @@
     <div class="md:flex md:items-center md:justify-between">
       <div class="flex-1">
         <h2 class="text-2xl font-bold leading-8 text-foreground sm:text-3xl">
-          Garage Beheer
+          {{ t('admin.tenants.title') }}
         </h2>
         <p class="mt-1 text-sm text-muted-foreground">
-          Beheer alle garages in het systeem
+          {{ t('admin.tenants.subtitle') }}
         </p>
       </div>
       <div class="mt-4 flex md:ml-4 md:mt-0">
         <Button asChild>
           <NuxtLink to="/admin/tenants/create">
-            Nieuwe Garage Toevoegen
+            {{ t('admin.tenants.addNew') }}
           </NuxtLink>
         </Button>
       </div>
@@ -25,7 +25,7 @@
     <!-- Loading state -->
     <div v-if="pending" class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <p class="mt-2 text-sm text-gray-500">Garages laden...</p>
+      <p class="mt-2 text-sm text-gray-500">{{ t('admin.tenants.loading') }}</p>
     </div>
 
     <!-- Error state -->
@@ -33,7 +33,7 @@
       <div class="flex">
         <div class="ml-3">
           <h3 class="text-sm font-medium text-red-800">
-            Fout bij laden
+            {{ t('admin.tenants.errorLoading') }}
           </h3>
           <div class="mt-2 text-sm text-red-700">
             {{ error }}
@@ -43,76 +43,68 @@
               @click="loadTenants"
               class="text-sm font-medium text-red-800 underline hover:text-red-600"
             >
-              Opnieuw proberen
+              {{ t('retry') }}
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tenants list -->
+    <!-- Tenants table -->
     <Card v-if="tenants?.length">
       <CardContent class="p-0">
-        <div class="divide-y divide-border">
-          <div v-for="tenant in tenants" :key="tenant.id" class="px-4 py-4 flex items-center justify-between">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <img
-                  v-if="tenant.logo_url"
-                  :src="tenant.logo_url"
-                  :alt="`${tenant.display_name} logo`"
-                  class="h-10 w-10 rounded-full bg-gray-300"
-                />
-                <div
-                  v-else
-                  class="h-10 w-10 rounded-full bg-muted flex items-center justify-center"
-                >
-                  <span class="text-sm font-medium text-muted-foreground">
-                    {{ tenant.display_name.charAt(0).toUpperCase() }}
-                  </span>
-                </div>
-              </div>
-              <div class="ml-4">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{{ t('admin.tenants.table.name') }}</TableHead>
+              <TableHead>{{ t('admin.tenants.table.systemName') }}</TableHead>
+              <TableHead>{{ t('admin.tenants.table.status') }}</TableHead>
+              <TableHead>{{ t('admin.tenants.table.users') }}</TableHead>
+              <TableHead>{{ t('admin.tenants.table.createdAt') }}</TableHead>
+              <TableHead class="text-right">{{ t('admin.tenants.table.actions') }}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="tenant in tenants" :key="tenant.id">
+              <TableCell class="font-medium">
                 <div class="flex items-center">
-                  <p class="text-sm font-medium text-gray-900 truncate">
-                    {{ tenant.display_name }}
-                  </p>
-                  <span
-                    :class="[
-                      'ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                      tenant.is_active
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    ]"
-                  >
-                    {{ tenant.is_active ? 'Actief' : 'Inactief' }}
-                  </span>
+                  <div class="flex-shrink-0">
+                    <img
+                      v-if="tenant.logo_url"
+                      :src="tenant.logo_url"
+                      :alt="`${tenant.display_name} logo`"
+                      class="h-8 w-8 rounded-full bg-gray-300"
+                    />
+                    <div
+                      v-else
+                      class="h-8 w-8 rounded-full bg-muted flex items-center justify-center"
+                    >
+                      <span class="text-xs font-medium text-muted-foreground">
+                        {{ tenant.display_name.charAt(0).toUpperCase() }}
+                      </span>
+                    </div>
+                  </div>
+                  <span class="ml-2">{{ tenant.display_name }}</span>
                 </div>
-                <div class="flex">
-                  <p class="text-sm text-gray-500">
-                    {{ tenant.name }}
-                  </p>
-                  <span class="text-sm text-gray-500 mx-1">•</span>
-                  <p class="text-sm text-gray-500">
-                    Aangemaakt {{ formatDate(tenant.created_at) }}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center space-x-2">
-              <Button variant="outline" size="sm" asChild>
-                <NuxtLink :to="`/admin/tenants/${tenant.id}`">
-                  Bekijken
-                </NuxtLink>
-              </Button>
-              <Button size="sm" asChild>
-                <NuxtLink :to="`/admin/tenants/${tenant.id}/edit`">
-                  Bewerken
-                </NuxtLink>
-              </Button>
-            </div>
-          </div>
-        </div>
+              </TableCell>
+              <TableCell>{{ tenant.name }}</TableCell>
+              <TableCell>
+                <Badge :variant="tenant.is_active ? 'success' : 'destructive'">
+                  {{ tenant.is_active ? t('common.active') : t('common.inactive') }}
+                </Badge>
+              </TableCell>
+              <TableCell>{{ tenant.user_count || 0 }}</TableCell>
+              <TableCell>{{ formatDate(tenant.created_at) }}</TableCell>
+              <TableCell class="text-right">
+                <Button variant="default" size="sm" asChild>
+                  <NuxtLink :to="`/admin/tenants/${tenant.id}`">
+                    {{ t('users.actions.viewDetails') }}
+                  </NuxtLink>
+                </Button>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
 
@@ -133,14 +125,14 @@
           d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
         />
       </svg>
-      <h3 class="mt-2 text-sm font-semibold text-gray-900">Geen garages</h3>
+      <h3 class="mt-2 text-sm font-semibold text-gray-900">{{ t('admin.tenants.noTenants') }}</h3>
       <p class="mt-1 text-sm text-gray-500">
-        Begin door een nieuwe garage toe te voegen.
+        {{ t('admin.tenants.noTenantsDescription') }}
       </p>
       <div class="mt-6">
         <Button asChild>
           <NuxtLink to="/admin/tenants/create">
-            Nieuwe Garage Toevoegen
+            {{ t('admin.tenants.addNew') }}
           </NuxtLink>
         </Button>
       </div>
@@ -149,12 +141,22 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { Tenant } from '~/types/auth'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent } from '~/components/ui/card'
 import { Breadcrumb } from '~/components/ui/breadcrumb'
+import { Badge } from '~/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '~/components/ui/table'
 
 // Meta
 definePageMeta({
@@ -164,15 +166,16 @@ definePageMeta({
 
 // Composables
 const { getTenants, pending, error } = useAdmin()
+const { t } = useI18n()
 
 // State
 const tenants = ref<Tenant[] | null>(null)
 
 // Breadcrumbs
-const breadcrumbItems = [
+const breadcrumbItems = computed(() => [
   { label: 'Admin', href: '/admin/tenants' },
-  { label: 'Garages' }
-]
+  { label: t('nav.garages') }
+])
 
 // Methods
 const loadTenants = async () => {

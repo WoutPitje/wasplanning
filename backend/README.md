@@ -29,6 +29,7 @@
 
 - **Multi-tenant & Multi-location architecture** - Complete data isolation between garages with location support
 - **Role-based authentication** - JWT-based auth with 6 different user roles
+- **User impersonation** - Super admins can impersonate other users for support/debugging
 - **Real-time WebSocket communication** - Live updates for wash task status changes
 - **PostgreSQL with TypeORM** - Robust database layer with Row-Level Security
 - **Redis caching & queues** - Performance optimization and job processing
@@ -95,6 +96,28 @@ Check out a few resources that may come in handy when working with NestJS:
 - Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
 - To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
 - Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+
+## API Endpoints
+
+### User Impersonation (Super Admin Only)
+
+**Start Impersonation:**
+```
+POST /api/auth/impersonate/:userId
+Authorization: Bearer {super_admin_token}
+```
+
+**Stop Impersonation:**
+```
+POST /api/auth/stop-impersonation  
+Authorization: Bearer {impersonated_token}
+```
+
+**Security Notes:**
+- Only SUPER_ADMIN role can impersonate
+- Cannot impersonate another SUPER_ADMIN
+- Cannot impersonate inactive users
+- Certain operations are blocked during impersonation (password changes, user deletion, tenant management)
 
 ## Support
 

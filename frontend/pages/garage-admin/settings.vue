@@ -1,17 +1,17 @@
 <template>
   <div>
     <div class="mb-6">
-      <h2 class="text-2xl font-bold mb-2">Garage Instellingen</h2>
-      <p class="text-muted-foreground">Configureer instellingen voor uw garage</p>
+      <h2 class="text-2xl font-bold mb-2">{{ t('garageAdmin.settings.title') }}</h2>
+      <p class="text-muted-foreground">{{ t('garageAdmin.settings.subtitle') }}</p>
     </div>
     
     <div class="grid grid-cols-1 gap-6">
       <Card>
         <CardHeader>
-          <h3 class="text-lg font-semibold">Algemene Instellingen</h3>
+          <h3 class="text-lg font-semibold">{{ t('garageAdmin.settings.generalSettings') }}</h3>
         </CardHeader>
         <CardContent>
-          <p class="text-muted-foreground">Hier komen de garage instellingen...</p>
+          <p class="text-muted-foreground">{{ t('garageAdmin.settings.placeholder') }}</p>
         </CardContent>
       </Card>
     </div>
@@ -19,7 +19,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Card, CardContent, CardHeader } from '~/components/ui/card'
+
+const { t } = useI18n()
 
 definePageMeta({
   middleware: ['auth'],

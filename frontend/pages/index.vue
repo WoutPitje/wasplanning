@@ -3,20 +3,20 @@
     <Card class="w-full max-w-md">
       <CardHeader class="text-center">
         <h1 class="text-4xl font-bold text-foreground mb-2">
-          Wasplanning
+          {{ t('app.name') }}
         </h1>
         <p class="text-lg text-muted-foreground">
-          Garage wasplanning systeem
+          {{ t('home.subtitle') }}
         </p>
       </CardHeader>
       <CardContent class="text-center space-y-6">
         <p class="text-muted-foreground">
-          Efficiënt beheer van autowasactiviteiten voor garages met ophaal- en brengservice.
+          {{ t('home.description') }}
         </p>
         
         <Button asChild class="w-full">
           <NuxtLink to="/login">
-            Inloggen
+            {{ t('common.login') }}
           </NuxtLink>
         </Button>
       </CardContent>
@@ -25,8 +25,11 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader } from '~/components/ui/card'
+
+const { t } = useI18n()
 
 // Meta
 definePageMeta({
@@ -36,9 +39,9 @@ definePageMeta({
 
 // Head meta
 useHead({
-  title: 'Wasplanning - Garage Wassysteem',
+  title: t('home.metaTitle'),
   meta: [
-    { name: 'description', content: 'Efficiënt beheer van autowasactiviteiten voor garages met ophaal- en brengservice.' }
+    { name: 'description', content: t('home.metaDescription') }
   ]
 })
 </script>
