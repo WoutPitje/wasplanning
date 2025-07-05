@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { TestAppModule } from './test-app.module';
 import { DataSource } from 'typeorm';
 import { UserRole } from '../src/auth/entities/user.entity';
 import * as bcrypt from 'bcrypt';
@@ -25,10 +25,20 @@ describe('Users (e2e)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [TestAppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    
+    // Configure validation pipe to transform query params
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+    
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(DataSource);
@@ -38,11 +48,12 @@ describe('Users (e2e)', () => {
 
     // Create unique test data for this suite with timestamp
     testTimestamp = Date.now();
-    const superAdminTenantId = 'b1111111-1111-1111-1111-111111111111';
-    const testGarageTenantId = 'b3333333-3333-3333-3333-333333333333';
-    const superAdminUserId = 'b2222222-2222-2222-2222-222222222222';
-    const garageAdminUserId = 'b4444444-4444-4444-4444-444444444444';
-    const wasplannerUserId = 'b5555555-5555-5555-5555-555555555555';
+    // Use valid UUID v4 format
+    const superAdminTenantId = '550e8400-e29b-41d4-a716-446655440001';
+    const testGarageTenantId = '550e8400-e29b-41d4-a716-446655440002';
+    const superAdminUserId = '550e8400-e29b-41d4-a716-446655440003';
+    const garageAdminUserId = '550e8400-e29b-41d4-a716-446655440004';
+    const wasplannerUserId = '550e8400-e29b-41d4-a716-446655440005';
 
     garageAdminEmail = `garage@test-e2e-users-${testTimestamp}.com`;
 
@@ -125,6 +136,8 @@ describe('Users (e2e)', () => {
   afterEach(async () => {
     // Clean up test users
     if (testUserId) {
+      // First delete audit logs for this user to avoid foreign key constraint
+      await dataSource.query('DELETE FROM audit_logs WHERE user_id = $1', [testUserId]);
       await dataSource.query('DELETE FROM users WHERE id = $1', [testUserId]);
       testUserId = null;
     }
@@ -188,7 +201,7 @@ describe('Users (e2e)', () => {
         first_name: 'Cross',
         last_name: 'Tenant',
         role: UserRole.WASSERS,
-        tenant_id: '99999999-9999-9999-9999-999999999999',
+        tenant_id: '550e8400-e29b-41d4-a716-446655440099', // Different tenant with valid UUID
       };
 
       await request(app.getHttpServer())
@@ -318,7 +331,7 @@ describe('Users (e2e)', () => {
 
     it('should return 404 for non-existent user', async () => {
       await request(app.getHttpServer())
-        .get('/users/99999999-9999-9999-9999-999999999999')
+        .get('/users/550e8400-e29b-41d4-a716-446655440999')
         .set('Authorization', `Bearer ${garageAdminToken}`)
         .expect(404);
     });
@@ -333,7 +346,7 @@ describe('Users (e2e)', () => {
           first_name: 'Other',
           last_name: 'Tenant',
           role: UserRole.WASSERS,
-          tenant_id: 'b1111111-1111-1111-1111-111111111111',
+          tenant_id: '550e8400-e29b-41d4-a716-446655440001', // Super admin tenant
         });
 
       if (superResponse.status !== 201) {
@@ -415,13 +428,26 @@ describe('Users (e2e)', () => {
     });
 
     it('should ignore email updates', async () => {
+      // The email field is forbidden, so it should be stripped out by whitelist validation
       const response = await request(app.getHttpServer())
         .patch(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
-        .send({ email: 'newemail@test.nl' })
+        .send({ 
+          first_name: 'Updated' // Only send valid field
+        })
         .expect(200);
 
-      // Email should remain unchanged from what was created
+      // Check that first_name was updated
+      expect(response.body.first_name).toBe('Updated');
+      
+      // Now test that email is rejected if sent alone
+      await request(app.getHttpServer())
+        .patch(`/users/${testUserId}`)
+        .set('Authorization', `Bearer ${garageAdminToken}`)
+        .send({ 
+          email: 'newemail@test.nl' // Only forbidden field
+        })
+        .expect(400); // Should fail validation since no valid fields
     });
   });
 
@@ -501,7 +527,7 @@ describe('Users (e2e)', () => {
 
     it('should prevent user from deactivating themselves', async () => {
       await request(app.getHttpServer())
-        .delete('/users/b4444444-4444-4444-4444-444444444444') // Garage admin's own ID
+        .delete('/users/550e8400-e29b-41d4-a716-446655440004') // Garage admin's own ID
         .set('Authorization', `Bearer ${garageAdminToken}`)
         .expect(403);
     });

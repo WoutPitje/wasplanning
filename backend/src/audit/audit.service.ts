@@ -5,7 +5,7 @@ import { AuditLog } from './entities/audit-log.entity';
 import { AuditQueryDto } from './dto/audit-query.dto';
 
 export interface AuditLogData {
-  tenant_id: string;
+  tenant_id?: string;
   user_id?: string;
   action: string;
   resource_type: string;
@@ -40,7 +40,7 @@ export class AuditService {
     }
   }
 
-  async getAuditLogs(query: AuditQueryDto, tenantId: string) {
+  async getAuditLogs(query: AuditQueryDto, tenantId: string | null) {
     const {
       page = 1,
       limit = 20,
@@ -55,8 +55,12 @@ export class AuditService {
 
     const queryBuilder = this.auditLogRepository
       .createQueryBuilder('audit_log')
-      .leftJoinAndSelect('audit_log.user', 'user')
-      .where('audit_log.tenant_id = :tenantId', { tenantId });
+      .leftJoinAndSelect('audit_log.user', 'user');
+    
+    // Only filter by tenant if tenantId is provided (for non-super admins)
+    if (tenantId) {
+      queryBuilder.where('audit_log.tenant_id = :tenantId', { tenantId });
+    }
 
     if (user_id) {
       queryBuilder.andWhere('audit_log.user_id = :userId', { userId: user_id });
@@ -107,12 +111,14 @@ export class AuditService {
     };
   }
 
-  async getUserActivity(userId: string, tenantId: string, limit = 10) {
+  async getUserActivity(userId: string, tenantId: string | null, limit = 10) {
+    const where: any = { user_id: userId };
+    if (tenantId) {
+      where.tenant_id = tenantId;
+    }
+    
     return this.auditLogRepository.find({
-      where: {
-        user_id: userId,
-        tenant_id: tenantId,
-      },
+      where,
       order: {
         created_at: 'DESC',
       },
@@ -120,15 +126,20 @@ export class AuditService {
     });
   }
 
-  async getAuditStats(tenantId: string, days = 7) {
+  async getAuditStats(tenantId: string | null, days = 7) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const stats = await this.auditLogRepository
+    const queryBuilder = this.auditLogRepository
       .createQueryBuilder('audit_log')
       .select('audit_log.action', 'action')
-      .addSelect('COUNT(*)', 'count')
-      .where('audit_log.tenant_id = :tenantId', { tenantId })
+      .addSelect('COUNT(*)', 'count');
+    
+    if (tenantId) {
+      queryBuilder.where('audit_log.tenant_id = :tenantId', { tenantId });
+    }
+    
+    const stats = await queryBuilder
       .andWhere('audit_log.created_at >= :startDate', { startDate })
       .groupBy('audit_log.action')
       .orderBy('count', 'DESC')
@@ -138,7 +149,7 @@ export class AuditService {
     return stats;
   }
 
-  async exportAuditLogsAsCsv(query: AuditQueryDto, tenantId: string): Promise<Buffer> {
+  async exportAuditLogsAsCsv(query: AuditQueryDto, tenantId: string | null): Promise<Buffer> {
     const {
       user_id,
       action,
@@ -149,8 +160,12 @@ export class AuditService {
 
     const queryBuilder = this.auditLogRepository
       .createQueryBuilder('audit_log')
-      .leftJoinAndSelect('audit_log.user', 'user')
-      .where('audit_log.tenant_id = :tenantId', { tenantId });
+      .leftJoinAndSelect('audit_log.user', 'user');
+    
+    // Only filter by tenant if tenantId is provided (for non-super admins)
+    if (tenantId) {
+      queryBuilder.where('audit_log.tenant_id = :tenantId', { tenantId });
+    }
 
     if (user_id) {
       queryBuilder.andWhere('audit_log.user_id = :userId', { userId: user_id });

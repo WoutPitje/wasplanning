@@ -40,7 +40,7 @@ export class AuditController {
   })
   async getAuditLogs(@Query() query: AuditQueryDto, @Request() req: any) {
     // Super admin can view all logs, garage admin only their tenant
-    const tenantId = req.user.tenant.id;
+    const tenantId = req.user.tenant?.id || null;
     return this.auditService.getAuditLogs(query, tenantId);
   }
 
@@ -52,7 +52,7 @@ export class AuditController {
     description: 'Audit log statistics for the last 7 days',
   })
   async getAuditStats(@Request() req: any) {
-    const tenantId = req.user.tenant.id;
+    const tenantId = req.user.tenant?.id || null;
     return this.auditService.getAuditStats(tenantId);
   }
 
@@ -68,7 +68,7 @@ export class AuditController {
     @Param('userId', ParseUUIDPipe) userId: string,
     @Request() req: any,
   ) {
-    const tenantId = req.user.tenant.id;
+    const tenantId = req.user.tenant?.id || null;
     return this.auditService.getUserActivity(userId, tenantId);
   }
 
@@ -93,7 +93,7 @@ export class AuditController {
     @Request() req: any,
     @Response({ passthrough: true }) res: any,
   ): Promise<StreamableFile> {
-    const tenantId = req.user.tenant.id;
+    const tenantId = req.user.tenant?.id || null;
     const csvBuffer = await this.auditService.exportAuditLogsAsCsv(query, tenantId);
     
     res.set({

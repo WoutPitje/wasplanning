@@ -47,7 +47,7 @@ export class CreateTenantAndUserTables1720000000001
         "last_login" TIMESTAMP,
         "created_at" TIMESTAMP NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
-        "tenant_id" uuid NOT NULL,
+        "tenant_id" uuid,
         CONSTRAINT "UQ_users_email" UNIQUE ("email"),
         CONSTRAINT "PK_users" PRIMARY KEY ("id")
       )

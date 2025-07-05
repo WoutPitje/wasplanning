@@ -60,7 +60,7 @@ export class TenantsController {
 
     // Log tenant creation
     await this.auditService.logAction({
-      tenant_id: req.user.tenant.id,
+      tenant_id: req.user.tenant?.id,
       user_id: req.user.id,
       action: 'tenant.created',
       resource_type: 'tenant',
@@ -129,7 +129,7 @@ export class TenantsController {
     if (tenant) {
       // Log tenant update
       await this.auditService.logAction({
-        tenant_id: req.user.tenant.id,
+        tenant_id: req.user.tenant?.id,
         user_id: req.user.id,
         action: 'tenant.updated',
         resource_type: 'tenant',
@@ -162,7 +162,7 @@ export class TenantsController {
 
     // Log tenant deactivation
     await this.auditService.logAction({
-      tenant_id: req.user.tenant.id,
+      tenant_id: req.user.tenant?.id,
       user_id: req.user.id,
       action: 'tenant.deactivated',
       resource_type: 'tenant',

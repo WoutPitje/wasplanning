@@ -22,8 +22,9 @@
     "migration:generate": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d data-source.ts",
     "migration:run": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d data-source.ts",
     "migration:revert": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d data-source.ts",
-    "migration:revert:all": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d data-source.ts",
+    "migration:revert:all": "ts-node -r tsconfig-paths/register src/scripts/revert-all-migrations.ts",
     "seed:run": "ts-node -r tsconfig-paths/register src/scripts/seed.ts",
+    "db:reset": "ts-node -r tsconfig-paths/register src/scripts/db-reset.ts",
     "test:db:create": "docker exec wasplanning_postgres psql -U wasplanning -c \"CREATE DATABASE wasplanning_test;\" || true",
     "test:db:setup": "npm run test:db:create && DATABASE_NAME=wasplanning_test npm run migration:run",
     "test:setup": "npm run test:db:setup"

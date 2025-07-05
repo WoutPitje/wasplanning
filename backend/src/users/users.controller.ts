@@ -54,7 +54,7 @@ export class UsersController {
     // Garage admin can only create users in their tenant
     if (
       req.user.role === UserRole.GARAGE_ADMIN &&
-      createUserDto.tenant_id !== req.user.tenant.id
+      createUserDto.tenant_id !== req.user.tenant?.id
     ) {
       throw new ForbiddenException('Cannot create users for other tenants');
     }
@@ -89,7 +89,7 @@ export class UsersController {
   })
   async findAll(@Query() query: GetUsersQueryDto, @Request() req: any) {
     // Super admin can filter by tenant, others only see their tenant
-    if (req.user.role !== UserRole.SUPER_ADMIN) {
+    if (req.user.role !== UserRole.SUPER_ADMIN && req.user.tenant) {
       query.tenant = req.user.tenant.id;
     }
 
@@ -173,7 +173,7 @@ export class UsersController {
 
     // Log password reset
     await this.auditService.logAction({
-      tenant_id: user.tenant.id,
+      tenant_id: user.tenant_id,
       user_id: req.user.id,
       action: 'user.password_reset',
       resource_type: 'user',
@@ -211,7 +211,7 @@ export class UsersController {
 
     // Log user deactivation
     await this.auditService.logAction({
-      tenant_id: user.tenant.id,
+      tenant_id: user.tenant_id,
       user_id: req.user.id,
       action: 'user.deactivated',
       resource_type: 'user',

@@ -50,7 +50,7 @@ export class AuthController {
 
     // Log successful login
     await this.auditService.logAction({
-      tenant_id: req.user.tenant.id,
+      tenant_id: req.user.tenant?.id,
       user_id: req.user.id,
       action: 'auth.login',
       resource_type: 'user',
@@ -92,7 +92,7 @@ export class AuthController {
       role: user.role,
       first_name: user.first_name,
       last_name: user.last_name,
-      tenant: user.tenant,
+      tenant: user.tenant || null,
     };
   }
 
@@ -120,7 +120,7 @@ export class AuthController {
 
     // Log impersonation start
     await this.auditService.logAction({
-      tenant_id: currentUser.tenant.id,
+      tenant_id: currentUser.tenant?.id,
       user_id: currentUser.id,
       action: 'auth.impersonate.start',
       resource_type: 'user',
@@ -155,7 +155,7 @@ export class AuthController {
 
     // Log impersonation stop
     await this.auditService.logAction({
-      tenant_id: result.user.tenant.id,
+      tenant_id: result.user.tenant?.id,
       user_id: user.impersonation.impersonator_id,
       action: 'auth.impersonate.stop',
       resource_type: 'user',
@@ -182,6 +182,9 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getTenantLogo(@CurrentUser() user: any) {
+    if (!user.tenant) {
+      return { logo_url: null };
+    }
     const logoUrl = await this.authService.getTenantLogoUrl(user.tenant.id);
     return { logo_url: logoUrl };
   }

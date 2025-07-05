@@ -23,6 +23,7 @@ import { AppService } from '../src/app.service';
       password: process.env.DATABASE_PASSWORD || 'wasplanning_dev',
       database: process.env.DATABASE_NAME || 'wasplanning_test',
       entities: [__dirname + '/../src/**/*.entity{.ts,.js}'],
+      autoLoadEntities: true, // This ensures all entities are loaded
       synchronize: true, // Always synchronize in test environment
       dropSchema: false, // Don't drop schema - we handle this in setup
       logging: false,

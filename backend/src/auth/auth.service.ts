@@ -17,13 +17,13 @@ export interface JwtPayload {
   id: string;
   email: string;
   role: string;
-  tenant: {
+  tenant?: {
     id: string;
     name: string;
     display_name: string;
     language: string;
     logo_url?: string | undefined;
-  };
+  } | null;
   impersonator_id?: string;
   is_impersonating?: boolean;
 }
@@ -37,13 +37,13 @@ export interface AuthResponse {
     role: string;
     first_name: string;
     last_name: string;
-    tenant: {
+    tenant?: {
       id: string;
       name: string;
       display_name: string;
       language: string;
       logo_url?: string | undefined;
-    };
+    } | null;
   };
   impersonation?: {
     is_impersonating: boolean;
@@ -83,19 +83,19 @@ export class AuthService {
   async login(user: User): Promise<AuthResponse> {
     // For now, just pass the raw logo_url from the tenant
     // The frontend will handle MinIO URL resolution
-    const logoUrl = user.tenant.logo_url || undefined;
+    const logoUrl = user.tenant?.logo_url || undefined;
 
     const payload: JwtPayload = {
       id: user.id,
       email: user.email,
       role: user.role,
-      tenant: {
+      tenant: user.tenant ? {
         id: user.tenant.id,
         name: user.tenant.name,
         display_name: user.tenant.display_name,
         language: user.tenant.language,
         logo_url: logoUrl,
-      },
+      } : null,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -112,13 +112,13 @@ export class AuthService {
         role: user.role,
         first_name: user.first_name,
         last_name: user.last_name,
-        tenant: {
+        tenant: user.tenant ? {
           id: user.tenant.id,
           name: user.tenant.name,
           display_name: user.tenant.display_name,
           language: user.tenant.language,
           logo_url: logoUrl,
-        },
+        } : null,
       },
     };
   }
@@ -149,12 +149,12 @@ export class AuthService {
           id: user.id,
           email: user.email,
           role: user.role,
-          tenant: {
+          tenant: user.tenant ? {
             id: user.tenant.id,
             name: user.tenant.name,
             display_name: user.tenant.display_name,
             language: user.tenant.language,
-          },
+          } : null,
           impersonator_id: payload.impersonator_id,
           is_impersonating: true,
         };
@@ -173,12 +173,12 @@ export class AuthService {
             role: user.role,
             first_name: user.first_name,
             last_name: user.last_name,
-            tenant: {
+            tenant: user.tenant ? {
               id: user.tenant.id,
               name: user.tenant.name,
               display_name: user.tenant.display_name,
               language: user.tenant.language,
-            },
+            } : null,
           },
           impersonation: {
             is_impersonating: true,
@@ -205,7 +205,7 @@ export class AuthService {
     first_name?: string;
     last_name?: string;
     role: UserRole;
-    tenant_id: string;
+    tenant_id?: string;
   }): Promise<User> {
     const hashedPassword = await this.hashPassword(userData.password);
 
@@ -261,19 +261,19 @@ export class AuthService {
     }
 
     // Create JWT payload with impersonation fields
-    const logoUrl = targetUser.tenant.logo_url || undefined;
+    const logoUrl = targetUser.tenant?.logo_url || undefined;
 
     const payload: JwtPayload = {
       id: targetUser.id,
       email: targetUser.email,
       role: targetUser.role,
-      tenant: {
+      tenant: targetUser.tenant ? {
         id: targetUser.tenant.id,
         name: targetUser.tenant.name,
         display_name: targetUser.tenant.display_name,
         language: targetUser.tenant.language,
         logo_url: logoUrl,
-      },
+      } : null,
       impersonator_id: impersonator.id,
       is_impersonating: true,
     };
@@ -293,13 +293,13 @@ export class AuthService {
         role: targetUser.role,
         first_name: targetUser.first_name,
         last_name: targetUser.last_name,
-        tenant: {
+        tenant: targetUser.tenant ? {
           id: targetUser.tenant.id,
           name: targetUser.tenant.name,
           display_name: targetUser.tenant.display_name,
           language: targetUser.tenant.language,
           logo_url: logoUrl,
-        },
+        } : null,
       },
       impersonation: {
         is_impersonating: true,

@@ -15,7 +15,7 @@
     "backend:dev": "cd backend && npm run start:dev",
     "frontend:dev": "cd frontend && npm run dev",
     "db:setup": "cd backend && npm run migration:run && npm run seed:run",
-    "db:reset": "cd backend && npm run migration:revert:all && npm run migration:run && npm run seed:run",
+    "db:reset": "cd backend && npm run db:reset",
     "test": "npm run test:backend && npm run test:frontend && npm run test:frontend:e2e && npm run test:backend:e2e",
     "test:backend": "cd backend && npm test",
     "test:frontend": "cd frontend && npm test",

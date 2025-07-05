@@ -54,7 +54,7 @@ export class User {
   @UpdateDateColumn()
   updated_at: Date;
 
-  @Column('uuid')
+  @Column('uuid', { nullable: true })
   tenant_id: string;
 
   @ManyToOne(() => Tenant, (tenant) => tenant.users)
