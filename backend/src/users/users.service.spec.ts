@@ -129,38 +129,55 @@ describe('UsersService', () => {
   });
 
   describe('findAll', () => {
-    it('should return all users for super admin', async () => {
+    it('should return paginated users', async () => {
       const users = [mockUser, { ...mockUser, id: 'user-2' }];
+      const total = 2;
       const queryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(users),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([users, total]),
       };
       mockUserRepository.createQueryBuilder.mockReturnValue(queryBuilder);
 
-      const result = await service.findAll();
+      const query = { page: 1, limit: 20 };
+      const result = await service.findAll(query as any);
 
-      expect(result).toEqual(users);
-      expect(queryBuilder.where).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        data: users,
+        meta: {
+          total: 2,
+          page: 1,
+          limit: 20,
+          totalPages: 1
+        }
+      });
+      expect(queryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(queryBuilder.take).toHaveBeenCalledWith(20);
     });
 
-    it('should return only tenant users for garage admin', async () => {
+    it('should filter by tenant when provided', async () => {
       const users = [mockUser];
+      const total = 1;
       const queryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(users),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([users, total]),
       };
       mockUserRepository.createQueryBuilder.mockReturnValue(queryBuilder);
 
-      const result = await service.findAll('tenant-uuid');
+      const query = { tenant: 'tenant-uuid', page: 1, limit: 20 };
+      const result = await service.findAll(query as any);
 
-      expect(result).toEqual(users);
-      expect(queryBuilder.where).toHaveBeenCalledWith(
+      expect(result.data).toEqual(users);
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
         'user.tenant_id = :tenantId',
         { tenantId: 'tenant-uuid' }
       );

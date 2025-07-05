@@ -83,7 +83,7 @@
     <!-- Users table -->
     <Card v-else>
       <CardContent class="p-0">
-        <div v-if="filteredUsers.length > 0">
+        <div v-if="users.length > 0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -97,7 +97,7 @@
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow v-for="user in filteredUsers" :key="user.id">
+              <TableRow v-for="user in users" :key="user.id">
                 <TableCell class="font-medium">
                   {{ user.first_name }} {{ user.last_name }}
                 </TableCell>
@@ -160,8 +160,9 @@ import { Label } from '~/components/ui/label'
 import { Badge } from '~/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import type { UserWithoutPassword } from '~/types/users'
+import type { UserWithoutPassword, UserFilters } from '~/types/users'
 import type { Tenant } from '~/types/admin'
+import { UserRole } from '~/types/auth'
 import { format } from 'date-fns'
 import { nl, enUS } from 'date-fns/locale'
 
@@ -203,34 +204,10 @@ const selectedRole = computed({
   set: (value) => updateFilter('role', value)
 })
 
-// Computed
-const filteredUsers = computed(() => {
-  let filtered = users.value
-  
-  // Filter by tenant
-  if (selectedTenantId.value !== 'all') {
-    filtered = filtered.filter(user => user.tenant?.id === selectedTenantId.value)
-  }
-  
-  // Filter by role
-  if (selectedRole.value !== 'all') {
-    filtered = filtered.filter(user => user.role.toLowerCase() === selectedRole.value.toLowerCase())
-  }
-  
-  // Filter by search
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(user => 
-      user.first_name.toLowerCase().includes(query) ||
-      user.last_name.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      (user.tenant?.name || '').toLowerCase().includes(query) ||
-      (user.tenant?.display_name || '').toLowerCase().includes(query)
-    )
-  }
-  
-  return filtered
-})
+// Watch for filter changes and reload data
+watch([searchQuery, selectedTenantId, selectedRole], () => {
+  loadData()
+}, { immediate: false })
 
 // Methods
 const formatDate = (dateString: string) => {
@@ -239,16 +216,27 @@ const formatDate = (dateString: string) => {
 }
 
 const loadData = async () => {
-  // Load all users across all tenants
-  const usersResult = await getUsers()
-  if (usersResult) {
-    users.value = usersResult
+  // Build filters object
+  const userFilters: UserFilters = {
+    ...(searchQuery.value && { search: searchQuery.value }),
+    ...(selectedRole.value !== 'all' && { role: selectedRole.value }),
+    ...(selectedTenantId.value !== 'all' && { tenant: selectedTenantId.value }),
+    page: 1,
+    limit: 20
   }
   
-  // Load all tenants
-  const tenantsResult = await getTenants()
-  if (tenantsResult) {
-    tenants.value = tenantsResult
+  // Load filtered users
+  const usersResult = await getUsers(userFilters)
+  if (usersResult) {
+    users.value = usersResult.data
+  }
+  
+  // Load all tenants (only need to do this once)
+  if (!tenants.value || tenants.value.length === 0) {
+    const tenantsResult = await getTenants()
+    if (tenantsResult) {
+      tenants.value = tenantsResult
+    }
   }
 }
 

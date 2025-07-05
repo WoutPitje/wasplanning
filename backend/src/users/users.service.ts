@@ -5,7 +5,9 @@ import { User, UserRole } from '../auth/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { CurrentUser } from './interfaces/current-user.interface';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 
 @Injectable()
 export class UsersService {
@@ -53,7 +55,18 @@ export class UsersService {
     };
   }
 
-  async findAll(tenantId?: string) {
+  async findAll(queryDto: GetUsersQueryDto): Promise<PaginatedResponse<User>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      role,
+      tenant,
+      is_active,
+      sortBy = 'created_at',
+      sortOrder = 'DESC',
+    } = queryDto;
+
     const query = this.userRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.tenant', 'tenant')
       .select([
@@ -68,14 +81,51 @@ export class UsersService {
         'tenant.id',
         'tenant.name',
         'tenant.display_name',
-      ])
-      .orderBy('user.created_at', 'DESC');
+      ]);
 
-    if (tenantId) {
-      query.where('user.tenant_id = :tenantId', { tenantId });
+    // Apply filters
+    if (tenant) {
+      query.andWhere('user.tenant_id = :tenantId', { tenantId: tenant });
     }
 
-    return query.getMany();
+    if (role) {
+      query.andWhere('user.role = :role', { role });
+    }
+
+    if (is_active !== undefined) {
+      query.andWhere('user.is_active = :is_active', { is_active });
+    }
+
+    if (search) {
+      query.andWhere(
+        '(LOWER(user.email) LIKE LOWER(:search) OR ' +
+        'LOWER(user.first_name) LIKE LOWER(:search) OR ' +
+        'LOWER(user.last_name) LIKE LOWER(:search))',
+        { search: `%${search}%` }
+      );
+    }
+
+    // Apply sorting
+    const allowedSortFields = ['created_at', 'email', 'first_name', 'last_name', 'last_login'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
+    query.orderBy(`user.${sortField}`, sortOrder);
+
+    // Apply pagination
+    const skip = (page - 1) * limit;
+    query.skip(skip).take(limit);
+
+    // Get results
+    const [data, total] = await query.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: string, currentUser: CurrentUser) {

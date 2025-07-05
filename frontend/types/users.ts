@@ -28,10 +28,24 @@ export interface CreateUserResponse {
 }
 
 export interface UserFilters {
-  tenant_id?: string
-  role?: UserRole
-  is_active?: boolean
   search?: string
+  role?: UserRole
+  tenant?: string
+  is_active?: boolean
+  page?: number
+  limit?: number
+  sortBy?: string
+  sortOrder?: 'ASC' | 'DESC'
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  meta: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
 }
 
 export interface UserWithoutPassword extends Omit<User, 'password'> {

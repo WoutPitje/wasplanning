@@ -5,7 +5,8 @@ import type {
   ResetPasswordDto, 
   CreateUserResponse, 
   UserWithoutPassword,
-  UserFilters 
+  UserFilters,
+  PaginatedResponse
 } from '~/types/users'
 
 export const useUsers = () => {
@@ -21,19 +22,23 @@ export const useUsers = () => {
     Authorization: `Bearer ${authStore.accessToken}`
   })
   
-  // Get all users
-  const getUsers = async (filters?: UserFilters): Promise<UserWithoutPassword[]> => {
+  // Get all users with pagination
+  const getUsers = async (filters?: UserFilters): Promise<PaginatedResponse<UserWithoutPassword>> => {
     try {
       pending.value = true
       error.value = null
       
       const queryParams = new URLSearchParams()
-      if (filters?.tenant_id) queryParams.append('tenant_id', filters.tenant_id)
-      if (filters?.role) queryParams.append('role', filters.role)
-      if (filters?.is_active !== undefined) queryParams.append('is_active', String(filters.is_active))
       if (filters?.search) queryParams.append('search', filters.search)
+      if (filters?.role) queryParams.append('role', filters.role)
+      if (filters?.tenant) queryParams.append('tenant', filters.tenant)
+      if (filters?.is_active !== undefined) queryParams.append('is_active', String(filters.is_active))
+      if (filters?.page) queryParams.append('page', String(filters.page))
+      if (filters?.limit) queryParams.append('limit', String(filters.limit))
+      if (filters?.sortBy) queryParams.append('sortBy', filters.sortBy)
+      if (filters?.sortOrder) queryParams.append('sortOrder', filters.sortOrder)
       
-      const response = await $fetch<UserWithoutPassword[]>(
+      const response = await $fetch<PaginatedResponse<UserWithoutPassword>>(
         `${config.public.apiUrl}/users${queryParams.toString() ? `?${queryParams}` : ''}`,
         {
           method: 'GET',
@@ -44,7 +49,10 @@ export const useUsers = () => {
       return response
     } catch (err: any) {
       error.value = err.data?.message || 'Failed to fetch users'
-      return []
+      return {
+        data: [],
+        meta: { total: 0, page: 1, limit: 20, totalPages: 0 }
+      }
     } finally {
       pending.value = false
     }

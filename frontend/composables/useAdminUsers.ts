@@ -2,7 +2,9 @@ import type {
   UserWithoutPassword, 
   CreateUserDto, 
   UpdateUserDto,
-  CreateUserResponse 
+  CreateUserResponse,
+  UserFilters,
+  PaginatedResponse
 } from '~/types/users'
 
 export const useAdminUsers = () => {
@@ -20,16 +22,29 @@ export const useAdminUsers = () => {
     }
   }
   
-  // Get all users (across all tenants for super admin)
-  const getUsers = async (): Promise<UserWithoutPassword[] | null> => {
+  // Get all users with filtering
+  const getUsers = async (filters?: UserFilters): Promise<PaginatedResponse<UserWithoutPassword> | null> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<UserWithoutPassword[]>(`${config.public.apiUrl}/users`, {
-        method: 'GET',
-        headers: getAuthHeaders()
-      })
+      const queryParams = new URLSearchParams()
+      if (filters?.search) queryParams.append('search', filters.search)
+      if (filters?.role) queryParams.append('role', filters.role)
+      if (filters?.tenant) queryParams.append('tenant', filters.tenant)
+      if (filters?.is_active !== undefined) queryParams.append('is_active', String(filters.is_active))
+      if (filters?.page) queryParams.append('page', String(filters.page))
+      if (filters?.limit) queryParams.append('limit', String(filters.limit))
+      if (filters?.sortBy) queryParams.append('sortBy', filters.sortBy)
+      if (filters?.sortOrder) queryParams.append('sortOrder', filters.sortOrder)
+      
+      const response = await $fetch<PaginatedResponse<UserWithoutPassword>>(
+        `${config.public.apiUrl}/users${queryParams.toString() ? `?${queryParams}` : ''}`,
+        {
+          method: 'GET',
+          headers: getAuthHeaders()
+        }
+      )
       
       return response
     } catch (err: any) {

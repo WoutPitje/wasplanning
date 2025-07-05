@@ -228,8 +228,11 @@ describe('Users (e2e)', () => {
         .set('Authorization', `Bearer ${superAdminToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThanOrEqual(3); // At least our test users
+      expect(response.body).toHaveProperty('data');
+      expect(response.body).toHaveProperty('meta');
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(3); // At least our test users
+      expect(response.body.meta.total).toBeGreaterThanOrEqual(3);
     });
 
     it('should return only tenant users for garage admin', async () => {
@@ -238,8 +241,9 @@ describe('Users (e2e)', () => {
         .set('Authorization', `Bearer ${garageAdminToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      response.body.forEach(user => {
+      expect(response.body).toHaveProperty('data');
+      expect(Array.isArray(response.body.data)).toBe(true);
+      response.body.data.forEach(user => {
         expect(user.tenant.id).toBe(testTenantId);
       });
     });
@@ -250,7 +254,8 @@ describe('Users (e2e)', () => {
         .set('Authorization', `Bearer ${wasplannerToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveProperty('data');
+      expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should return 401 without authentication', async () => {
@@ -356,7 +361,7 @@ describe('Users (e2e)', () => {
         .patch(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
         .send(updateDto)
-        .expect(201);
+        .expect(200);
 
       expect(response.body.first_name).toBe(updateDto.first_name);
       expect(response.body.last_name).toBe(updateDto.last_name);
@@ -376,7 +381,7 @@ describe('Users (e2e)', () => {
         .patch(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ role: UserRole.WASPLANNERS })
-        .expect(201);
+        .expect(200);
 
       expect(response.body.role).toBe(UserRole.WASPLANNERS);
     });
@@ -386,7 +391,7 @@ describe('Users (e2e)', () => {
         .patch(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
         .send({ email: 'newemail@test.nl' })
-        .expect(201);
+        .expect(200);
 
       // Email should remain unchanged from what was created
     });
@@ -416,7 +421,7 @@ describe('Users (e2e)', () => {
         .patch(`/users/${testUserId}/password`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
         .send({ new_password: newPassword })
-        .expect(201);
+        .expect(200);
 
       expect(response.body.message).toBe('Password reset successfully');
 
@@ -453,7 +458,7 @@ describe('Users (e2e)', () => {
       const response = await request(app.getHttpServer())
         .delete(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
-        .expect(201);
+        .expect(200);
 
       expect(response.body.message).toContain('deactivated');
 
@@ -461,7 +466,7 @@ describe('Users (e2e)', () => {
       const checkResponse = await request(app.getHttpServer())
         .get(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
-        .expect(201);
+        .expect(200);
 
       expect(checkResponse.body.is_active).toBe(false);
     });

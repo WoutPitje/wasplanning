@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Request,
   ForbiddenException,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,6 +23,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
@@ -54,15 +56,18 @@ export class UsersController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.GARAGE_ADMIN, UserRole.WASPLANNERS)
-  @ApiOperation({ summary: 'Get all users' })
+  @ApiOperation({ summary: 'Get all users with filtering and pagination' })
   @ApiResponse({
     status: 200,
-    description: 'List of users',
+    description: 'Paginated list of users',
   })
-  findAll(@Request() req) {
-    // Super admin can see all users, others only their tenant
-    const tenantId = req.user.role === UserRole.SUPER_ADMIN ? undefined : req.user.tenant.id;
-    return this.usersService.findAll(tenantId);
+  async findAll(@Query() query: GetUsersQueryDto, @Request() req) {
+    // Super admin can filter by tenant, others only see their tenant
+    if (req.user.role !== UserRole.SUPER_ADMIN) {
+      query.tenant = req.user.tenant.id;
+    }
+    
+    return this.usersService.findAll(query);
   }
 
   @Get(':id')

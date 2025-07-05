@@ -96,26 +96,37 @@ describe('UsersController', () => {
 
   describe('findAll', () => {
     it('should return users filtered by tenant for garage admin', async () => {
-      const users = [{ id: 'user1' }, { id: 'user2' }];
-      mockUsersService.findAll.mockResolvedValue(users);
+      const mockQuery = { page: 1, limit: 20 };
+      const mockResponse = {
+        data: [{ id: 'user1' }, { id: 'user2' }],
+        meta: { total: 2, page: 1, limit: 20, totalPages: 1 }
+      };
+      mockUsersService.findAll.mockResolvedValue(mockResponse);
 
-      const result = await controller.findAll(mockRequest);
+      const result = await controller.findAll(mockQuery as any, mockRequest);
 
-      expect(result).toEqual(users);
-      expect(mockUsersService.findAll).toHaveBeenCalledWith('tenant-id');
+      expect(result).toEqual(mockResponse);
+      expect(mockUsersService.findAll).toHaveBeenCalledWith({
+        ...mockQuery,
+        tenant: 'tenant-id'
+      });
     });
 
     it('should return all users for super admin', async () => {
       const superAdminRequest = {
         user: { ...mockRequest.user, role: UserRole.SUPER_ADMIN },
       };
-      const users = [{ id: 'user1' }, { id: 'user2' }];
-      mockUsersService.findAll.mockResolvedValue(users);
+      const mockQuery = { page: 1, limit: 20 };
+      const mockResponse = {
+        data: [{ id: 'user1' }, { id: 'user2' }],
+        meta: { total: 2, page: 1, limit: 20, totalPages: 1 }
+      };
+      mockUsersService.findAll.mockResolvedValue(mockResponse);
 
-      const result = await controller.findAll(superAdminRequest);
+      const result = await controller.findAll(mockQuery as any, superAdminRequest);
 
-      expect(result).toEqual(users);
-      expect(mockUsersService.findAll).toHaveBeenCalledWith(undefined);
+      expect(result).toEqual(mockResponse);
+      expect(mockUsersService.findAll).toHaveBeenCalledWith(mockQuery);
     });
   });
 
