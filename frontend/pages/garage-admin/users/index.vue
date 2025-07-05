@@ -19,6 +19,32 @@
       </div>
     </div>
 
+    <!-- Filters -->
+    <div class="flex flex-col sm:flex-row gap-4">
+      <div class="w-full sm:w-48">
+        <Label for="roleFilter">{{ t('users.filters.role') }}</Label>
+        <Select v-model="selectedRole">
+          <SelectTrigger>
+            <SelectValue :placeholder="t('users.filters.allRoles')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{{ t('users.filters.allRoles') }}</SelectItem>
+            <SelectItem v-for="role in availableRoles" :key="role" :value="role">
+              {{ t(`roles.${role}`) }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div class="flex-1">
+        <Label for="search">{{ t('users.search') }}</Label>
+        <Input
+          v-model="searchQuery"
+          :placeholder="t('users.search')"
+          class="w-full"
+        />
+      </div>
+    </div>
+
     <!-- Users List -->
     <UsersList
       :users="users"
@@ -32,11 +58,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
+import { Label } from '~/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import UsersList from '~/components/users/UsersList.vue'
-import type { UserWithoutPassword } from '~/types/users'
+import type { UserWithoutPassword, UserFilters } from '~/types/users'
 import { UserRole } from '~/types/auth'
 
 const { t } = useI18n()
@@ -61,10 +90,41 @@ const availableRoles = [
   UserRole.GARAGE_ADMIN
 ]
 
+// Query parameter sync
+const { filters, updateFilter } = useQueryFilters({
+  search: '',
+  role: 'all'
+})
+
+// Use filters from query params
+const searchQuery = computed({
+  get: () => filters.search,
+  set: (value) => updateFilter('search', value)
+})
+
+const selectedRole = computed({
+  get: () => filters.role,
+  set: (value) => updateFilter('role', value)
+})
+
+// Watch for filter changes and reload data
+watch([searchQuery, selectedRole], () => {
+  loadUsers()
+}, { immediate: false })
+
 // Methods
 const loadUsers = async () => {
-  const result = await getUsers({ tenant_id: authStore.tenant?.id })
-  users.value = result // getUsers returns empty array on error, not null
+  // Build filters object - always filter by tenant for garage admin
+  const userFilters: UserFilters = {
+    tenant: authStore.tenant?.id,
+    ...(searchQuery.value && { search: searchQuery.value }),
+    ...(selectedRole.value !== 'all' && { role: selectedRole.value }),
+    page: 1,
+    limit: 20
+  }
+  
+  const result = await getUsers(userFilters)
+  users.value = result.data // Extract data array from paginated response
 }
 
 const viewUser = async (user: UserWithoutPassword) => {

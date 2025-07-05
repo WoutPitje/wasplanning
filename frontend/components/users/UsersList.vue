@@ -1,45 +1,5 @@
 <template>
   <div class="space-y-6">
-    <!-- Filters -->
-    <div class="flex flex-col sm:flex-row gap-4">
-      <div v-if="showTenantFilter" class="w-full sm:w-64">
-        <Label for="tenantFilter" class="sr-only">{{ t('users.filters.tenant') }}</Label>
-        <Select v-model="selectedTenantId">
-          <SelectTrigger>
-            <SelectValue :placeholder="t('users.filters.allTenants')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{{ t('users.filters.allTenants') }}</SelectItem>
-            <SelectItem v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-              {{ tenant.display_name || tenant.name }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div class="w-full sm:w-48">
-        <Label for="roleFilter" class="sr-only">{{ t('users.filters.role') }}</Label>
-        <Select v-model="selectedRole">
-          <SelectTrigger>
-            <SelectValue :placeholder="t('users.filters.allRoles')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{{ t('users.filters.allRoles') }}</SelectItem>
-            <SelectItem v-for="role in availableRoles" :key="role" :value="role">
-              {{ t(`roles.${role}`) }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div class="flex-1">
-        <Label for="search" class="sr-only">{{ t('users.search') }}</Label>
-        <Input
-          v-model="searchQuery"
-          :placeholder="t('users.search')"
-          class="w-full"
-        />
-      </div>
-    </div>
-
     <!-- Loading state -->
     <div v-if="loading" class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -126,17 +86,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { format } from 'date-fns'
 import { nl, enUS } from 'date-fns/locale'
 import { Card, CardContent } from '~/components/ui/card'
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import type { UserWithoutPassword } from '~/types/users'
 import type { Tenant } from '~/types/admin'
 import { UserRole } from '~/types/auth'
@@ -158,12 +114,12 @@ const props = withDefaults(defineProps<Props>(), {
   showTenantFilter: false,
   showTenantColumn: false,
   availableRoles: () => [
-    'werkplaats',
-    'wassers',
-    'haal_breng_planners',
-    'wasplanners',
-    'garage_admin',
-    'super_admin'
+    UserRole.WERKPLAATS,
+    UserRole.WASSERS,
+    UserRole.HAAL_BRENG_PLANNERS,
+    UserRole.WASPLANNERS,
+    UserRole.GARAGE_ADMIN,
+    UserRole.SUPER_ADMIN
   ]
 })
 
@@ -173,34 +129,6 @@ defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
-
-// Query parameter sync
-const { filters, updateFilter } = useQueryFilters({
-  search: '',
-  tenant: 'all',
-  role: 'all'
-})
-
-// Use filters from query params
-const searchQuery = computed({
-  get: () => filters.search,
-  set: (value) => updateFilter('search', value)
-})
-
-const selectedTenantId = computed({
-  get: () => filters.tenant,
-  set: (value) => updateFilter('tenant', value)
-})
-
-const selectedRole = computed({
-  get: () => filters.role,
-  set: (value) => updateFilter('role', value)
-})
-
-// Emit filter changes to parent
-watch([searchQuery, selectedTenantId, selectedRole], () => {
-  // Parent component should handle filtering through API
-})
 
 // Methods
 const formatDate = (dateString: string) => {

@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
-import type { User, UserRole } from '~/types/auth'
+import { type User, UserRole } from '~/types/auth'
 
-export const createMockUser = (role: UserRole = 'super_admin' as UserRole): User => ({
+export const createMockUser = (role: UserRole = UserRole.SUPER_ADMIN): User => ({
   id: '1',
   email: 'test@example.com',
   first_name: 'Test',
@@ -34,8 +34,8 @@ export const createMockAuthStore = (isAuthenticated = false, user: User | null =
   logout: vi.fn(),
   refreshTokens: vi.fn(),
   hasRole: vi.fn((role: UserRole) => user?.role === role),
-  isSuperAdmin: user?.role === 'super_admin',
-  isGarageAdmin: user?.role === 'garage_admin',
+  isSuperAdmin: user?.role === UserRole.SUPER_ADMIN,
+  isGarageAdmin: user?.role === UserRole.GARAGE_ADMIN,
   tenant: user?.tenant || null,
   fullName: user ? `${user.first_name} ${user.last_name}` : ''
 })
@@ -93,7 +93,7 @@ export const setupTestEnvironment = () => {
 export const createMockLoginResponse = (user?: Partial<User>) => ({
   access_token: 'mock-access-token',
   refresh_token: 'mock-refresh-token',
-  user: createMockUser(user?.role || 'super_admin' as UserRole)
+  user: createMockUser(user?.role || UserRole.SUPER_ADMIN)
 })
 
 export const createMockApiError = (message = 'API Error', statusCode = 400) => ({

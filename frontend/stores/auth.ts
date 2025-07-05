@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { User, UserRole, LoginResponse } from '~/types/auth'
+import { type User, UserRole, type LoginResponse } from '~/types/auth'
 
 interface AuthState {
   user: User | null
@@ -30,12 +30,12 @@ export const useAuthStore = defineStore('auth', {
 
     // Check if user is super admin
     isSuperAdmin: (state): boolean => {
-      return state.user?.role === 'super_admin'
+      return state.user?.role === UserRole.SUPER_ADMIN
     },
 
     // Check if user is garage admin
     isGarageAdmin: (state): boolean => {
-      return state.user?.role === 'garage_admin'
+      return state.user?.role === UserRole.GARAGE_ADMIN
     },
 
     // Get user's tenant info

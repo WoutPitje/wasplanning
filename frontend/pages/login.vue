@@ -2,6 +2,11 @@
   <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
       <div>
+        <img 
+          src="/wasplanning-logo.png" 
+          alt="Wasplanning Logo" 
+          class="mx-auto h-24 w-auto mb-8"
+        />
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
           {{ t('login.title') }}
         </h2>
@@ -76,7 +81,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { LoginDto } from '~/types/auth'
+import { type LoginDto, UserRole } from '~/types/auth'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 
@@ -126,17 +131,17 @@ const handleLogin = async () => {
 // Get redirect path based on user role
 const getRedirectPath = (role: string) => {
   switch (role) {
-    case 'super_admin':
+    case UserRole.SUPER_ADMIN:
       return '/admin/tenants'
-    case 'garage_admin':
+    case UserRole.GARAGE_ADMIN:
       return '/garage-admin/dashboard'
-    case 'wasplanners':
+    case UserRole.WASPLANNERS:
       return '/wasplanner/dashboard'
-    case 'wassers':
+    case UserRole.WASSERS:
       return '/washer/queue'
-    case 'werkplaats':
+    case UserRole.WERKPLAATS:
       return '/workshop/requests'
-    case 'haal_breng_planners':
+    case UserRole.HAAL_BRENG_PLANNERS:
       return '/delivery/schedule'
     default:
       return '/dashboard'

@@ -19,8 +19,8 @@ const createMockStore = () => {
 
     // Getters
     hasRole: (role: UserRole) => state.user?.role === role,
-    get isSuperAdmin() { return state.user?.role === 'super_admin' },
-    get isGarageAdmin() { return state.user?.role === 'garage_admin' },
+    get isSuperAdmin() { return state.user?.role === UserRole.SUPER_ADMIN },
+    get isGarageAdmin() { return state.user?.role === UserRole.GARAGE_ADMIN },
     get tenant() { return state.user?.tenant || null },
     get fullName() { 
       return state.user ? `${state.user.first_name} ${state.user.last_name}` : ''

@@ -267,10 +267,10 @@ export default {
   
   // Roles
   roles: {
-    werkplaats: 'Workshop',
-    wassers: 'Washers',
-    haal_breng_planners: 'Pickup/Delivery Planners',
-    wasplanners: 'Wash Planners',
+    workshop: 'Workshop',
+    washers: 'Washers',
+    pickup_delivery_planners: 'Pickup/Delivery Planners',
+    wash_planners: 'Wash Planners',
     garage_admin: 'Garage Admin',
     super_admin: 'Super Admin'
   },

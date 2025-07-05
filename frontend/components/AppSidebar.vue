@@ -18,8 +18,15 @@
       <div class="flex flex-col h-full">
         <!-- Logo/Title -->
         <div class="flex items-center justify-between p-4 border-b">
-          <NuxtLink to="/" class="text-xl font-bold text-primary hover:text-primary/80 transition-colors">
-            {{ appTitle }}
+          <NuxtLink to="/" class="flex items-center gap-3">
+            <img 
+              src="/wasplanning-logo.png" 
+              alt="Wasplanning Logo" 
+              class="h-8 w-auto"
+            />
+            <span class="text-xl font-bold text-primary hover:text-primary/80 transition-colors">
+              {{ appTitle }}
+            </span>
           </NuxtLink>
           <Button
             variant="ghost"

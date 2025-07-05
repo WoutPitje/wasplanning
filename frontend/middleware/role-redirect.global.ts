@@ -1,3 +1,5 @@
+import { UserRole } from '~/types/auth'
+
 export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
   
@@ -18,12 +20,12 @@ export default defineNuxtRouteMiddleware((to) => {
   
   // Role-based dashboard redirects
   const roleDashboards: Record<string, string> = {
-    'super_admin': '/admin/tenants',
-    'garage_admin': '/garage-admin/dashboard',
-    'wasplanners': '/wasplanner/dashboard',
-    'wassers': '/washer/queue',
-    'werkplaats': '/workshop/requests',
-    'haal_breng_planners': '/delivery/schedule'
+    [UserRole.SUPER_ADMIN]: '/admin/tenants',
+    [UserRole.GARAGE_ADMIN]: '/garage-admin/dashboard',
+    [UserRole.WASPLANNERS]: '/wasplanner/dashboard',
+    [UserRole.WASSERS]: '/washer/queue',
+    [UserRole.WERKPLAATS]: '/workshop/requests',
+    [UserRole.HAAL_BRENG_PLANNERS]: '/delivery/schedule'
   }
   
   // If user is on root path or dashboard, redirect to role-specific dashboard
@@ -39,7 +41,7 @@ export default defineNuxtRouteMiddleware((to) => {
   const targetPath = to.path
   
   // Super admin can access admin routes
-  if (targetPath.startsWith('/admin/') && userRole !== 'super_admin') {
+  if (targetPath.startsWith('/admin/') && userRole !== UserRole.SUPER_ADMIN) {
     throw createError({
       statusCode: 403,
       statusMessage: 'Toegang geweigerd'
@@ -47,7 +49,7 @@ export default defineNuxtRouteMiddleware((to) => {
   }
   
   // Garage admin can access garage-admin routes  
-  if (targetPath.startsWith('/garage-admin/') && userRole !== 'garage_admin') {
+  if (targetPath.startsWith('/garage-admin/') && userRole !== UserRole.GARAGE_ADMIN) {
     throw createError({
       statusCode: 403,
       statusMessage: 'Toegang geweigerd'

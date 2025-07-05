@@ -36,12 +36,12 @@
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{{ t('users.filters.allRoles') }}</SelectItem>
-            <SelectItem value="werkplaats">{{ t('roles.werkplaats') }}</SelectItem>
-            <SelectItem value="wassers">{{ t('roles.wassers') }}</SelectItem>
-            <SelectItem value="haal_breng_planners">{{ t('roles.haal_breng_planners') }}</SelectItem>
-            <SelectItem value="wasplanners">{{ t('roles.wasplanners') }}</SelectItem>
-            <SelectItem value="garage_admin">{{ t('roles.garage_admin') }}</SelectItem>
-            <SelectItem value="super_admin">{{ t('roles.super_admin') }}</SelectItem>
+            <SelectItem :value="UserRole.WERKPLAATS">{{ t('roles.workshop') }}</SelectItem>
+            <SelectItem :value="UserRole.WASSERS">{{ t('roles.washers') }}</SelectItem>
+            <SelectItem :value="UserRole.HAAL_BRENG_PLANNERS">{{ t('roles.pickup_delivery_planners') }}</SelectItem>
+            <SelectItem :value="UserRole.WASPLANNERS">{{ t('roles.wash_planners') }}</SelectItem>
+            <SelectItem :value="UserRole.GARAGE_ADMIN">{{ t('roles.garage_admin') }}</SelectItem>
+            <SelectItem :value="UserRole.SUPER_ADMIN">{{ t('roles.super_admin') }}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -128,7 +128,7 @@
                       </NuxtLink>
                     </Button>
                     <Button 
-                      v-if="user.role !== 'super_admin' && user.is_active"
+                      v-if="user.role !== UserRole.SUPER_ADMIN && user.is_active"
                       variant="outline" 
                       size="sm"
                       @click="handleImpersonate(user.id)"

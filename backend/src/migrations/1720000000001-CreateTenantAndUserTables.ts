@@ -7,10 +7,10 @@ export class CreateTenantAndUserTables1720000000001 implements MigrationInterfac
     // Create user_role enum
     await queryRunner.query(`
       CREATE TYPE "user_role" AS ENUM(
-        'werkplaats', 
-        'wassers', 
-        'haal_breng_planners', 
-        'wasplanners', 
+        'workshop', 
+        'washers', 
+        'pickup_delivery_planners', 
+        'wash_planners', 
         'garage_admin', 
         'super_admin'
       )
@@ -40,7 +40,7 @@ export class CreateTenantAndUserTables1720000000001 implements MigrationInterfac
         "password" character varying NOT NULL,
         "first_name" character varying,
         "last_name" character varying,
-        "role" "user_role" NOT NULL DEFAULT 'werkplaats',
+        "role" "user_role" NOT NULL DEFAULT 'workshop',
         "is_active" boolean NOT NULL DEFAULT true,
         "last_login" TIMESTAMP,
         "created_at" TIMESTAMP NOT NULL DEFAULT now(),

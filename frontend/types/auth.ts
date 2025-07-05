@@ -37,10 +37,10 @@ export interface Tenant {
 }
 
 export enum UserRole {
-  WERKPLAATS = 'werkplaats',
-  WASSERS = 'wassers',
-  HAAL_BRENG_PLANNERS = 'haal_breng_planners',
-  WASPLANNERS = 'wasplanners',
+  WERKPLAATS = 'workshop',
+  WASSERS = 'washers',
+  HAAL_BRENG_PLANNERS = 'pickup_delivery_planners',
+  WASPLANNERS = 'wash_planners',
   GARAGE_ADMIN = 'garage_admin',
   SUPER_ADMIN = 'super_admin'
 }

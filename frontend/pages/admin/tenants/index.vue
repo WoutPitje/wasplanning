@@ -1,8 +1,5 @@
 <template>
   <div class="space-y-6">
-    <!-- Breadcrumbs -->
-    <Breadcrumb :items="breadcrumbItems" />
-    
     <!-- Header -->
     <div class="md:flex md:items-center md:justify-between">
       <div class="flex-1">
@@ -147,7 +144,6 @@ import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent } from '~/components/ui/card'
-import { Breadcrumb } from '~/components/ui/breadcrumb'
 import { Badge } from '~/components/ui/badge'
 import {
   Table,
@@ -171,11 +167,6 @@ const { t } = useI18n()
 // State
 const tenants = ref<Tenant[] | null>(null)
 
-// Breadcrumbs
-const breadcrumbItems = computed(() => [
-  { label: 'Admin', href: '/admin/tenants' },
-  { label: t('nav.garages') }
-])
 
 // Methods
 const loadTenants = async () => {
