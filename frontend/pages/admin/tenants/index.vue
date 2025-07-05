@@ -90,7 +90,7 @@
                   {{ tenant.is_active ? t('common.active') : t('common.inactive') }}
                 </Badge>
               </TableCell>
-              <TableCell>{{ tenant.user_count || 0 }}</TableCell>
+              <TableCell>{{ tenant?.user_count || 0 }}</TableCell>
               <TableCell>{{ formatDate(tenant.created_at) }}</TableCell>
               <TableCell class="text-right">
                 <Button variant="default" size="sm" asChild>

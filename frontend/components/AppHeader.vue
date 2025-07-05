@@ -27,8 +27,29 @@
         <div class="flex justify-between items-center">
         <!-- Left side: Logo/Title and Navigation -->
         <div class="flex items-center space-x-6">
-          <div class="flex items-center">
-            <NuxtLink to="/" class="text-2xl font-bold text-primary hover:text-primary/80 transition-colors">
+          <div class="flex items-center space-x-3">
+            <!-- Tenant Logo -->
+            <div v-if="!authStore.isSuperAdmin" class="flex-shrink-0">
+              <img 
+                v-if="tenantLogoUrl"
+                :src="tenantLogoUrl" 
+                :alt="authStore.tenant?.display_name || 'Logo'"
+                class="h-8 w-auto max-w-[120px] object-contain"
+                @error="handleLogoError"
+              />
+              <!-- Default logo fallback -->
+              <div 
+                v-else
+                class="h-8 w-8 rounded bg-primary/10 flex items-center justify-center"
+              >
+                <span class="text-primary font-bold text-sm">
+                  {{ (authStore.tenant?.display_name || 'W').charAt(0).toUpperCase() }}
+                </span>
+              </div>
+            </div>
+            
+            <!-- App Title -->
+            <NuxtLink to="/" class="text-lg sm:text-2xl font-bold text-primary hover:text-primary/80 transition-colors">
               {{ appTitle }}
             </NuxtLink>
           </div>
@@ -90,10 +111,15 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const router = useRouter()
 const { stopImpersonation } = useImpersonation()
+const config = useRuntimeConfig()
 
 // Impersonation state
 const isImpersonating = computed(() => authStore.impersonation?.is_impersonating || false)
 const stoppingImpersonation = ref(false)
+
+// Tenant logo state
+const tenantLogoUrl = ref<string | null>(null)
+const logoError = ref(false)
 
 // App title based on user role
 const appTitle = computed(() => {
@@ -182,4 +208,47 @@ const handleStopImpersonation = async () => {
     stoppingImpersonation.value = false
   }
 }
+
+// Fetch tenant logo URL
+const fetchTenantLogo = async () => {
+  if (!authStore.tenant?.logo_url || logoError.value) {
+    tenantLogoUrl.value = null
+    return
+  }
+
+  const logoUrl = authStore.tenant.logo_url
+
+  // If it's a regular HTTP URL, use it directly
+  if (logoUrl.startsWith('http')) {
+    tenantLogoUrl.value = logoUrl
+    return
+  }
+
+  // If it's a MinIO URL, get the presigned URL
+  if (logoUrl.startsWith('minio:') && authStore.tenant?.id) {
+    try {
+      const response = await $fetch(`${config.public.apiUrl}/auth/tenant/logo`, {
+        headers: {
+          Authorization: `Bearer ${authStore.accessToken}`
+        }
+      })
+      tenantLogoUrl.value = response.logo_url
+    } catch (error) {
+      tenantLogoUrl.value = null
+      logoError.value = true
+    }
+  }
+}
+
+// Handle logo loading errors
+const handleLogoError = () => {
+  tenantLogoUrl.value = null
+  logoError.value = true
+}
+
+// Watch for tenant changes and fetch logo
+watch(() => authStore.tenant?.logo_url, () => {
+  logoError.value = false
+  fetchTenantLogo()
+}, { immediate: true })
 </script>

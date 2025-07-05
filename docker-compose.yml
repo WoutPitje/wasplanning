@@ -44,7 +44,6 @@ services:
     environment:
       MINIO_ROOT_USER: wasplanning
       MINIO_ROOT_PASSWORD: wasplanning_dev
-      MINIO_DEFAULT_BUCKETS: wasplanning-uploads,wasplanning-public,wasplanning-private
     ports:
       - "9000:9000"  # API
       - "9001:9001"  # Console
@@ -56,25 +55,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    networks:
-      - wasplanning
-
-  # MinIO Bucket Setup
-  minio-setup:
-    image: minio/mc:latest
-    container_name: wasplanning_minio_setup
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc alias set minio http://minio:9000 wasplanning wasplanning_dev;
-      /usr/bin/mc mb minio/wasplanning-uploads --ignore-existing;
-      /usr/bin/mc mb minio/wasplanning-public --ignore-existing;
-      /usr/bin/mc mb minio/wasplanning-private --ignore-existing;
-      /usr/bin/mc anonymous set public minio/wasplanning-public;
-      echo 'MinIO buckets created successfully';
-      "
     networks:
       - wasplanning
 

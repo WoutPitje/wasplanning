@@ -65,19 +65,16 @@
               </div>
             </div>
 
-            <div class="sm:col-span-3">
-              <label for="logo_url" class="block text-sm font-medium leading-6 text-foreground">
+            <div class="sm:col-span-6">
+              <label class="block text-sm font-medium leading-6 text-foreground mb-2">
                 {{ t('admin.tenants.form.logoUrl') }}
               </label>
-              <div class="mt-2">
-                <Input
-                  id="logo_url"
-                  v-model="form.logo_url"
-                  type="url"
-                  name="logo_url"
-                  placeholder="https://example.com/logo.png"
-                />
-              </div>
+              <FileUpload
+                v-model="form.logo_url"
+              />
+              <p class="mt-1 text-xs text-muted-foreground">
+                {{ t('admin.tenants.form.logoUploadNote') }}
+              </p>
             </div>
 
             <div class="sm:col-span-3">
@@ -248,6 +245,7 @@ import { Button } from '~/components/ui/button'
 import { Card, CardContent } from '~/components/ui/card'
 import { Input } from '~/components/ui/input'
 import { Breadcrumb } from '~/components/ui/breadcrumb'
+import { FileUpload } from '~/components/ui/file-upload'
 
 // Meta
 definePageMeta({

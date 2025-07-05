@@ -4,6 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole } from './entities/user.entity';
+import { Tenant } from './entities/tenant.entity';
+import { StorageService } from '../storage/storage.service';
 
 export interface JwtPayload {
   id: string;
@@ -14,6 +16,7 @@ export interface JwtPayload {
     name: string;
     display_name: string;
     language: string;
+    logo_url?: string | undefined;
   };
   impersonator_id?: string;
   is_impersonating?: boolean;
@@ -33,6 +36,7 @@ export interface AuthResponse {
       name: string;
       display_name: string;
       language: string;
+      logo_url?: string | undefined;
     };
   };
   impersonation?: {
@@ -49,7 +53,10 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Tenant)
+    private tenantRepository: Repository<Tenant>,
     private jwtService: JwtService,
+    private storageService: StorageService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<User | null> {
@@ -68,6 +75,10 @@ export class AuthService {
   }
 
   async login(user: User): Promise<AuthResponse> {
+    // For now, just pass the raw logo_url from the tenant
+    // The frontend will handle MinIO URL resolution
+    const logoUrl = user.tenant.logo_url || undefined;
+
     const payload: JwtPayload = {
       id: user.id,
       email: user.email,
@@ -77,6 +88,7 @@ export class AuthService {
         name: user.tenant.name,
         display_name: user.tenant.display_name,
         language: user.tenant.language,
+        logo_url: logoUrl,
       },
     };
 
@@ -99,6 +111,7 @@ export class AuthService {
           name: user.tenant.name,
           display_name: user.tenant.display_name,
           language: user.tenant.language,
+          logo_url: logoUrl,
         },
       },
     };
@@ -237,6 +250,8 @@ export class AuthService {
     }
 
     // Create JWT payload with impersonation fields
+    const logoUrl = targetUser.tenant.logo_url || undefined;
+    
     const payload: JwtPayload = {
       id: targetUser.id,
       email: targetUser.email,
@@ -246,6 +261,7 @@ export class AuthService {
         name: targetUser.tenant.name,
         display_name: targetUser.tenant.display_name,
         language: targetUser.tenant.language,
+        logo_url: logoUrl,
       },
       impersonator_id: impersonator.id,
       is_impersonating: true,
@@ -271,6 +287,7 @@ export class AuthService {
           name: targetUser.tenant.name,
           display_name: targetUser.tenant.display_name,
           language: targetUser.tenant.language,
+          logo_url: logoUrl,
         },
       },
       impersonation: {
@@ -303,5 +320,26 @@ export class AuthService {
 
     // Create regular JWT without impersonation fields
     return this.login(superAdmin);
+  }
+
+  async getTenantLogoUrl(tenantId: string): Promise<string | null> {
+    const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
+    if (!tenant || !tenant.logo_url) {
+      return null;
+    }
+
+    // Check if logo is stored in MinIO
+    if (tenant.logo_url.startsWith('minio:')) {
+      const fileId = tenant.logo_url.substring(6); // Remove 'minio:' prefix
+      try {
+        return await this.storageService.generatePresignedUrl(fileId, tenantId);
+      } catch (error) {
+        // If file not found or error, return null
+        return null;
+      }
+    }
+
+    // Return external URL as-is
+    return tenant.logo_url;
   }
 }

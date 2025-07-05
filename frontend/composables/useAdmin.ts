@@ -144,6 +144,30 @@ export const useAdmin = () => {
     }
   }
   
+  // Upload tenant logo
+  const uploadTenantLogo = async (tenantId: string, file: File): Promise<{ logo_url: string } | null> => {
+    try {
+      pending.value = true
+      error.value = null
+      
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await $fetch<{ logo_url: string }>(`${config.public.apiUrl}/admin/tenants/${tenantId}/logo`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: formData
+      })
+      
+      return response
+    } catch (err: any) {
+      error.value = err.data?.message || 'Failed to upload logo'
+      return null
+    } finally {
+      pending.value = false
+    }
+  }
+  
   return {
     // State
     pending: readonly(pending),
@@ -156,6 +180,7 @@ export const useAdmin = () => {
     getTenantStats,
     updateTenant,
     deactivateTenant,
+    uploadTenantLogo,
     
     // Utils
     clearError: () => { error.value = null }

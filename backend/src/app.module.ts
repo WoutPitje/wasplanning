@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
 import { UsersModule } from './users/users.module';
+import { StorageModule } from './storage/storage.module';
 
 import databaseConfig from './config/database.config';
 
@@ -30,6 +31,7 @@ import databaseConfig from './config/database.config';
       }),
       inject: [ConfigService],
     }),
+    StorageModule,
     AuthModule,
     AdminModule,
     UsersModule,

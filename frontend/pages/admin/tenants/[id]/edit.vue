@@ -79,18 +79,14 @@
             </div>
 
             <div class="sm:col-span-6">
-              <label for="logo_url" class="block text-sm font-medium leading-6 text-foreground">
+              <label class="block text-sm font-medium leading-6 text-foreground mb-2">
                 {{ t('admin.tenants.edit.logoUrl') }}
               </label>
-              <div class="mt-2">
-                <Input
-                  id="logo_url"
-                  v-model="form.logo_url"
-                  type="url"
-                  name="logo_url"
-                  :placeholder="t('admin.tenants.edit.logoUrlPlaceholder')"
-                />
-              </div>
+              <FileUpload
+                v-model="form.logo_url"
+                :tenant-id="getTenantId()"
+                @file-uploaded="handleLogoUploaded"
+              />
             </div>
 
             <!-- Language -->
@@ -180,6 +176,7 @@ import { Button } from '~/components/ui/button'
 import { Card, CardContent } from '~/components/ui/card'
 import { Input } from '~/components/ui/input'
 import { Breadcrumb } from '~/components/ui/breadcrumb'
+import { FileUpload } from '~/components/ui/file-upload'
 
 const { t } = useI18n()
 
@@ -248,6 +245,17 @@ const handleSubmit = async () => {
   }
   
   updatePending.value = false
+}
+
+const handleLogoUploaded = (result: any) => {
+  // Update the form with the new logo URL
+  form.logo_url = result.logo_url
+  
+  // Optionally show a success message
+  showSuccess.value = true
+  setTimeout(() => {
+    showSuccess.value = false
+  }, 3000)
 }
 
 // Load tenant on mount

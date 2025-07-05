@@ -19,11 +19,21 @@
         <!-- Logo/Title -->
         <div class="flex items-center justify-between p-4 border-b">
           <NuxtLink to="/" class="flex items-center gap-3">
+            <!-- Tenant Logo (when available) or Default Logo -->
             <img 
+              v-if="tenantLogoUrl"
+              :src="tenantLogoUrl" 
+              :alt="authStore.tenant?.display_name || 'Logo'"
+              class="h-8 w-auto max-w-[40px] object-contain"
+              @error="handleLogoError"
+            />
+            <img 
+              v-else-if="!authStore.tenant?.logo_url || logoError"
               src="/wasplanning-logo.png" 
               alt="Wasplanning Logo" 
               class="h-8 w-auto"
             />
+            
             <span class="text-xl font-bold text-primary hover:text-primary/80 transition-colors">
               {{ appTitle }}
             </span>
@@ -112,9 +122,14 @@ import { UserRole } from '~/types/auth'
 const { t } = useI18n()
 const authStore = useAuthStore()
 const router = useRouter()
+const config = useRuntimeConfig()
 
 // Sidebar state
 const sidebarOpen = ref(false)
+
+// Tenant logo state
+const tenantLogoUrl = ref<string | null>(null)
+const logoError = ref(false)
 
 // App title based on user role
 const appTitle = computed(() => {
@@ -193,6 +208,52 @@ const logout = async () => {
   authStore.clearAuth()
   await router.push('/login')
 }
+
+// Fetch tenant logo URL
+const fetchTenantLogo = async () => {
+  if (!authStore.tenant?.logo_url || logoError.value) {
+    tenantLogoUrl.value = null
+    return
+  }
+
+  const logoUrl = authStore.tenant.logo_url
+
+  // If it's a regular HTTP URL, use it directly
+  if (logoUrl.startsWith('http')) {
+    tenantLogoUrl.value = logoUrl
+    return
+  }
+
+  // For MinIO URLs, get the presigned URL from the auth endpoint
+  if (logoUrl.startsWith('minio:') && authStore.tenant?.id) {
+    try {
+      const response = await $fetch(`${config.public.apiUrl}/auth/tenant/logo`, {
+        headers: {
+          Authorization: `Bearer ${authStore.accessToken}`
+        }
+      })
+      tenantLogoUrl.value = response.logo_url
+    } catch (error) {
+      tenantLogoUrl.value = null
+      logoError.value = true
+    }
+    return
+  }
+
+  tenantLogoUrl.value = logoUrl
+}
+
+// Handle logo loading errors
+const handleLogoError = () => {
+  tenantLogoUrl.value = null
+  logoError.value = true
+}
+
+// Watch for tenant changes and fetch logo
+watch(() => authStore.tenant?.logo_url, () => {
+  logoError.value = false
+  fetchTenantLogo()
+}, { immediate: true })
 
 // Close sidebar on route change (mobile)
 const route = useRoute()

@@ -85,4 +85,15 @@ export class AuthController {
   async stopImpersonation(@CurrentUser() user) {
     return this.authService.stopImpersonation(user);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('tenant/logo')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user tenant logo URL' })
+  @ApiResponse({ status: 200, description: 'Tenant logo URL retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getTenantLogo(@CurrentUser() user) {
+    const logoUrl = await this.authService.getTenantLogoUrl(user.tenant.id);
+    return { logo_url: logoUrl };
+  }
 }

@@ -144,7 +144,22 @@ export default {
         credentialsNote: 'Send these credentials securely to the garage administrator. The temporary password must be changed on first login.',
         copied: 'Copied!',
         copy: 'Copy',
-        backToOverview: 'Back to Overview'
+        backToOverview: 'Back to Overview',
+        // File upload
+        logoPreview: 'Logo preview',
+        clickToUpload: 'Click to upload',
+        orDragAndDrop: 'or drag and drop',
+        allowedFormats: 'PNG, JPG, GIF, WebP up to 2MB',
+        maxFileSize: 'Maximum 2MB',
+        logoUrlAlternative: 'Or use a URL',
+        logoUrlPlaceholder: 'https://example.com/logo.png',
+        useUrlInstead: 'Use URL instead of file',
+        removeImage: 'Remove image',
+        uploading: 'Uploading',
+        invalidFileType: 'Invalid file type. Only JPEG, PNG, GIF and WebP are allowed.',
+        fileTooLarge: 'File too large. Maximum 2MB allowed.',
+        uploadFailed: 'Upload failed. Please try again.',
+        logoUploadNote: 'Logo can be uploaded after creation via the edit page'
       },
       
       // Users

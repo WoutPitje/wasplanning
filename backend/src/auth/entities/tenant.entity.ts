@@ -13,7 +13,7 @@ export class Tenant {
   display_name: string;
 
   @Column({ nullable: true })
-  logo_url: string;
+  logo_url?: string;
 
   @Column({ type: 'jsonb', nullable: true })
   settings: Record<string, any>;

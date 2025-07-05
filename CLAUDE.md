@@ -17,15 +17,21 @@ Dutch car wash planning system for garages with pickup/delivery service. Coordin
 - **Frontend**: Nuxt 3 + Vue 3 + shadcn-vue + Pinia + TailwindCSS  
 - **Mobile**: Expo + React Native + Zustand + NativeWind
 - **Real-time**: Socket.io
-- **Storage**: MinIO (S3-compatible)
+- **Storage**: MinIO (S3-compatible) with per-tenant buckets
 - **Auth**: JWT with role-based access
 
 ### Multi-Tenancy (MANDATORY)
 - **Complete tenant isolation** at database level
 - **Row-Level Security** policies for all tenant-scoped tables
 - **Tenant context** in JWT tokens and all API requests
-- **Tenant-specific** Redis namespacing and MinIO buckets
+- **Tenant-specific** Redis namespacing and MinIO buckets (per-tenant buckets)
 - **Cross-tenant admin** dashboard for garage chain management
+
+### File Storage Strategy
+- **Per-tenant buckets**: Each tenant gets isolated MinIO bucket (`{prefix}-{tenant-id}`)
+- **Simplified paths**: Files stored as `{category}/{year}/{month}/{uuid}-{filename}`
+- **Auto-provisioning**: Buckets created automatically on first file upload
+- **Secure isolation**: Complete file isolation between tenants at bucket level
 
 ### User Roles (6 Fixed Roles - Per Tenant)
 1. **Werkplaats** - Submit wash requests only

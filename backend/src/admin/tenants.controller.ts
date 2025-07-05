@@ -8,6 +8,9 @@ import {
   Delete,
   UseGuards,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,6 +18,8 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
@@ -24,6 +29,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/entities/user.entity';
 import { NoImpersonation } from '../auth/decorators/no-impersonation.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Admin - Tenants')
 @Controller('admin/tenants')
@@ -103,5 +110,75 @@ export class TenantsController {
   @ApiResponse({ status: 404, description: 'Tenant not found' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.tenantsService.remove(id);
+  }
+
+  @Post(':id/logo')
+  @ApiOperation({ summary: 'Upload tenant logo' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Logo uploaded successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid file format' })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
+  @UseInterceptors(FileInterceptor('file'))
+  @NoImpersonation()
+  async uploadLogo(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    // Validate file type
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed');
+    }
+
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      throw new BadRequestException('File size exceeds 2MB limit');
+    }
+
+    return this.tenantsService.uploadLogo(id, file, user.id);
+  }
+
+  @Get(':id/logo')
+  @ApiOperation({ summary: 'Get tenant logo URL' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Logo URL retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        logo_url: {
+          type: 'string',
+          nullable: true,
+          description: 'Presigned URL for the logo (expires in 7 days) or null if no logo',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
+  async getLogo(@Param('id', ParseUUIDPipe) id: string) {
+    const logoUrl = await this.tenantsService.getLogoUrl(id);
+    return { logo_url: logoUrl };
   }
 }

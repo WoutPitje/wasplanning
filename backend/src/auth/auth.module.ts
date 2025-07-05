@@ -9,11 +9,13 @@ import { User } from './entities/user.entity';
 import { Tenant } from './entities/tenant.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Tenant]),
     PassportModule,
+    StorageModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

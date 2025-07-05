@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tenant } from '../auth/entities/tenant.entity';
@@ -7,6 +7,8 @@ import { AuthService } from '../auth/auth.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { CreateTenantResponseDto } from './dto/create-tenant-response.dto';
+import { StorageService } from '../storage/storage.service';
+import { FileCategory } from '../storage/entities/file.entity';
 
 @Injectable()
 export class TenantsService {
@@ -16,6 +18,7 @@ export class TenantsService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private authService: AuthService,
+    private storageService: StorageService,
   ) {}
 
   private generateTemporaryPassword(): string {
@@ -90,10 +93,35 @@ export class TenantsService {
   }
 
   async findAll() {
-    return this.tenantRepository.find({
+    const tenants = await this.tenantRepository.find({
       select: ['id', 'name', 'display_name', 'logo_url', 'language', 'is_active', 'created_at', 'updated_at'],
       order: { created_at: 'DESC' },
     });
+
+    // Generate actual logo URLs for MinIO-stored logos
+    const tenantsWithLogos = await Promise.all(
+      tenants.map(async (tenant) => {
+        let actualLogoUrl = tenant.logo_url;
+        
+        // If logo is stored in MinIO, generate presigned URL
+        if (tenant.logo_url && tenant.logo_url.startsWith('minio:')) {
+          try {
+            const logoUrl = await this.getLogoUrl(tenant.id);
+            actualLogoUrl = logoUrl || undefined;
+          } catch (error) {
+            // If logo file is missing/corrupted, set to undefined
+            actualLogoUrl = undefined;
+          }
+        }
+        
+        return {
+          ...tenant,
+          logo_url: actualLogoUrl,
+        };
+      })
+    );
+
+    return tenantsWithLogos;
   }
 
   async findOne(id: string) {
@@ -111,6 +139,17 @@ export class TenantsService {
       const { password, ...userWithoutPassword } = user;
       return userWithoutPassword as User;
     });
+
+    // Generate actual logo URL if stored in MinIO
+    if (tenant.logo_url && tenant.logo_url.startsWith('minio:')) {
+      try {
+        const logoUrl = await this.getLogoUrl(tenant.id);
+        tenant.logo_url = logoUrl || undefined;
+      } catch (error) {
+        // If logo file is missing/corrupted, set to undefined
+        tenant.logo_url = undefined;
+      }
+    }
 
     return tenant;
   }
@@ -164,5 +203,91 @@ export class TenantsService {
       created_at: tenant.created_at,
       last_updated: tenant.updated_at,
     };
+  }
+
+  async uploadLogo(tenantId: string, file: Express.Multer.File, userId: string) {
+    // Check if tenant exists
+    const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
+    if (!tenant) {
+      throw new NotFoundException(`Tenant with ID ${tenantId} not found`);
+    }
+
+    try {
+      // Upload file to storage service
+      const uploadedFile = await this.storageService.uploadFile({
+        file,
+        tenantId,
+        userId,
+        category: FileCategory.TENANT_LOGO,
+        isPublic: true, // Tenant logos should be publicly accessible
+        metadata: {
+          tenant_name: tenant.name,
+          previous_logo_url: tenant.logo_url || null,
+        },
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        maxSizeBytes: 2 * 1024 * 1024, // 2MB
+      });
+
+      // Generate presigned URL for the logo
+      const logoUrl = await this.storageService.generatePresignedUrl(
+        uploadedFile.id,
+        tenantId,
+        7 * 24 * 60 * 60, // 7 days expiry
+      );
+
+      // Delete old logo if it exists and is stored in MinIO
+      if (tenant.logo_url && tenant.logo_url.startsWith('minio:')) {
+        try {
+          const oldFileId = tenant.logo_url.replace('minio:', '');
+          await this.storageService.deleteFile(oldFileId, tenantId, userId);
+        } catch (error) {
+          // Log but don't fail the upload if old logo deletion fails
+          console.warn(`Failed to delete old logo: ${error.message}`);
+        }
+      }
+
+      // Update tenant with new logo file ID
+      await this.tenantRepository.update(tenantId, {
+        logo_url: `minio:${uploadedFile.id}`, // Store file ID for reference
+      });
+
+      return {
+        message: 'Logo uploaded successfully',
+        file_id: uploadedFile.id,
+        logo_url: logoUrl,
+        mime_type: uploadedFile.mime_type,
+        size_bytes: uploadedFile.size_bytes,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+    } catch (error) {
+      if (error instanceof ConflictException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to upload logo');
+    }
+  }
+
+  /**
+   * Get logo URL for a tenant, handling both external URLs and MinIO-stored files
+   */
+  async getLogoUrl(tenantId: string): Promise<string | null> {
+    const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
+    if (!tenant || !tenant.logo_url) {
+      return null;
+    }
+
+    // Check if logo is stored in MinIO
+    if (tenant.logo_url.startsWith('minio:')) {
+      const fileId = tenant.logo_url.substring(6); // Remove 'minio:' prefix
+      try {
+        return await this.storageService.generatePresignedUrl(fileId, tenantId);
+      } catch (error) {
+        // If file not found or error, return null
+        return null;
+      }
+    }
+
+    // Return external URL as-is
+    return tenant.logo_url;
   }
 }

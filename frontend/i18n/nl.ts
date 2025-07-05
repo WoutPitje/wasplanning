@@ -144,7 +144,22 @@ export default {
         credentialsNote: 'Stuur deze gegevens veilig naar de garage beheerder. Het tijdelijke wachtwoord moet bij eerste inlog worden gewijzigd.',
         copied: 'Gekopieerd!',
         copy: 'Kopiëren',
-        backToOverview: 'Terug naar Overzicht'
+        backToOverview: 'Terug naar Overzicht',
+        // File upload
+        logoPreview: 'Logo voorbeeldweergave',
+        clickToUpload: 'Klik om te uploaden',
+        orDragAndDrop: 'of sleep bestanden hierheen',
+        allowedFormats: 'PNG, JPG, GIF, WebP tot 2MB',
+        maxFileSize: 'Maximaal 2MB',
+        logoUrlAlternative: 'Of gebruik een URL',
+        logoUrlPlaceholder: 'https://example.com/logo.png',
+        useUrlInstead: 'Gebruik URL in plaats van bestand',
+        removeImage: 'Verwijder afbeelding',
+        uploading: 'Uploaden',
+        invalidFileType: 'Ongeldig bestandstype. Alleen JPEG, PNG, GIF en WebP zijn toegestaan.',
+        fileTooLarge: 'Bestand te groot. Maximaal 2MB toegestaan.',
+        uploadFailed: 'Upload mislukt. Probeer het opnieuw.',
+        logoUploadNote: 'Logo kan na aanmaak worden geüpload via de bewerkingspagina'
       },
       
       // Users

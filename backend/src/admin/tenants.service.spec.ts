@@ -6,6 +6,7 @@ import { TenantsService } from './tenants.service';
 import { Tenant } from '../auth/entities/tenant.entity';
 import { User, UserRole } from '../auth/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
+import { StorageService } from '../storage/storage.service';
 
 describe('TenantsService', () => {
   let service: TenantsService;
@@ -69,6 +70,14 @@ describe('TenantsService', () => {
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: StorageService,
+          useValue: {
+            uploadFile: jest.fn(),
+            deleteFile: jest.fn(),
+            generatePresignedUrl: jest.fn(),
+          },
         },
       ],
     }).compile();

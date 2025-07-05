@@ -29,7 +29,7 @@ export interface Tenant {
   id: string
   name: string
   display_name: string
-  logo_url: string | null
+  logo_url?: string
   language: string
   is_active: boolean
   created_at: string
