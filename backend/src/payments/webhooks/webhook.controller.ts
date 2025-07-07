@@ -7,11 +7,15 @@ import {
   HttpStatus,
   Logger,
   BadRequestException,
+  Inject,
+  forwardRef,
+  Param,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PaymentsService } from '../payments.service';
 import { MollieProvider } from '../providers/mollie/mollie.provider';
 import { TransactionStatus } from '../entities/payment-transaction.entity';
+import { SubscriptionsService } from '../../subscriptions/subscriptions.service';
 
 @ApiTags('webhooks')
 @Controller('payments/webhook')
@@ -21,6 +25,8 @@ export class WebhookController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly mollieProvider: MollieProvider,
+    @Inject(forwardRef(() => SubscriptionsService))
+    private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
   @Post('mollie')
@@ -32,6 +38,7 @@ export class WebhookController {
     @Headers('mollie-signature') signature: string,
   ) {
     this.logger.log('Received Mollie webhook');
+    this.logger.log(`Webhook body: ${JSON.stringify(body)}`);
 
     try {
       // Validate webhook signature
@@ -54,8 +61,37 @@ export class WebhookController {
     }
   }
 
+  @Post('mollie/test/:paymentId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Test webhook processing manually' })
+  @ApiResponse({ status: 200, description: 'Test webhook processed successfully' })
+  async testMollieWebhook(@Param('paymentId') paymentId: string) {
+    this.logger.log(`Testing webhook for payment ${paymentId}`);
+
+    try {
+      // Create a test webhook event
+      const event = {
+        id: paymentId,
+        type: 'payment.updated',
+        data: { id: paymentId },
+        createdAt: new Date(),
+      };
+
+      await this.processWebhookEvent(event);
+
+      return { status: 'ok', message: 'Test webhook processed successfully' };
+    } catch (error) {
+      this.logger.error(`Failed to process test webhook: ${error.message}`);
+      throw error;
+    }
+  }
+
   private async processWebhookEvent(event: any): Promise<void> {
     switch (event.type) {
+      case 'payment.updated':
+        // Mollie sends a generic update event, we need to check the status
+        await this.handlePaymentUpdated(event);
+        break;
       case 'payment.paid':
         await this.handlePaymentPaid(event);
         break;
@@ -79,23 +115,89 @@ export class WebhookController {
     }
   }
 
-  private async handlePaymentPaid(event: any): Promise<void> {
-    this.logger.log(`Payment paid: ${event.data.id}`);
+  private async handlePaymentUpdated(event: any): Promise<void> {
+    this.logger.log(`Payment updated: ${event.data.id}`);
     
     try {
       // Get payment details from Mollie
       const payment = await this.mollieProvider.getPayment(event.data.id);
       
+      this.logger.log(`Payment ${payment.providerId} status: ${payment.status}`);
+      
+      // Handle based on the actual payment status
+      switch (payment.status) {
+        case 'paid':
+          await this.handlePaymentPaidStatus(payment);
+          break;
+        case 'failed':
+          await this.updateTransactionStatus(payment.providerId, TransactionStatus.FAILED);
+          break;
+        case 'canceled':
+          await this.updateTransactionStatus(payment.providerId, TransactionStatus.CANCELED);
+          break;
+        // Mollie can return 'expired' status which we treat as failed
+        case 'expired' as any:
+          await this.updateTransactionStatus(payment.providerId, TransactionStatus.FAILED);
+          break;
+        default:
+          this.logger.log(`Payment ${payment.providerId} has status ${payment.status}, no action needed`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to process payment updated event: ${error.message}`);
+    }
+  }
+
+  private async handlePaymentPaidStatus(payment: any): Promise<void> {
+    this.logger.log(`Processing paid payment: ${payment.providerId}`);
+    
+    try {
       // Update transaction status
-      await this.paymentsService.updateTransactionStatus(
-        payment.providerId,
-        TransactionStatus.COMPLETED,
-      );
+      await this.updateTransactionStatus(payment.providerId, TransactionStatus.COMPLETED);
 
       this.logger.log(`Payment ${payment.providerId} marked as completed`);
+      
+      // Check if this payment is for a subscription action
+      if (payment.metadata) {
+        const { action } = payment.metadata;
+        
+        if (action === 'new_subscription') {
+          // Handle new subscription creation
+          this.logger.log('Processing new subscription payment');
+          try {
+            await this.subscriptionsService.completeNewSubscription(payment.providerId);
+            this.logger.log(`Successfully completed new subscription for payment ${payment.providerId}`);
+          } catch (error) {
+            this.logger.error(`Failed to complete new subscription: ${error.message}`);
+            // Don't throw - we've already marked the payment as completed
+          }
+        } else if (action === 'subscription_change') {
+          // Handle subscription plan change
+          this.logger.log('Processing subscription change payment');
+          try {
+            await this.subscriptionsService.completeSubscriptionChange(payment.providerId);
+            this.logger.log(`Successfully completed subscription change for payment ${payment.providerId}`);
+          } catch (error) {
+            this.logger.error(`Failed to complete subscription change: ${error.message}`);
+            // Don't throw - we've already marked the payment as completed
+          }
+        }
+      }
     } catch (error) {
-      this.logger.error(`Failed to process payment paid event: ${error.message}`);
+      this.logger.error(`Failed to process paid payment: ${error.message}`);
     }
+  }
+
+  private async updateTransactionStatus(
+    providerTransactionId: string,
+    status: TransactionStatus,
+  ): Promise<void> {
+    await this.paymentsService.updateTransactionStatus(providerTransactionId, status);
+  }
+
+  private async handlePaymentPaid(event: any): Promise<void> {
+    // This is kept for compatibility but delegates to handlePaymentUpdated
+    // since Mollie typically sends payment.updated events
+    await this.handlePaymentUpdated(event);
   }
 
   private async handlePaymentFailed(event: any): Promise<void> {

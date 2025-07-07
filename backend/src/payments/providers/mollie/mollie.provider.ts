@@ -51,33 +51,32 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Creating Mollie subscription: ${JSON.stringify(params)}`);
     
     try {
-      // TODO: Implement Mollie subscription creation
-      // const mollie = createMollieClient({ apiKey: this.config.apiKey });
-      // const subscription = await mollie.subscriptions.create({
-      //   customerId: params.customerId,
-      //   amount: {
-      //     value: params.amount.toFixed(2),
-      //     currency: params.currency,
-      //   },
-      //   interval: params.interval === 'monthly' ? '1 month' : '1 year',
-      //   description: params.description,
-      //   webhookUrl: this.config.webhookUrl,
-      //   metadata: params.metadata,
-      // });
-      
-      // For now, return a mock subscription
-      return {
-        id: `sub_${Date.now()}`,
-        providerId: `sub_${Date.now()}`,
-        status: 'active',
-        amount: params.amount,
-        currency: params.currency,
-        interval: params.interval,
-        nextPaymentDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      const subscription = await this.mollie.customers_subscriptions.create(params.customerId, {
+        amount: {
+          value: params.amount.toFixed(2),
+          currency: params.currency,
+        },
+        interval: params.interval === 'monthly' ? '1 month' : '1 year',
+        description: params.description,
+        webhookUrl: this.config.webhookUrl,
         metadata: params.metadata,
+      });
+      
+      return {
+        id: subscription.id,
+        providerId: subscription.id,
+        status: subscription.status as any,
+        amount: parseFloat(subscription.amount.value),
+        currency: subscription.amount.currency,
+        interval: params.interval,
+        nextPaymentDate: subscription.nextPaymentDate ? new Date(subscription.nextPaymentDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        metadata: subscription.metadata || {},
       };
     } catch (error) {
       this.logger.error('Failed to create Mollie subscription', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -86,30 +85,40 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Updating Mollie subscription ${id}: ${JSON.stringify(params)}`);
     
     try {
-      // TODO: Implement Mollie subscription update
-      // const mollie = createMollieClient({ apiKey: this.config.apiKey });
-      // const subscription = await mollie.subscriptions.update(id, {
-      //   amount: params.amount ? {
-      //     value: params.amount.toFixed(2),
-      //     currency: 'EUR',
-      //   } : undefined,
-      //   description: params.description,
-      //   metadata: params.metadata,
-      // });
+      const updateData: any = {};
       
-      // For now, return a mock updated subscription
+      if (params.amount) {
+        updateData.amount = {
+          value: params.amount.toFixed(2),
+          currency: 'EUR',
+        };
+      }
+      
+      if (params.description) {
+        updateData.description = params.description;
+      }
+      
+      if (params.metadata) {
+        updateData.metadata = params.metadata;
+      }
+      
+      const subscription = await this.mollie.customers_subscriptions.update(id, updateData);
+      
       return {
-        id: id,
-        providerId: id,
-        status: 'active',
-        amount: params.amount || 49.00,
-        currency: 'EUR',
-        interval: 'monthly',
-        nextPaymentDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        metadata: params.metadata,
+        id: subscription.id,
+        providerId: subscription.id,
+        status: subscription.status as any,
+        amount: parseFloat(subscription.amount.value),
+        currency: subscription.amount.currency,
+        interval: subscription.interval === '1 month' ? 'monthly' : 'yearly',
+        nextPaymentDate: subscription.nextPaymentDate ? new Date(subscription.nextPaymentDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        metadata: subscription.metadata || {},
       };
     } catch (error) {
       this.logger.error('Failed to update Mollie subscription', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -118,11 +127,12 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Canceling Mollie subscription ${id}`);
     
     try {
-      // TODO: Implement Mollie subscription cancellation
-      // const mollie = createMollieClient({ apiKey: this.config.apiKey });
-      // await mollie.subscriptions.cancel(id);
+      await this.mollie.customers_subscriptions.cancel(id);
     } catch (error) {
       this.logger.error('Failed to cancel Mollie subscription', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -131,23 +141,23 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Getting Mollie subscription ${id}`);
     
     try {
-      // TODO: Implement Mollie subscription retrieval
-      // const mollie = createMollieClient({ apiKey: this.config.apiKey });
-      // const subscription = await mollie.subscriptions.get(id);
+      const subscription = await this.mollie.customers_subscriptions.get(id);
       
-      // For now, return a mock subscription
       return {
-        id: id,
-        providerId: id,
-        status: 'active',
-        amount: 49.00,
-        currency: 'EUR',
-        interval: 'monthly',
-        nextPaymentDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        metadata: {},
+        id: subscription.id,
+        providerId: subscription.id,
+        status: subscription.status as any,
+        amount: parseFloat(subscription.amount.value),
+        currency: subscription.amount.currency,
+        interval: subscription.interval === '1 month' ? 'monthly' : 'yearly',
+        nextPaymentDate: subscription.nextPaymentDate ? new Date(subscription.nextPaymentDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        metadata: subscription.metadata || {},
       };
     } catch (error) {
       this.logger.error('Failed to get Mollie subscription', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -156,24 +166,23 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Creating Mollie payment method: ${JSON.stringify(params)}`);
     
     try {
-      // TODO: Implement Mollie mandate creation for payment methods
-      // const mollie = createMollieClient({ apiKey: this.config.apiKey });
-      // const mandate = await mollie.mandates.create({
-      //   customerId: params.customerId,
-      //   method: params.type,
-      //   ...params.details,
-      // });
+      const mandate = await this.mollie.customers_mandates.create(params.customerId, {
+        method: params.type,
+        ...params.details,
+      });
       
-      // For now, return a mock payment method
       return {
-        id: `mdt_${Date.now()}`,
-        providerId: `mdt_${Date.now()}`,
-        type: params.type,
-        details: params.details,
+        id: mandate.id,
+        providerId: mandate.id,
+        type: mandate.method as any,
+        details: mandate.details || {},
         isDefault: false,
       };
     } catch (error) {
       this.logger.error('Failed to create Mollie payment method', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -182,11 +191,12 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Deleting Mollie payment method ${id}`);
     
     try {
-      // TODO: Implement Mollie mandate revocation
-      // const mollie = createMollieClient({ apiKey: this.config.apiKey });
-      // await mollie.mandates.revoke(id);
+      await this.mollie.customers_mandates.revoke(id);
     } catch (error) {
       this.logger.error('Failed to delete Mollie payment method', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -195,14 +205,20 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Listing Mollie payment methods for customer ${customerId}`);
     
     try {
-      // TODO: Implement Mollie mandate listing
-      // const mollie = createMollieClient({ apiKey: this.config.apiKey });
-      // const mandates = await mollie.mandates.list({ customerId });
+      const mandates = await this.mollie.customers_mandates.list({ customerId });
       
-      // For now, return empty array
-      return [];
+      return mandates.map(mandate => ({
+        id: mandate.id,
+        providerId: mandate.id,
+        type: mandate.method as any,
+        details: mandate.details || {},
+        isDefault: false,
+      }));
     } catch (error) {
       this.logger.error('Failed to list Mollie payment methods', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -211,31 +227,83 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Creating Mollie payment: ${JSON.stringify(params)}`);
     
     try {
-      // TODO: Implement Mollie payment creation
-      // const mollie = createMollieClient({ apiKey: this.config.apiKey });
-      // const payment = await mollie.payments.create({
-      //   amount: {
-      //     value: params.amount.toFixed(2),
-      //     currency: params.currency,
-      //   },
-      //   description: params.description,
-      //   customerId: params.customerId,
-      //   mandateId: params.paymentMethodId,
-      //   webhookUrl: this.config.webhookUrl,
-      //   metadata: params.metadata,
-      // });
-      
-      // For now, return a mock payment
-      return {
-        id: `tr_${Date.now()}`,
-        providerId: `tr_${Date.now()}`,
-        status: 'pending',
-        amount: params.amount,
-        currency: params.currency,
+      const payment = await this.mollie.payments.create({
+        amount: {
+          value: params.amount.toFixed(2),
+          currency: params.currency,
+        },
+        description: params.description,
+        customerId: params.customerId,
+        mandateId: params.paymentMethodId,
+        webhookUrl: this.config.webhookUrl,
         metadata: params.metadata,
+      });
+      
+      return {
+        id: payment.id,
+        providerId: payment.id,
+        status: payment.status as any,
+        amount: parseFloat(payment.amount.value),
+        currency: payment.amount.currency,
+        paidAt: payment.paidAt ? new Date(payment.paidAt) : undefined,
+        metadata: payment.metadata || {},
       };
     } catch (error) {
       this.logger.error('Failed to create Mollie payment', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async createCheckoutPayment(params: {
+    amount: number;
+    currency: string;
+    description: string;
+    customerId?: string;
+    redirectUrl: string;
+    webhookUrl?: string;
+    metadata?: any;
+  }): Promise<{ id: string; checkoutUrl: string; status: string }> {
+    this.logger.log(`Creating Mollie checkout payment: ${JSON.stringify(params)}`);
+    
+    try {
+      const paymentData: any = {
+        amount: {
+          value: params.amount.toFixed(2),
+          currency: params.currency,
+        },
+        description: params.description,
+        redirectUrl: params.redirectUrl,
+        webhookUrl: params.webhookUrl || this.config.webhookUrl,
+        metadata: params.metadata,
+      };
+
+      // Only add customerId if provided
+      if (params.customerId) {
+        paymentData.customerId = params.customerId;
+      }
+
+      const payment = await this.mollie.payments.create(paymentData);
+      
+      // Get the checkout URL from the payment response
+      const checkoutUrl = payment._links?.checkout?.href || '';
+      
+      if (!checkoutUrl) {
+        throw new Error('No checkout URL returned from Mollie');
+      }
+      
+      return {
+        id: payment.id,
+        checkoutUrl,
+        status: payment.status,
+      };
+    } catch (error) {
+      this.logger.error('Failed to create Mollie checkout payment', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -244,22 +312,22 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Getting Mollie payment ${id}`);
     
     try {
-      // TODO: Implement Mollie payment retrieval
-      // const mollie = createMollieClient({ apiKey: this.config.apiKey });
-      // const payment = await mollie.payments.get(id);
+      const payment = await this.mollie.payments.get(id);
       
-      // For now, return a mock payment
       return {
-        id: id,
-        providerId: id,
-        status: 'paid',
-        amount: 49.00,
-        currency: 'EUR',
-        paidAt: new Date(),
-        metadata: {},
+        id: payment.id,
+        providerId: payment.id,
+        status: payment.status as any,
+        amount: parseFloat(payment.amount.value),
+        currency: payment.amount.currency,
+        paidAt: payment.paidAt ? new Date(payment.paidAt) : undefined,
+        metadata: payment.metadata || {},
       };
     } catch (error) {
       this.logger.error('Failed to get Mollie payment', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -274,10 +342,21 @@ export class MollieProvider implements PaymentProvider {
   parseWebhook(body: any): WebhookEvent {
     this.logger.log(`Parsing Mollie webhook: ${JSON.stringify(body)}`);
     
-    // TODO: Implement proper webhook parsing
+    // Mollie sends webhooks with just the payment ID
+    // We need to determine the event type from the resource type
+    let eventType = 'unknown';
+    
+    if (body.id) {
+      if (body.id.startsWith('tr_')) {
+        eventType = 'payment.updated';
+      } else if (body.id.startsWith('sub_')) {
+        eventType = 'subscription.updated';
+      }
+    }
+    
     return {
       id: body.id || 'unknown',
-      type: 'payment.status_changed',
+      type: eventType,
       data: body,
       createdAt: new Date(),
     };

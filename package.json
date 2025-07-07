@@ -5,8 +5,12 @@
   "main": "index.js",
   "scripts": {
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "start": "npm run services:start && npm run dev",
+    "start": "npm run services:start && npm run dev:tunnel",
+    "start:no-tunnel": "npm run services:start && npm run dev",
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "dev:tunnel": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\" \"npm run tunnel\"",
+    "tunnel": "node scripts/setup-tunnel.js",
+    "tunnel:simple": "lt --port 3001 --subdomain wasplanning-webhook",
     "dev:mobile": "cd mobile && npm run dev",
     "services:start": "docker-compose up -d",
     "services:stop": "docker-compose down",
@@ -57,6 +61,7 @@
   },
   "homepage": "https://github.com/WoutPitje/wasplanning#readme",
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "localtunnel": "^2.0.2"
   }
 }

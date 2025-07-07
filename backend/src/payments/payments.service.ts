@@ -259,4 +259,97 @@ export class PaymentsService {
       { status },
     );
   }
+
+  /**
+   * Get or create a Mollie customer for a tenant
+   */
+  async getOrCreateCustomer(tenantId: string, customerData: { email: string; metadata?: any }): Promise<{ id: string }> {
+    this.logger.log(`Getting or creating Mollie customer for tenant ${tenantId}`);
+    
+    try {
+      // For now, create a new customer each time
+      // In production, you'd want to store and reuse customer IDs
+      const customerId = await this.mollieProvider.createCustomer(customerData.email, {
+        ...customerData.metadata,
+        tenantId,
+      });
+      
+      return { id: customerId };
+    } catch (error) {
+      this.logger.error('Failed to get or create customer', error);
+      throw new BadRequestException('Failed to setup payment customer');
+    }
+  }
+
+  /**
+   * Create a checkout payment (one-time payment)
+   */
+  async createCheckoutPayment(params: {
+    amount: number;
+    currency: string;
+    description: string;
+    customerId?: string;
+    redirectUrl: string;
+    webhookUrl?: string;
+    metadata?: any;
+  }): Promise<{ id: string; checkoutUrl: string; status: string }> {
+    this.logger.log(`Creating checkout payment: ${params.amount} ${params.currency}`);
+    
+    try {
+      // Create checkout payment with Mollie
+      const payment = await this.mollieProvider.createCheckoutPayment({
+        amount: params.amount,
+        currency: params.currency,
+        description: params.description,
+        customerId: params.customerId,
+        redirectUrl: params.redirectUrl,
+        webhookUrl: params.webhookUrl,
+        metadata: params.metadata,
+      });
+
+      return payment;
+    } catch (error) {
+      this.logger.error('Failed to create checkout payment', error);
+      throw new BadRequestException('Failed to create payment');
+    }
+  }
+
+  /**
+   * Get payment details by ID
+   */
+  async getPayment(paymentId: string): Promise<{ id: string; status: string; amount: number; metadata: any }> {
+    this.logger.log(`Getting payment ${paymentId}`);
+    
+    try {
+      const payment = await this.mollieProvider.getPayment(paymentId);
+      return {
+        id: payment.id,
+        status: payment.status,
+        amount: payment.amount,
+        metadata: payment.metadata || {},
+      };
+    } catch (error) {
+      this.logger.error('Failed to get payment', error);
+      throw new NotFoundException('Payment not found');
+    }
+  }
+
+  /**
+   * Get payment status from provider
+   */
+  async getPaymentStatus(paymentId: string): Promise<{ id: string; status: string; metadata?: any }> {
+    this.logger.log(`Getting payment status for ${paymentId}`);
+    
+    try {
+      const payment = await this.getPayment(paymentId);
+      return {
+        id: payment.id,
+        status: payment.status,
+        metadata: payment.metadata,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get payment status', error);
+      throw new BadRequestException('Failed to get payment status');
+    }
+  }
 }

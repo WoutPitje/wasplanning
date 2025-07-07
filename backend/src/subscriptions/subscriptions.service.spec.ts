@@ -298,13 +298,30 @@ describe('SubscriptionsService', () => {
       });
     });
 
-    it('should throw NotFoundException when no subscription found', async () => {
+    it('should return empty usage data when no subscription found', async () => {
       const tenantId = 'tenant-123';
 
       mockSubscriptionRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getCurrentUsage(tenantId))
-        .rejects.toThrow(NotFoundException);
+      const result = await service.getCurrentUsage(tenantId);
+
+      expect(result).toEqual({
+        usage: {
+          cars_washed: 0,
+          active_users: 0,
+          active_locations: 0,
+        },
+        limits: {
+          cars: { current: 0, limit: null, percentage: 0 },
+          users: { current: 0, limit: null, percentage: 0 },
+          locations: { current: 0, limit: null, percentage: 0 },
+        },
+        warnings: {
+          warning: false,
+          critical: false,
+          messages: [],
+        },
+      });
     });
   });
 

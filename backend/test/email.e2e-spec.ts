@@ -59,7 +59,7 @@ describe('Email (e2e)', () => {
     // Create test tenant for email tests
     const tenantEmail = getUniqueName('tenant') + '@test-email.com';
     const tenantResponse = await request(app.getHttpServer())
-      .post('/api/v1/admin/tenants')
+      .post('/admin/tenants')
       .send({
         name: getUniqueName('email-tenant'),
         display_name: 'Email Test Garage',
@@ -77,7 +77,7 @@ describe('Email (e2e)', () => {
 
     // Login as super admin
     const loginResponse = await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
+      .post('/auth/login')
       .send({
         email: 'super@admin.com',
         password: 'Admin123!',
@@ -104,7 +104,7 @@ describe('Email (e2e)', () => {
       const userEmail = getUniqueName('user') + '@test-email.com';
       
       const response = await request(app.getHttpServer())
-        .post('/api/v1/users')
+        .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
           email: userEmail,
@@ -133,7 +133,7 @@ describe('Email (e2e)', () => {
       const userEmail = getUniqueName('user-pwd') + '@test-email.com';
       
       const response = await request(app.getHttpServer())
-        .post('/api/v1/users')
+        .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
           email: userEmail,
@@ -165,7 +165,7 @@ describe('Email (e2e)', () => {
       const userEmail = getUniqueName('user-error') + '@test-email.com';
       
       const response = await request(app.getHttpServer())
-        .post('/api/v1/users')
+        .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
           email: userEmail,
@@ -188,7 +188,7 @@ describe('Email (e2e)', () => {
       const userEmail = getUniqueName('user-fallback') + '@test-email.com';
       
       const response = await request(app.getHttpServer())
-        .post('/api/v1/users')
+        .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
           email: userEmail,
@@ -211,7 +211,7 @@ describe('Email (e2e)', () => {
       const userEmail = getUniqueName('user-minimal') + '@test-email.com';
       
       const response = await request(app.getHttpServer())
-        .post('/api/v1/users')
+        .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
           email: userEmail,

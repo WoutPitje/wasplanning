@@ -77,4 +77,11 @@ export class PaymentsController {
   async getTransaction(@Request() req: any, @Param('id') id: string) {
     return await this.paymentsService.getTransaction(req.user.tenant.id, id);
   }
+
+  @Get(':id/status')
+  @ApiOperation({ summary: 'Get payment status from provider' })
+  @ApiResponse({ status: 200, description: 'Payment status retrieved successfully' })
+  async getPaymentStatus(@Param('id') id: string) {
+    return await this.paymentsService.getPaymentStatus(id);
+  }
 }

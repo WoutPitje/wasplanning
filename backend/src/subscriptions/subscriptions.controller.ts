@@ -13,6 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
+import { SubscriptionsService as SubService } from './subscriptions.service';
 import { SubscriptionsService } from './subscriptions.service';
 import { UsageService } from './services/usage.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
@@ -47,13 +48,23 @@ export class SubscriptionsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new subscription' })
+  @ApiOperation({ summary: 'Create a new subscription (trial)' })
   @ApiResponse({ status: 201, description: 'Subscription created successfully' })
   async createSubscription(
     @Request() req: any,
     @Body() dto: CreateSubscriptionDto,
   ) {
     return await this.subscriptionsService.createSubscription(req.user.tenant.id, dto);
+  }
+
+  @Post('paid')
+  @ApiOperation({ summary: 'Create a paid subscription with Mollie checkout' })
+  @ApiResponse({ status: 201, description: 'Checkout URL created successfully' })
+  async createPaidSubscription(
+    @Request() req: any,
+    @Body() dto: CreateSubscriptionDto & { returnUrl: string },
+  ) {
+    return await this.subscriptionsService.createPaidSubscription(req.user.tenant.id, dto);
   }
 
   @Get('current')
@@ -158,5 +169,36 @@ export class SubscriptionsController {
       estimatedAmount: subscription.plan.priceMonthly, // Simplified for now
       nextBillingDate: subscription.currentPeriodEnd,
     };
+  }
+
+  @Post(':id/change-plan')
+  @ApiOperation({ summary: 'Change subscription plan with payment' })
+  @ApiResponse({ status: 200, description: 'Plan change initiated successfully' })
+  async changeSubscriptionPlan(
+    @Request() req: any,
+    @Param('id') subscriptionId: string,
+    @Body() body: { newPlanName: string; billingInterval?: string; returnUrl: string },
+  ) {
+    return await this.subscriptionsService.changeSubscriptionPlan(
+      req.user.tenant.id,
+      subscriptionId,
+      body.newPlanName as any,
+      body.returnUrl,
+      body.billingInterval as any,
+    );
+  }
+
+  @Post('complete-change/:paymentId')
+  @ApiOperation({ summary: 'Complete subscription plan change after payment' })
+  @ApiResponse({ status: 200, description: 'Plan change completed successfully' })
+  async completeSubscriptionChange(@Param('paymentId') paymentId: string) {
+    return await this.subscriptionsService.completeSubscriptionChange(paymentId);
+  }
+
+  @Post('complete-new/:paymentId')
+  @ApiOperation({ summary: 'Complete new subscription creation after payment' })
+  @ApiResponse({ status: 200, description: 'Subscription created successfully' })
+  async completeNewSubscription(@Param('paymentId') paymentId: string) {
+    return await this.subscriptionsService.completeNewSubscription(paymentId);
   }
 }

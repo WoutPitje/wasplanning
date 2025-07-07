@@ -5,6 +5,7 @@ import { Repository, Between } from 'typeorm';
 import { UsageService } from './usage.service';
 import { UsageRecord, MetricType } from '../entities/usage-record.entity';
 import { Subscription } from '../entities/subscription.entity';
+import { AuditService } from '../../audit/audit.service';
 
 import {
   mockUsageRecord,
@@ -39,6 +40,12 @@ describe('UsageService', () => {
         {
           provide: getRepositoryToken(Subscription),
           useValue: mockSubscriptionRepository,
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            logAction: jest.fn(),
+          },
         },
       ],
     }).compile();

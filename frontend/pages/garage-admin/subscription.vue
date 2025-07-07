@@ -1,32 +1,27 @@
 <template>
   <div class="space-y-6">
     <!-- Page Header -->
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-4 py-5 sm:p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ t('subscription.title') }}</h1>
-            <p class="mt-1 text-gray-600">{{ t('subscription.description') }}</p>
-          </div>
-          <div v-if="currentSubscription && !currentSubscription.cancelAtPeriodEnd">
-            <Button
-              @click="showCancelDialog = true"
-              variant="outline"
-              class="text-red-600 border-red-200 hover:bg-red-50"
-            >
-              {{ t('subscription.cancelSubscription') }}
-            </Button>
-          </div>
-        </div>
+    <div class="md:flex md:items-center md:justify-between">
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold leading-8 text-foreground sm:text-3xl">{{ t('subscription.title') }}</h2>
+        <p class="mt-1 text-sm text-muted-foreground">{{ t('subscription.description') }}</p>
+      </div>
+      <div v-if="currentSubscription && !currentSubscription.cancelAtPeriodEnd" class="mt-4 flex md:ml-4 md:mt-0">
+        <Button
+          @click="showCancelDialog = true"
+          variant="destructive"
+          size="sm"
+        >
+          <XCircle class="h-4 w-4 mr-2" />
+          {{ t('subscription.cancelSubscription') }}
+        </Button>
       </div>
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="bg-white shadow rounded-lg p-6">
-      <div class="flex items-center justify-center">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span class="ml-3 text-gray-600">{{ t('common.loading') }}</span>
-      </div>
+    <div v-if="loading" class="text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <p class="mt-2 text-sm text-muted-foreground">{{ t('common.loading') }}</p>
     </div>
 
     <!-- Current Subscription -->
@@ -40,33 +35,33 @@
         <CardContent class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Plan Info -->
-            <div class="bg-blue-50 p-4 rounded-lg">
-              <h3 class="font-semibold text-blue-900">{{ currentSubscription.plan.displayName }}</h3>
-              <p class="text-2xl font-bold text-blue-900 mt-1">
+            <div class="border rounded-lg p-4 bg-primary/5 border-primary/20">
+              <h3 class="font-semibold text-foreground">{{ currentSubscription.plan.displayName }}</h3>
+              <p class="text-2xl font-bold text-foreground mt-1">
                 {{ formatPrice(currentSubscription.billingInterval === 'month' 
                   ? currentSubscription.plan.priceMonthly 
                   : currentSubscription.plan.priceYearly / 12) }}
               </p>
-              <p class="text-sm text-blue-700">
+              <p class="text-sm text-muted-foreground">
                 {{ t(`subscription.billing.${currentSubscription.billingInterval}`) }}
               </p>
             </div>
 
             <!-- Status -->
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <h3 class="font-semibold text-gray-900">{{ t('subscription.status.title') }}</h3>
+            <div class="border rounded-lg p-4">
+              <h3 class="font-semibold text-foreground">{{ t('subscription.status.title') }}</h3>
               <div class="mt-1">
                 <Badge :variant="getStatusVariant(currentSubscription.status)">
                   {{ t(`subscription.status.${currentSubscription.status}`) }}
                 </Badge>
               </div>
-              <p class="text-sm text-gray-600 mt-1">
+              <p class="text-sm text-muted-foreground mt-1">
                 {{ t('subscription.renewsOn') }}: {{ formatDate(currentSubscription.currentPeriodEnd) }}
               </p>
             </div>
 
             <!-- Trial Info -->
-            <div v-if="currentSubscription.trialEnd" class="bg-green-50 p-4 rounded-lg">
+            <div v-if="currentSubscription.trialEnd" class="border rounded-lg p-4 bg-green-50 border-green-200">
               <h3 class="font-semibold text-green-900">{{ t('subscription.trial.title') }}</h3>
               <p class="text-sm text-green-700 mt-1">
                 {{ t('subscription.trial.endsOn') }}: {{ formatDate(currentSubscription.trialEnd) }}
@@ -107,13 +102,13 @@
             <!-- Cars Washed -->
             <div class="space-y-2">
               <div class="flex justify-between items-center">
-                <span class="text-sm font-medium text-gray-700">{{ t('subscription.usage.cars') }}</span>
-                <span class="text-sm text-gray-500">
+                <span class="text-sm font-medium text-foreground">{{ t('subscription.usage.cars') }}</span>
+                <span class="text-sm text-muted-foreground">
                   {{ usageData.usage.cars_washed }}
                   <span v-if="usageData.limits.cars.limit">/ {{ usageData.limits.cars.limit }}</span>
                 </span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="w-full bg-secondary rounded-full h-2">
                 <div 
                   :class="[
                     'h-2 rounded-full transition-all',
@@ -128,13 +123,13 @@
             <!-- Active Users -->
             <div class="space-y-2">
               <div class="flex justify-between items-center">
-                <span class="text-sm font-medium text-gray-700">{{ t('subscription.usage.users') }}</span>
-                <span class="text-sm text-gray-500">
+                <span class="text-sm font-medium text-foreground">{{ t('subscription.usage.users') }}</span>
+                <span class="text-sm text-muted-foreground">
                   {{ usageData.usage.active_users }}
                   <span v-if="usageData.limits.users.limit">/ {{ usageData.limits.users.limit }}</span>
                 </span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="w-full bg-secondary rounded-full h-2">
                 <div 
                   :class="[
                     'h-2 rounded-full transition-all',
@@ -149,13 +144,13 @@
             <!-- Active Locations -->
             <div class="space-y-2">
               <div class="flex justify-between items-center">
-                <span class="text-sm font-medium text-gray-700">{{ t('subscription.usage.locations') }}</span>
-                <span class="text-sm text-gray-500">
+                <span class="text-sm font-medium text-foreground">{{ t('subscription.usage.locations') }}</span>
+                <span class="text-sm text-muted-foreground">
                   {{ usageData.usage.active_locations }}
                   <span v-if="usageData.limits.locations.limit">/ {{ usageData.limits.locations.limit }}</span>
                 </span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="w-full bg-secondary rounded-full h-2">
                 <div 
                   :class="[
                     'h-2 rounded-full transition-all',
@@ -215,18 +210,18 @@
               :class="[
                 'border rounded-lg p-4 cursor-pointer transition-all',
                 plan.id === currentSubscription.planId 
-                  ? 'border-blue-500 bg-blue-50' 
-                  : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                  ? 'border-primary bg-primary/5' 
+                  : 'hover:border-foreground/20 hover:shadow-sm'
               ]"
               @click="plan.id !== currentSubscription.planId && selectPlan(plan)"
             >
               <div class="flex justify-between items-start">
                 <div>
-                  <h3 class="font-semibold text-gray-900">{{ plan.displayName }}</h3>
-                  <p class="text-2xl font-bold text-gray-900 mt-1">
+                  <h3 class="font-semibold text-foreground">{{ plan.displayName }}</h3>
+                  <p class="text-2xl font-bold text-foreground mt-1">
                     {{ formatPrice(plan.priceMonthly) }}
                   </p>
-                  <p class="text-sm text-gray-600">{{ t('pricing.perMonth') }}</p>
+                  <p class="text-sm text-muted-foreground">{{ t('pricing.perMonth') }}</p>
                 </div>
                 <div v-if="plan.id === currentSubscription.planId">
                   <Badge variant="default">{{ t('subscription.current.badge') }}</Badge>
@@ -234,7 +229,7 @@
               </div>
               
               <div class="mt-4 space-y-2">
-                <div class="text-sm text-gray-600">
+                <div class="text-sm text-muted-foreground">
                   <div v-if="plan.maxCarsPerMonth">
                     {{ t('pricing.maxCars', { count: plan.maxCarsPerMonth.toLocaleString() }) }}
                   </div>
@@ -258,23 +253,115 @@
     </div>
 
     <!-- No Subscription State -->
-    <div v-else class="bg-white shadow rounded-lg">
-      <div class="px-4 py-5 sm:p-6 text-center">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">
-          {{ t('subscription.noSubscription.title') }}
-        </h2>
-        <p class="text-gray-600 mb-6">
-          {{ t('subscription.noSubscription.description') }}
-        </p>
-        <div class="space-y-4">
-          <NuxtLink to="/pricing">
-            <Button>{{ t('subscription.viewPlans') }}</Button>
-          </NuxtLink>
-          <p class="text-sm text-gray-500">
-            {{ t('subscription.noSubscription.trialInfo') }}
-          </p>
-        </div>
-      </div>
+    <div v-else class="space-y-6">
+      <!-- Welcome Card -->
+      <Card>
+        <CardHeader>
+          <CardTitle>{{ t('subscription.noSubscription.title') }}</CardTitle>
+          <CardDescription>{{ t('subscription.noSubscription.description') }}</CardDescription>
+        </CardHeader>
+      </Card>
+
+      <!-- Available Plans -->
+      <Card>
+        <CardHeader>
+          <CardTitle>{{ t('subscription.selectPlan.title') }}</CardTitle>
+          <CardDescription>{{ t('subscription.selectPlan.description') }}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <!-- Billing Period Toggle -->
+          <div class="flex justify-center mb-6">
+            <div class="bg-muted p-1 rounded-lg inline-flex">
+              <button
+                @click="billingType = 'monthly'"
+                :class="[
+                  'px-4 py-2 rounded-md text-sm font-medium transition-all',
+                  billingType === 'monthly'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                ]"
+              >
+                {{ t('subscription.billing.monthly') }}
+              </button>
+              <button
+                @click="billingType = 'yearly'"
+                :class="[
+                  'px-4 py-2 rounded-md text-sm font-medium transition-all',
+                  billingType === 'yearly'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                ]"
+              >
+                {{ t('subscription.billing.yearly') }}
+                <Badge variant="secondary" class="ml-2">{{ t('subscription.billing.savePercent') }}</Badge>
+              </button>
+            </div>
+          </div>
+
+          <!-- Plans Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div
+              v-for="plan in availablePlans"
+              :key="plan.id"
+              :class="[
+                'border rounded-lg p-6 transition-all cursor-pointer',
+                plan.name === 'SCALE' ? 'border-primary shadow-sm' : 'hover:shadow-sm'
+              ]"
+              @click="selectPlanForPurchase(plan)"
+            >
+              <div class="text-center">
+                <h3 class="text-xl font-semibold text-foreground">{{ plan.displayName }}</h3>
+                <div class="mt-4">
+                  <span class="text-4xl font-bold text-foreground">
+                    {{ formatPrice(billingType === 'monthly' ? plan.priceMonthly : plan.priceYearly / 12) }}
+                  </span>
+                  <span class="text-muted-foreground">{{ t('pricing.perMonth') }}</span>
+                </div>
+                <p v-if="billingType === 'yearly'" class="text-sm text-green-600 mt-1">
+                  {{ t('subscription.billing.yearlyTotal', { price: formatPrice(plan.priceYearly) }) }}
+                </p>
+              </div>
+              
+              <div class="mt-6 space-y-3">
+                <div class="text-sm text-muted-foreground">
+                  <div v-if="plan.maxCarsPerMonth" class="flex items-center">
+                    <CheckCircle2 class="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                    {{ t('pricing.maxCars', { count: plan.maxCarsPerMonth.toLocaleString() }) }}
+                  </div>
+                  <div v-else class="flex items-center">
+                    <CheckCircle2 class="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                    {{ t('pricing.unlimitedCars') }}
+                  </div>
+                  
+                  <div v-if="plan.maxUsers" class="flex items-center mt-2">
+                    <CheckCircle2 class="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                    {{ t('pricing.maxUsers', { count: plan.maxUsers }) }}
+                  </div>
+                  <div v-else class="flex items-center mt-2">
+                    <CheckCircle2 class="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                    {{ t('pricing.unlimitedUsers') }}
+                  </div>
+                  
+                  <div v-if="plan.maxLocations" class="flex items-center mt-2">
+                    <CheckCircle2 class="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                    {{ t('pricing.maxLocations', { count: plan.maxLocations }) }}
+                  </div>
+                  <div v-else class="flex items-center mt-2">
+                    <CheckCircle2 class="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                    {{ t('pricing.unlimitedLocations') }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-6">
+                <Button class="w-full" :variant="plan.name === 'SCALE' ? 'default' : 'outline'">
+                  {{ t('subscription.selectPlan.button') }}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- Cancel Subscription Dialog -->
@@ -299,13 +386,13 @@
               <input
                 v-model="cancelImmediately"
                 type="checkbox"
-                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                class="rounded border-input text-primary focus:ring-primary"
               />
-              <span class="text-sm text-gray-700">
+              <span class="text-sm text-foreground">
                 {{ t('subscription.cancel.immediately') }}
               </span>
             </label>
-            <p class="text-xs text-gray-500 ml-6">
+            <p class="text-xs text-muted-foreground ml-6">
               {{ t('subscription.cancel.immediatelyWarning') }}
             </p>
           </div>
@@ -333,26 +420,73 @@
         </DialogHeader>
         
         <div v-if="selectedPlan" class="space-y-4">
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="bg-primary/5 border border-primary/20 rounded-lg p-4">
             <div class="flex justify-between items-center">
               <div>
-                <h3 class="font-semibold text-blue-900">{{ selectedPlan.displayName }}</h3>
-                <p class="text-blue-700">{{ formatPrice(selectedPlan.priceMonthly) }} {{ t('pricing.perMonth') }}</p>
+                <h3 class="font-semibold text-foreground">{{ selectedPlan.displayName }}</h3>
+                <p class="text-muted-foreground">{{ formatPrice(selectedPlan.priceMonthly) }} {{ t('pricing.perMonth') }}</p>
               </div>
             </div>
           </div>
           
-          <p class="text-sm text-gray-600">
+          <p class="text-sm text-muted-foreground">
             {{ t('subscription.changePlan.confirm.effective') }}
           </p>
         </div>
 
         <DialogFooter>
-          <Button @click="showPlanChangeDialog = false" variant="outline">
+          <Button @click="showPlanChangeDialog = false" variant="outline" :disabled="isProcessingPayment">
             {{ t('common.cancel') }}
           </Button>
-          <Button @click="confirmPlanChange">
+          <Button @click="confirmPlanChange" :disabled="isProcessingPayment">
+            <Loader2 v-if="isProcessingPayment" class="h-4 w-4 mr-2 animate-spin" />
             {{ t('subscription.changePlan.confirm.button') }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Purchase Plan Dialog -->
+    <Dialog v-model:open="showPurchaseDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{{ t('subscription.purchase.title') }}</DialogTitle>
+          <DialogDescription>
+            {{ t('subscription.purchase.description') }}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div v-if="selectedPlan" class="space-y-4">
+          <div class="bg-primary/5 border border-primary/20 rounded-lg p-4">
+            <div class="space-y-2">
+              <h3 class="font-semibold text-foreground">{{ selectedPlan.displayName }}</h3>
+              <div>
+                <p class="text-2xl font-bold text-foreground">
+                  {{ formatPrice(billingType === 'monthly' ? selectedPlan.priceMonthly : selectedPlan.priceYearly / 12) }}
+                  <span class="text-sm font-normal text-muted-foreground">{{ t('pricing.perMonth') }}</span>
+                </p>
+                <p v-if="billingType === 'yearly'" class="text-sm text-muted-foreground mt-1">
+                  {{ t('subscription.billing.yearlyTotal', { price: formatPrice(selectedPlan.priceYearly) }) }}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <Alert>
+            <AlertCircle class="h-4 w-4" />
+            <AlertDescription>
+              {{ t('subscription.purchase.redirectNotice') }}
+            </AlertDescription>
+          </Alert>
+        </div>
+
+        <DialogFooter>
+          <Button @click="showPurchaseDialog = false" variant="outline" :disabled="isProcessingPayment">
+            {{ t('common.cancel') }}
+          </Button>
+          <Button @click="confirmPlanPurchase" :disabled="isProcessingPayment">
+            <Loader2 v-if="isProcessingPayment" class="h-4 w-4 mr-2 animate-spin" />
+            {{ t('subscription.purchase.button') }}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -361,7 +495,7 @@
 </template>
 
 <script setup lang="ts">
-import { AlertTriangle } from 'lucide-vue-next'
+import { AlertTriangle, CheckCircle2, AlertCircle, Loader2, XCircle } from 'lucide-vue-next'
 import type { SubscriptionPlan, Subscription, UsageData } from '~/types/subscriptions'
 
 // Auth middleware
@@ -379,8 +513,11 @@ const availablePlans = ref<SubscriptionPlan[]>([])
 const usageData = ref<UsageData | null>(null)
 const showCancelDialog = ref(false)
 const showPlanChangeDialog = ref(false)
+const showPurchaseDialog = ref(false)
 const cancelImmediately = ref(false)
 const selectedPlan = ref<SubscriptionPlan | null>(null)
+const billingType = ref<'monthly' | 'yearly'>('monthly')
+const isProcessingPayment = ref(false)
 
 // Composables
 const {
@@ -393,6 +530,8 @@ const {
   getCurrentUsage,
   formatPrice,
   getUsageWarningLevel,
+  createPaidSubscription,
+  changePlan,
 } = useSubscriptions()
 
 // SEO
@@ -403,33 +542,35 @@ useSeoMeta({
 
 // Load data
 const loadData = async () => {
-  try {
-    const [subscription, plans, usage] = await Promise.all([
-      getCurrentSubscription(),
-      getPlans(),
-      getCurrentUsage().catch(() => null), // Usage might not be available without subscription
-    ])
-    
-    currentSubscription.value = subscription
-    availablePlans.value = plans
-    if (usage) usageData.value = usage
-  } catch (err) {
-    console.error('Failed to load subscription data:', err)
-  }
+  const [subscription, plans, usage] = await Promise.all([
+    getCurrentSubscription(),
+    getPlans(),
+    getCurrentUsage(), // Usage might not be available without subscription
+  ])
+  
+  currentSubscription.value = subscription
+  availablePlans.value = plans || []
+  if (usage) usageData.value = usage
 }
 
 // Utility functions
 const formatDate = (dateString?: string): string => {
   if (!dateString) return ''
-  return new Date(dateString).toLocaleDateString('nl-NL')
+  const date = new Date(dateString)
+  return date.toLocaleDateString('nl-NL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 }
 
 const getStatusVariant = (status: string) => {
   switch (status) {
-    case 'active': return 'default'
+    case 'active': return 'success'
     case 'trialing': return 'secondary'
     case 'past_due': return 'destructive'
-    case 'canceled': return 'outline'
+    case 'canceled': return 'secondary'
+    case 'incomplete': return 'warning'
     default: return 'secondary'
   }
 }
@@ -440,43 +581,93 @@ const selectPlan = (plan: SubscriptionPlan) => {
   showPlanChangeDialog.value = true
 }
 
+const selectPlanForPurchase = (plan: SubscriptionPlan) => {
+  selectedPlan.value = plan
+  showPurchaseDialog.value = true
+}
+
 const confirmPlanChange = async () => {
   if (!selectedPlan.value || !currentSubscription.value) return
   
-  try {
-    await updateSubscription(currentSubscription.value.id, {
-      planName: selectedPlan.value.name,
-    })
-    
-    showPlanChangeDialog.value = false
-    await loadData() // Reload data
-  } catch (err) {
-    console.error('Failed to change plan:', err)
+  isProcessingPayment.value = true
+  console.log('Changing plan to:', selectedPlan.value.name)
+  
+  const result = await changePlan(
+    currentSubscription.value.id,
+    selectedPlan.value,
+    billingType.value
+  )
+  
+  console.log('Change plan result:', result)
+  
+  if (result) {
+    // Check if we got a checkout URL (payment required) or direct update
+    if ('checkoutUrl' in result) {
+      console.log('Redirecting to checkout URL:', result.checkoutUrl)
+      // Redirect to Mollie for payment
+      window.location.href = result.checkoutUrl
+    } else {
+      // Plan changed without payment (e.g., downgrade)
+      showPlanChangeDialog.value = false
+      await loadData() // Reload data
+    }
+  } else {
+    // Error already handled in composable
+    console.error('Failed to change plan - no result returned')
   }
+  
+  isProcessingPayment.value = false
+}
+
+const confirmPlanPurchase = async () => {
+  if (!selectedPlan.value) return
+  
+  isProcessingPayment.value = true
+  console.log('Creating paid subscription for plan:', selectedPlan.value.name)
+  
+  const result = await createPaidSubscription(
+    selectedPlan.value,
+    billingType.value
+  )
+  
+  console.log('Create paid subscription result:', result)
+  
+  if (result) {
+    console.log('Redirecting to checkout URL:', result.checkoutUrl)
+    // Redirect to Mollie for payment
+    window.location.href = result.checkoutUrl
+  } else {
+    // Error already handled in composable
+    console.error('Failed to create subscription - no result returned')
+  }
+  
+  isProcessingPayment.value = false
 }
 
 const confirmCancellation = async () => {
   if (!currentSubscription.value) return
   
-  try {
-    await cancelSubscription(currentSubscription.value.id, cancelImmediately.value)
+  const result = await cancelSubscription(currentSubscription.value.id, cancelImmediately.value)
+  
+  if (result) {
     showCancelDialog.value = false
     await loadData() // Reload data
-  } catch (err) {
-    console.error('Failed to cancel subscription:', err)
+  } else {
+    console.error('Failed to cancel subscription')
   }
 }
 
 const reactivateSubscription = async () => {
   if (!currentSubscription.value) return
   
-  try {
-    await updateSubscription(currentSubscription.value.id, {
-      cancelAtPeriodEnd: false,
-    })
+  const result = await updateSubscription(currentSubscription.value.id, {
+    cancelAtPeriodEnd: false,
+  })
+  
+  if (result) {
     await loadData() // Reload data
-  } catch (err) {
-    console.error('Failed to reactivate subscription:', err)
+  } else {
+    console.error('Failed to reactivate subscription')
   }
 }
 

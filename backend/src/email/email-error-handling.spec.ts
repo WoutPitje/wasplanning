@@ -134,7 +134,7 @@ describe('EmailService Error Handling', () => {
       };
 
       await expect(service.sendEmail(emailData)).rejects.toThrow(
-        'Permission denied reading template file'
+        'Failed to render email template: user_welcome'
       );
     });
 
@@ -198,7 +198,7 @@ describe('EmailService Error Handling', () => {
         data: { firstName: 'John' },
       };
 
-      await expect(service.sendEmail(emailData)).rejects.toThrow('Invalid recipients');
+      await expect(service.sendEmail(emailData)).rejects.toThrow('Invalid to email address: invalid-email-address');
     });
 
     it('should handle rejected recipient addresses', async () => {

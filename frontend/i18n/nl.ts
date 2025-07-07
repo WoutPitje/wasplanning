@@ -288,6 +288,24 @@ export default {
       subtitle: 'Beheer gebruikers binnen uw garage',
       overview: 'Gebruikersoverzicht',
       placeholder: 'Gebruikersbeheer komt hier...'
+    },
+    payment: {
+      processing: 'Betaling wordt verwerkt...',
+      error: {
+        title: 'Betaling Mislukt',
+        missingPaymentId: 'Geen betaling ID gevonden. Probeer het opnieuw.',
+        processingFailed: 'Er ging iets mis bij het verwerken van uw betaling. Probeer het opnieuw.',
+        notPaid: 'De betaling is nog niet voltooid. Controleer uw betaling bij Mollie.'
+      },
+      success: {
+        title: 'Betaling Geslaagd',
+        subscriptionCreated: 'Uw abonnement is succesvol geactiveerd!',
+        planChanged: 'Uw pakket is succesvol gewijzigd!',
+        alreadyProcessed: 'Deze betaling is al verwerkt.',
+        redirecting: 'U wordt doorgestuurd naar uw abonnement overzicht...'
+      },
+      backToSubscription: 'Terug naar Abonnement',
+      retry: 'Opnieuw Proberen'
     }
   },
   
@@ -361,7 +379,8 @@ export default {
     history: 'Geschiedenis',
     newRequests: 'Nieuwe Verzoeken',
     myRequests: 'Mijn Verzoeken',
-    routes: 'Routes'
+    routes: 'Routes',
+    subscription: 'Abonnement'
   },
   
   // Users
@@ -1192,7 +1211,11 @@ export default {
     
     billing: {
       month: 'Maandelijks',
-      year: 'Jaarlijks'
+      year: 'Jaarlijks',
+      monthly: 'Maandelijks',
+      yearly: 'Jaarlijks',
+      savePercent: '2 maanden gratis',
+      yearlyTotal: '{price} per jaar'
     },
     
     status: {
@@ -1201,7 +1224,8 @@ export default {
       active: 'Actief',
       past_due: 'Betaling achterstallig',
       canceled: 'Opgezegd',
-      unpaid: 'Onbetaald'
+      unpaid: 'Onbetaald',
+      incomplete: 'Wacht op betaling'
     },
     
     renewsOn: 'Verlengd op',
@@ -1244,6 +1268,19 @@ export default {
       immediately: 'Direct opzeggen',
       immediatelyWarning: 'U verliest direct toegang tot alle functies.',
       confirm: 'Ja, Opzeggen'
+    },
+    
+    selectPlan: {
+      title: 'Kies Uw Pakket',
+      description: 'Selecteer het pakket dat het beste bij uw garage past',
+      button: 'Selecteer Dit Pakket'
+    },
+    
+    purchase: {
+      title: 'Bevestig Uw Keuze',
+      description: 'U staat op het punt om een abonnement af te sluiten',
+      redirectNotice: 'U wordt doorgestuurd naar onze beveiligde betaalomgeving om de betaling te voltooien.',
+      button: 'Ga Naar Betaling'
     }
   }
 }

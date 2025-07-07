@@ -27,20 +27,7 @@
           <p class="text-muted-foreground">{{ t('garageAdmin.dashboard.reportsDescription') }}</p>
         </CardContent>
       </Card>
-      
-      <Card>
-        <CardHeader>
-          <h2 class="text-xl font-semibold">{{ t('garageAdmin.dashboard.subscription') }}</h2>
-        </CardHeader>
-        <CardContent>
-          <p class="text-muted-foreground">{{ t('garageAdmin.dashboard.subscriptionDescription') }}</p>
-          <div class="mt-4">
-            <NuxtLink to="/garage-admin/subscription">
-              <Button>{{ t('garageAdmin.dashboard.manageSubscription') }}</Button>
-            </NuxtLink>
-          </div>
-        </CardContent>
-      </Card>
+  
     </div>
   </div>
 </template>
