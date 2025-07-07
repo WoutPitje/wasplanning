@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Subscription, SubscriptionStatus, BillingInterval } from './entities/subscription.entity';
 import { SubscriptionPlan, PlanName } from './entities/subscription-plan.entity';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
@@ -26,6 +27,7 @@ export class SubscriptionsService {
     private limitsService: LimitsService,
     private auditService: AuditService,
     private prorationService: ProrationService,
+    private configService: ConfigService,
   ) {}
 
   async createSubscription(
@@ -70,7 +72,7 @@ export class SubscriptionsService {
       currentPeriodStart: now,
       currentPeriodEnd: periodEnd,
       billingInterval: dto.billingInterval || BillingInterval.MONTH,
-      trialEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
+      trialEnd: new Date(Date.now() + this.getTrialDays() * 24 * 60 * 60 * 1000),
       metadata: dto.metadata || {},
     });
 
@@ -195,7 +197,16 @@ export class SubscriptionsService {
       subscription.canceledAt = new Date();
     }
 
-    // TODO: Cancel subscription in payment provider
+    // Cancel Mollie subscription if exists
+    if (subscription.mollieSubscriptionId) {
+      try {
+        await this.paymentsService.cancelSubscription(subscription.mollieSubscriptionId);
+        this.logger.log(`Cancelled Mollie subscription ${subscription.mollieSubscriptionId}`);
+      } catch (error) {
+        this.logger.error(`Failed to cancel Mollie subscription: ${error.message}`);
+        // Continue with local cancellation even if Mollie fails
+      }
+    }
 
     const canceledSubscription = await this.subscriptionRepository.save(subscription);
 
@@ -236,7 +247,12 @@ export class SubscriptionsService {
     subscription.cancelAtPeriodEnd = false;
     subscription.canceledAt = undefined;
 
-    // TODO: Reactivate subscription in payment provider
+    // Cannot reactivate cancelled Mollie subscriptions
+    // Need to create a new subscription
+    if (subscription.mollieSubscriptionId) {
+      this.logger.warn('Cannot reactivate cancelled Mollie subscription, user needs to create new subscription');
+      throw new BadRequestException('Cancelled subscriptions cannot be reactivated. Please create a new subscription.');
+    }
 
     return await this.subscriptionRepository.save(subscription);
   }
@@ -640,8 +656,27 @@ export class SubscriptionsService {
     // Create a one-time payment for the prorated amount
     try {
       // First ensure we have a Mollie customer for this tenant
+      const tenantRepo = this.subscriptionRepository.manager.getRepository('Tenant');
+      const tenant = await tenantRepo.findOne({ 
+        where: { id: tenantId },
+        relations: ['users'] 
+      });
+      
+      // Get the primary admin user's email for this tenant
+      const userRepo = this.subscriptionRepository.manager.getRepository('User');
+      const adminUser = await userRepo.findOne({
+        where: { 
+          tenant: { id: tenantId },
+          role: 'garage_admin'
+        },
+        order: { created_at: 'ASC' }
+      });
+      
+      const customerEmail = adminUser?.email || `tenant-${tenantId}@example.com`;
+      
       const customer = await this.paymentsService.getOrCreateCustomer(tenantId, {
-        email: `tenant-${tenantId}@garage.example.com`, // This should come from tenant data
+        email: customerEmail,
+        name: tenant?.display_name || tenant?.name || `Tenant ${tenantId}`,
         metadata: { tenantId, action: 'subscription_change' },
       });
 
@@ -751,75 +786,165 @@ export class SubscriptionsService {
 
     try {
       // First ensure we have a Mollie customer for this tenant
+      // Get tenant information for customer creation
+      const tenantRepo = this.subscriptionRepository.manager.getRepository('Tenant');
+      const tenant = await tenantRepo.findOne({ 
+        where: { id: tenantId },
+        relations: ['users'] 
+      });
+      
+      // Get the primary admin user's email for this tenant
+      const userRepo = this.subscriptionRepository.manager.getRepository('User');
+      const adminUser = await userRepo.findOne({
+        where: { 
+          tenant: { id: tenantId },
+          role: 'garage_admin'
+        },
+        order: { created_at: 'ASC' }
+      });
+      
+      const customerEmail = adminUser?.email || `tenant-${tenantId}@example.com`;
+      
       const customer = await this.paymentsService.getOrCreateCustomer(tenantId, {
-        email: `tenant-${tenantId}@garage.example.com`, // This should come from tenant data
+        email: customerEmail,
+        name: tenant?.display_name || tenant?.name || `Tenant ${tenantId}`,
         metadata: { tenantId, action: 'new_subscription' },
       });
 
-      // Create payment for the subscription
-      const payment = await this.paymentsService.createCheckoutPayment({
-        amount,
-        currency: 'EUR',
-        description: `${plan.displayName} subscription - ${dto.billingInterval === BillingInterval.YEAR ? 'Yearly' : 'Monthly'}`,
-        customerId: customer.id,
-        redirectUrl: dto.returnUrl,
-        webhookUrl: process.env.MOLLIE_WEBHOOK_URL,
-        metadata: {
-          tenantId,
-          planName: dto.planName,
-          billingInterval: dto.billingInterval,
-          action: 'new_subscription',
-        },
-      });
-
-      // Create subscription in pending state
-      const now = new Date();
-      const currentPeriodEnd = new Date(now);
+      // Check if customer has valid mandate
+      const hasMandate = await this.paymentsService.hasValidMandate(customer.id);
       
-      // Set period end based on billing interval
-      if (dto.billingInterval === BillingInterval.YEAR) {
-        currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
-      } else {
-        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
-      }
-
-      const subscription = this.subscriptionRepository.create({
-        tenantId,
-        planId: plan.id,
-        paymentMethodId: dto.paymentMethodId,
-        status: SubscriptionStatus.INCOMPLETE, // Will be activated after payment
-        billingInterval: dto.billingInterval || BillingInterval.MONTH,
-        currentPeriodStart: now,
-        currentPeriodEnd: currentPeriodEnd,
-        metadata: {
-          ...dto.metadata,
-          pendingPaymentId: payment.id,
-        },
-      });
-
-      const savedSubscription = await this.subscriptionRepository.save(subscription);
-
-      // Audit log subscription creation attempt
-      await this.auditService.logAction({
-        action: 'PAID_SUBSCRIPTION_INITIATED',
-        resource_type: 'Subscription',
-        resource_id: savedSubscription.id,
-        details: {
-          planName: dto.planName,
-          billingInterval: dto.billingInterval,
+      if (!hasMandate || customer.isNew) {
+        // Customer needs to set up mandate first with a first payment
+        this.logger.log('Customer needs mandate setup, creating first payment');
+        
+        // Create first payment to establish mandate
+        const payment = await this.paymentsService.createCheckoutPayment({
           amount,
-          paymentId: payment.id,
-        },
-        tenant_id: tenantId,
-      });
+          currency: 'EUR',
+          description: `${plan.displayName} subscription - First payment`,
+          customerId: customer.id,
+          redirectUrl: dto.returnUrl,
+          webhookUrl: process.env.MOLLIE_WEBHOOK_URL,
+          sequenceType: 'first', // This creates a mandate
+          metadata: {
+            tenantId,
+            planName: dto.planName,
+            billingInterval: dto.billingInterval,
+            action: 'subscription_mandate_setup',
+            subscriptionStart: true,
+          },
+        });
 
-      return {
-        checkoutUrl: payment.checkoutUrl,
-        subscription: savedSubscription,
-      };
+        // Create subscription in pending state
+        const now = new Date();
+        const currentPeriodEnd = new Date(now);
+        
+        // Set period end based on billing interval
+        if (dto.billingInterval === BillingInterval.YEAR) {
+          currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+        } else {
+          currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+        }
+
+        const subscription = this.subscriptionRepository.create({
+          tenantId,
+          planId: plan.id,
+          paymentMethodId: dto.paymentMethodId,
+          status: SubscriptionStatus.INCOMPLETE, // Will be activated after payment
+          billingInterval: dto.billingInterval || BillingInterval.MONTH,
+          currentPeriodStart: now,
+          currentPeriodEnd: currentPeriodEnd,
+          mollieCustomerId: customer.id,
+          metadata: {
+            ...dto.metadata,
+            pendingPaymentId: payment.id,
+            awaitingMandateSetup: true,
+          },
+        });
+
+        const savedSubscription = await this.subscriptionRepository.save(subscription);
+
+        // Audit log subscription creation attempt
+        await this.auditService.logAction({
+          action: 'PAID_SUBSCRIPTION_INITIATED',
+          resource_type: 'Subscription',
+          resource_id: savedSubscription.id,
+          details: {
+            planName: dto.planName,
+            billingInterval: dto.billingInterval,
+            amount,
+            paymentId: payment.id,
+            mandateSetup: true,
+          },
+          tenant_id: tenantId,
+        });
+
+        return {
+          checkoutUrl: payment.checkoutUrl,
+          subscription: savedSubscription,
+        };
+      } else {
+        // Customer has mandate, create subscription directly
+        this.logger.log('Customer has mandate, creating subscription directly');
+        
+        const mollieSubscription = await this.paymentsService.createSubscription({
+          customerId: customer.id,
+          amount,
+          currency: 'EUR',
+          interval: dto.billingInterval === BillingInterval.YEAR ? 'yearly' : 'monthly',
+          description: `${plan.displayName} subscription`,
+          metadata: {
+            tenantId,
+            planName: dto.planName,
+            billingInterval: dto.billingInterval,
+          },
+        });
+
+        // Create subscription record
+        const now = new Date();
+        const subscription = this.subscriptionRepository.create({
+          tenantId,
+          planId: plan.id,
+          paymentMethodId: dto.paymentMethodId,
+          status: SubscriptionStatus.ACTIVE,
+          billingInterval: dto.billingInterval || BillingInterval.MONTH,
+          currentPeriodStart: now,
+          currentPeriodEnd: mollieSubscription.nextPaymentDate,
+          nextPaymentDate: mollieSubscription.nextPaymentDate,
+          mollieCustomerId: customer.id,
+          mollieSubscriptionId: mollieSubscription.id,
+          metadata: {
+            ...dto.metadata,
+            mollieStatus: mollieSubscription.status,
+          },
+        });
+
+        const savedSubscription = await this.subscriptionRepository.save(subscription);
+
+        // Audit log
+        await this.auditService.logAction({
+          action: 'SUBSCRIPTION_CREATED_WITH_MOLLIE',
+          resource_type: 'Subscription',
+          resource_id: savedSubscription.id,
+          details: {
+            planName: dto.planName,
+            billingInterval: dto.billingInterval,
+            amount,
+            mollieSubscriptionId: mollieSubscription.id,
+          },
+          tenant_id: tenantId,
+        });
+
+        // No checkout URL needed, redirect to success page
+        return {
+          checkoutUrl: dto.returnUrl + '?status=success',
+          subscription: savedSubscription,
+        };
+      }
     } catch (error) {
       this.logger.error('Failed to create paid subscription', error);
-      throw new BadRequestException('Failed to initiate subscription payment');
+      throw new BadRequestException(error.message || 'Failed to initiate subscription');
     }
   }
 
@@ -842,8 +967,6 @@ export class SubscriptionsService {
       const tenantId = metadata.tenantId;
 
       // Find subscription with this payment ID
-      // Note: TypeORM doesn't support JSON queries in where clause directly
-      // We need to find all subscriptions for the tenant and filter
       const subscriptions = await this.subscriptionRepository.find({
         where: { 
           tenantId,
@@ -860,48 +983,107 @@ export class SubscriptionsService {
         throw new NotFoundException('Subscription not found for payment');
       }
 
-      // Activate subscription
-      const now = new Date();
-      const periodEnd = new Date(now);
-      
-      if (subscription.billingInterval === BillingInterval.YEAR) {
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      // Check if this was a mandate setup payment
+      if (metadata.action === 'subscription_mandate_setup') {
+        // Now create the actual Mollie subscription
+        const plan = subscription.plan;
+        const amount = subscription.billingInterval === BillingInterval.YEAR 
+          ? parseFloat(plan.priceYearly.toString()) 
+          : parseFloat(plan.priceMonthly.toString());
+
+        try {
+          const mollieSubscription = await this.paymentsService.createSubscription({
+            customerId: subscription.mollieCustomerId,
+            amount,
+            currency: 'EUR',
+            interval: subscription.billingInterval === BillingInterval.YEAR ? 'yearly' : 'monthly',
+            description: `${plan.displayName} - ${new Date().toISOString().slice(0, 10)}`,
+            metadata: {
+              tenantId,
+              subscriptionId: subscription.id,
+              planName: plan.name,
+            },
+          });
+
+          // Update subscription with Mollie details
+          subscription.status = SubscriptionStatus.ACTIVE;
+          subscription.currentPeriodStart = new Date();
+          subscription.currentPeriodEnd = mollieSubscription.nextPaymentDate;
+          subscription.nextPaymentDate = mollieSubscription.nextPaymentDate;
+          subscription.mollieSubscriptionId = mollieSubscription.id;
+          subscription.metadata = {
+            ...subscription.metadata,
+            activatedAt: new Date().toISOString(),
+            activationPaymentId: paymentId,
+            mollieStatus: mollieSubscription.status,
+          };
+          delete subscription.metadata.pendingPaymentId;
+          delete subscription.metadata.awaitingMandateSetup;
+
+          const updatedSubscription = await this.subscriptionRepository.save(subscription);
+
+          // Audit log
+          await this.auditService.logAction({
+            action: 'SUBSCRIPTION_ACTIVATED_WITH_MOLLIE',
+            resource_type: 'Subscription',
+            resource_id: subscription.id,
+            details: {
+              plan: subscription.plan.name,
+              paymentId,
+              mollieSubscriptionId: mollieSubscription.id,
+              amount: payment.amount,
+            },
+            tenant_id: tenantId,
+          });
+
+          this.logger.log(`Subscription ${subscription.id} activated with Mollie subscription ${mollieSubscription.id}`);
+          return updatedSubscription;
+        } catch (error) {
+          this.logger.error('Failed to create Mollie subscription after mandate setup', error);
+          // Update subscription status to reflect the error
+          subscription.status = SubscriptionStatus.INCOMPLETE;
+          subscription.metadata.error = error.message;
+          await this.subscriptionRepository.save(subscription);
+          throw error;
+        }
       } else {
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
+        // Legacy path for one-time payment activation (shouldn't happen with new flow)
+        const now = new Date();
+        const periodEnd = new Date(now);
+        
+        if (subscription.billingInterval === BillingInterval.YEAR) {
+          periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+        } else {
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+        }
+
+        subscription.status = SubscriptionStatus.ACTIVE;
+        subscription.currentPeriodStart = now;
+        subscription.currentPeriodEnd = periodEnd;
+        subscription.metadata = {
+          ...subscription.metadata,
+          activatedAt: now.toISOString(),
+          activationPaymentId: paymentId,
+          legacyActivation: true,
+        };
+        delete subscription.metadata.pendingPaymentId;
+
+        const updatedSubscription = await this.subscriptionRepository.save(subscription);
+
+        await this.auditService.logAction({
+          action: 'SUBSCRIPTION_ACTIVATED_LEGACY',
+          resource_type: 'Subscription',
+          resource_id: subscription.id,
+          details: {
+            plan: subscription.plan.name,
+            paymentId,
+            amount: payment.amount,
+          },
+          tenant_id: tenantId,
+        });
+
+        return updatedSubscription;
       }
-
-      subscription.status = SubscriptionStatus.ACTIVE;
-      subscription.currentPeriodStart = now;
-      subscription.currentPeriodEnd = periodEnd;
-      subscription.providerSubscriptionId = payment.id; // If available
-      subscription.metadata = {
-        ...subscription.metadata,
-        activatedAt: now.toISOString(),
-        activationPaymentId: paymentId,
-      };
-      delete subscription.metadata.pendingPaymentId;
-      delete subscription.metadata.pendingChangePaymentId;
-      delete subscription.metadata.pendingNewPlanName;
-      delete subscription.metadata.pendingNewBillingInterval;
-
-      const updatedSubscription = await this.subscriptionRepository.save(subscription);
-
-      // Audit log successful subscription activation
-      await this.auditService.logAction({
-        action: 'SUBSCRIPTION_ACTIVATED',
-        resource_type: 'Subscription',
-        resource_id: subscription.id,
-        details: {
-          plan: subscription.plan.name,
-          paymentId,
-          amount: payment.amount,
-        },
-        tenant_id: tenantId,
-      });
-
-      this.logger.log(`Subscription ${subscription.id} successfully activated`);
-      
-      return updatedSubscription;
     } catch (error) {
       this.logger.error('Failed to complete new subscription', error);
       throw error;
@@ -1119,7 +1301,8 @@ export class SubscriptionsService {
         tenant_id: subscription.tenantId,
       });
 
-      // TODO: Send notification email to tenant
+      // Send notification email to tenant
+      // In production, integrate with email service to notify about failed payment
 
       this.logger.log(`Subscription ${subscriptionId} marked as past due`);
     } catch (error) {
@@ -1181,5 +1364,13 @@ export class SubscriptionsService {
       this.logger.error('Failed to create overdue payment', error);
       throw error;
     }
+  }
+
+  /**
+   * Get the number of trial days from configuration
+   * @returns Number of days for trial period
+   */
+  private getTrialDays(): number {
+    return this.configService.get<number>('SUBSCRIPTION_TRIAL_DAYS', 30);
   }
 }

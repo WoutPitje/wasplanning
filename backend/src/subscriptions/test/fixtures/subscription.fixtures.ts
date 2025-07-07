@@ -1,7 +1,6 @@
 import { SubscriptionPlan, PlanName, BillingType } from '../../entities/subscription-plan.entity';
 import { Subscription, SubscriptionStatus, BillingInterval } from '../../entities/subscription.entity';
 import { UsageRecord, MetricType } from '../../entities/usage-record.entity';
-import { BillingCycle, BillingCycleStatus } from '../../entities/billing-cycle.entity';
 import { CreateSubscriptionDto } from '../../dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from '../../dto/update-subscription.dto';
 import { RecordUsageDto } from '../../dto/record-usage.dto';
@@ -73,19 +72,6 @@ export const mockUsageRecord: Partial<UsageRecord> = {
   metadata: { washTaskId: 'wash-123' },
 };
 
-export const mockBillingCycle: Partial<BillingCycle> = {
-  id: 'cycle-123',
-  subscriptionId: 'sub-123',
-  startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-  endDate: new Date(),
-  baseAmount: 49.00,
-  usageAmount: 0,
-  totalAmount: 49.00,
-  usageSummary: { cars_washed: 250 },
-  status: BillingCycleStatus.PAID,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
 
 export const createSubscriptionDto: CreateSubscriptionDto = {
   planName: PlanName.STARTER,

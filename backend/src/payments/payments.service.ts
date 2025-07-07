@@ -31,6 +31,7 @@ export class PaymentsService {
       // Create customer in Mollie if needed
       const customerId = await this.mollieProvider.createCustomer(
         `tenant-${tenantId}@wasplanning.nl`,
+        undefined, // name
         { tenantId },
       );
 
@@ -269,18 +270,41 @@ export class PaymentsService {
   /**
    * Get or create a Mollie customer for a tenant
    */
-  async getOrCreateCustomer(tenantId: string, customerData: { email: string; metadata?: any }): Promise<{ id: string }> {
+  async getOrCreateCustomer(tenantId: string, customerData: { email: string; name?: string; metadata?: any }): Promise<{ id: string; isNew: boolean }> {
     this.logger.log(`Getting or creating Mollie customer for tenant ${tenantId}`);
     
     try {
-      // For now, create a new customer each time
-      // In production, you'd want to store and reuse customer IDs
-      const customerId = await this.mollieProvider.createCustomer(customerData.email, {
-        ...customerData.metadata,
-        tenantId,
+      // Check if we already have a customer ID stored
+      // First, check subscriptions for existing Mollie customer ID
+      const subscriptionRepo = this.transactionRepository.manager.getRepository('Subscription');
+      const existingSubscription = await subscriptionRepo.findOne({
+        where: { tenantId },
+        select: ['mollieCustomerId'],
       });
       
-      return { id: customerId };
+      if (existingSubscription?.mollieCustomerId) {
+        this.logger.log(`Found existing Mollie customer: ${existingSubscription.mollieCustomerId}`);
+        // Verify customer still exists in Mollie
+        try {
+          await this.mollieProvider.getCustomer(existingSubscription.mollieCustomerId);
+          return { id: existingSubscription.mollieCustomerId, isNew: false };
+        } catch (error) {
+          this.logger.warn(`Mollie customer ${existingSubscription.mollieCustomerId} not found, creating new one`);
+        }
+      }
+      
+      // Create new customer
+      const customerId = await this.mollieProvider.createCustomer(
+        customerData.email, 
+        customerData.name,
+        {
+          ...customerData.metadata,
+          tenantId,
+        }
+      );
+      
+      this.logger.log(`Created new Mollie customer: ${customerId}`);
+      return { id: customerId, isNew: true };
     } catch (error) {
       this.logger.error('Failed to get or create customer', error);
       throw new BadRequestException('Failed to setup payment customer');
@@ -288,7 +312,7 @@ export class PaymentsService {
   }
 
   /**
-   * Create a checkout payment (one-time payment)
+   * Create a checkout payment (one-time payment or first payment for mandate)
    */
   async createCheckoutPayment(params: {
     amount: number;
@@ -298,8 +322,16 @@ export class PaymentsService {
     redirectUrl: string;
     webhookUrl?: string;
     metadata?: any;
+    sequenceType?: 'first' | 'recurring' | 'oneoff';
   }): Promise<{ id: string; checkoutUrl: string; status: string }> {
     this.logger.log(`Creating checkout payment: ${params.amount} ${params.currency}`);
+    
+    // Validate tenantId before processing
+    const tenantId = params.metadata?.tenantId;
+    if (!tenantId) {
+      this.logger.error('No tenantId found in payment metadata');
+      throw new BadRequestException('Invalid payment metadata: missing tenantId');
+    }
     
     try {
       // Create checkout payment with Mollie
@@ -311,14 +343,8 @@ export class PaymentsService {
         redirectUrl: params.redirectUrl,
         webhookUrl: params.webhookUrl,
         metadata: params.metadata,
+        sequenceType: params.sequenceType,
       });
-
-      // Extract tenantId from metadata
-      const tenantId = params.metadata?.tenantId;
-      if (!tenantId) {
-        this.logger.error('No tenantId found in payment metadata');
-        throw new BadRequestException('Invalid payment metadata: missing tenantId');
-      }
 
       // Create a payment transaction record in the database
       const transaction = this.transactionRepository.create({
@@ -348,6 +374,7 @@ export class PaymentsService {
           provider: 'mollie',
           providerTransactionId: payment.id,
           type: transaction.type,
+          sequenceType: params.sequenceType,
         },
         tenant_id: tenantId,
       });
@@ -395,6 +422,81 @@ export class PaymentsService {
     } catch (error) {
       this.logger.error('Failed to get payment status', error);
       throw new BadRequestException('Failed to get payment status');
+    }
+  }
+
+  /**
+   * Check if customer has valid mandates
+   */
+  async hasValidMandate(customerId: string): Promise<boolean> {
+    try {
+      const mandates = await this.mollieProvider.listMandates(customerId);
+      return mandates.length > 0;
+    } catch (error) {
+      this.logger.error('Failed to check mandates', error);
+      return false;
+    }
+  }
+
+  /**
+   * Create a Mollie subscription
+   */
+  async createSubscription(params: {
+    customerId: string;
+    amount: number;
+    currency: string;
+    interval: 'monthly' | 'yearly';
+    description: string;
+    mandateId?: string;
+    metadata?: any;
+  }): Promise<{ id: string; status: string; nextPaymentDate: Date }> {
+    this.logger.log(`Creating Mollie subscription for customer ${params.customerId}`);
+    
+    try {
+      const subscription = await this.mollieProvider.createSubscription({
+        customerId: params.customerId,
+        amount: params.amount,
+        currency: params.currency,
+        interval: params.interval,
+        description: params.description,
+        mandateId: params.mandateId,
+        metadata: params.metadata,
+      });
+      
+      return {
+        id: subscription.id,
+        status: subscription.status,
+        nextPaymentDate: subscription.nextPaymentDate,
+      };
+    } catch (error) {
+      this.logger.error('Failed to create subscription', error);
+      throw new BadRequestException(error.message || 'Failed to create subscription');
+    }
+  }
+
+  /**
+   * Cancel a Mollie subscription
+   */
+  async cancelSubscription(subscriptionId: string): Promise<void> {
+    this.logger.log(`Canceling Mollie subscription ${subscriptionId}`);
+    
+    try {
+      await this.mollieProvider.cancelSubscription(subscriptionId);
+    } catch (error) {
+      this.logger.error('Failed to cancel subscription', error);
+      throw new BadRequestException('Failed to cancel subscription');
+    }
+  }
+
+  /**
+   * Get Mollie subscription details
+   */
+  async getSubscription(subscriptionId: string, customerId?: string): Promise<any> {
+    try {
+      return await this.mollieProvider.getSubscription(subscriptionId, customerId);
+    } catch (error) {
+      this.logger.error('Failed to get subscription', error);
+      throw new BadRequestException('Failed to get subscription');
     }
   }
 }

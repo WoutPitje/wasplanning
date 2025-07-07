@@ -20,29 +20,71 @@ export class MollieProvider implements PaymentProvider {
   private readonly logger = new Logger(MollieProvider.name);
   private readonly config: MollieConfig;
   private readonly mollie;
+  private readonly mollieClient;
 
   constructor(private configService: ConfigService) {
+    const apiKey = this.configService.get<string>('MOLLIE_API_KEY', '');
+    
+    if (!apiKey) {
+      throw new Error('MOLLIE_API_KEY is not configured. Please set it in your environment variables.');
+    }
+    
     this.config = {
-      apiKey: this.configService.get<string>('MOLLIE_API_KEY') || 'test_abWq5tSnzuyseaT22rFPVRHG67uCbd',
+      apiKey,
       webhookUrl: this.configService.get<string>('MOLLIE_WEBHOOK_URL') || mollieConfig.webhookUrl,
       testMode: this.configService.get<string>('NODE_ENV') !== 'production',
     };
 
     this.mollie = createMollieClient({ apiKey: this.config.apiKey });
+    this.mollieClient = this.mollie;
     this.logger.log(`Mollie client initialized with ${this.config.testMode ? 'test' : 'live'} API key`);
   }
 
-  async createCustomer(email: string, metadata?: Record<string, any>): Promise<string> {
+  async createCustomer(email: string, name?: string, metadata?: Record<string, any>): Promise<string> {
     this.logger.log(`Creating Mollie customer for email: ${email}`);
     
     try {
-      const customer = await this.mollie.customers.create({
+      const customerData: any = {
         email,
         metadata,
-      });
+      };
+      
+      if (name) {
+        customerData.name = name;
+      }
+      
+      const customer = await this.mollie.customers.create(customerData);
       return customer.id;
     } catch (error) {
       this.logger.error('Failed to create Mollie customer', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async getCustomer(customerId: string): Promise<any> {
+    try {
+      return await this.mollie.customers.get(customerId);
+    } catch (error) {
+      this.logger.error('Failed to get Mollie customer', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async listMandates(customerId: string): Promise<any[]> {
+    try {
+      const mandates = await this.mollie.customers_mandates.page({ customerId });
+      return mandates.filter(m => m.status === 'valid');
+    } catch (error) {
+      this.logger.error('Failed to list Mollie mandates', error);
+      if (error instanceof MollieApiError) {
+        throw new Error(`Mollie API Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -51,13 +93,30 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Creating Mollie subscription: ${JSON.stringify(params)}`);
     
     try {
-      const subscription = await this.mollie.customers_subscriptions.create(params.customerId, {
+      // First check if customer exists
+      const customer = await this.mollie.customers.get(params.customerId);
+      if (!customer) {
+        throw new Error(`Customer ${params.customerId} not found`);
+      }
+
+      // Check if customer has valid mandate
+      const mandates = await this.mollie.customers_mandates.page({ customerId: params.customerId });
+      const validMandate = mandates.find(m => m.status === 'valid');
+      
+      if (!validMandate) {
+        throw new Error('Customer has no valid payment mandate. Please set up a payment method first.');
+      }
+
+      const subscription = await this.mollie.customers_subscriptions.create({
+        customerId: params.customerId,
         amount: {
           value: params.amount.toFixed(2),
           currency: params.currency,
         },
+        times: params.times, // Optional: number of charges for the subscription
         interval: params.interval === 'monthly' ? '1 month' : '1 year',
         description: params.description,
+        mandateId: params.mandateId || validMandate.id,
         webhookUrl: this.config.webhookUrl,
         metadata: params.metadata,
       });
@@ -85,9 +144,14 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Updating Mollie subscription ${id}: ${JSON.stringify(params)}`);
     
     try {
+      // Get subscription first to get customer ID
+      const existingSubscription = await this.mollie.customers_subscriptions.get(id, {
+        include: ['customer'],
+      });
+
       const updateData: any = {};
       
-      if (params.amount) {
+      if (params.amount !== undefined) {
         updateData.amount = {
           value: params.amount.toFixed(2),
           currency: 'EUR',
@@ -102,7 +166,11 @@ export class MollieProvider implements PaymentProvider {
         updateData.metadata = params.metadata;
       }
       
-      const subscription = await this.mollie.customers_subscriptions.update(id, updateData);
+      const subscription = await this.mollie.customers_subscriptions.update(
+        existingSubscription.customerId,
+        id,
+        updateData
+      );
       
       return {
         id: subscription.id,
@@ -127,7 +195,15 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Canceling Mollie subscription ${id}`);
     
     try {
-      await this.mollie.customers_subscriptions.cancel(id);
+      // Get subscription first to get customer ID
+      const subscription = await this.mollie.customers_subscriptions.get(id, {
+        include: ['customer'],
+      });
+      
+      await this.mollie.customers_subscriptions.cancel(
+        subscription.customerId,
+        id
+      );
     } catch (error) {
       this.logger.error('Failed to cancel Mollie subscription', error);
       if (error instanceof MollieApiError) {
@@ -137,11 +213,36 @@ export class MollieProvider implements PaymentProvider {
     }
   }
 
-  async getSubscription(id: string): Promise<Subscription> {
+  async getSubscription(id: string, customerId?: string): Promise<Subscription> {
     this.logger.log(`Getting Mollie subscription ${id}`);
     
     try {
-      const subscription = await this.mollie.customers_subscriptions.get(id);
+      let subscription;
+      
+      if (customerId) {
+        subscription = await this.mollie.customers_subscriptions.get(
+          customerId,
+          id
+        );
+      } else {
+        // Try to get subscription with all customers (less efficient)
+        const customers = await this.mollie.customers.page();
+        for (const customer of customers) {
+          try {
+            subscription = await this.mollie.customers_subscriptions.get(
+              customer.id,
+              id
+            );
+            if (subscription) break;
+          } catch (e) {
+            // Continue searching
+          }
+        }
+        
+        if (!subscription) {
+          throw new Error(`Subscription ${id} not found`);
+        }
+      }
       
       return {
         id: subscription.id,
@@ -166,18 +267,9 @@ export class MollieProvider implements PaymentProvider {
     this.logger.log(`Creating Mollie payment method: ${JSON.stringify(params)}`);
     
     try {
-      const mandate = await this.mollie.customers_mandates.create(params.customerId, {
-        method: params.type,
-        ...params.details,
-      });
-      
-      return {
-        id: mandate.id,
-        providerId: mandate.id,
-        type: mandate.method as any,
-        details: mandate.details || {},
-        isDefault: false,
-      };
+      // For Mollie, we need to create a first payment to establish a mandate
+      // This is typically done through a checkout flow
+      throw new Error('Payment method creation requires a checkout flow. Use createCheckoutPayment with sequenceType: "first"');
     } catch (error) {
       this.logger.error('Failed to create Mollie payment method', error);
       if (error instanceof MollieApiError) {
@@ -265,6 +357,8 @@ export class MollieProvider implements PaymentProvider {
     redirectUrl: string;
     webhookUrl?: string;
     metadata?: any;
+    sequenceType?: 'first' | 'recurring' | 'oneoff';
+    mandateId?: string;
   }): Promise<{ id: string; checkoutUrl: string; status: string }> {
     this.logger.log(`Creating Mollie checkout payment: ${JSON.stringify(params)}`);
     this.logger.log(`Redirect URL being sent to Mollie: ${params.redirectUrl}`);
@@ -281,9 +375,19 @@ export class MollieProvider implements PaymentProvider {
         metadata: params.metadata,
       };
 
-      // Only add customerId if provided
+      // Add customer and mandate info for subscription setup
       if (params.customerId) {
         paymentData.customerId = params.customerId;
+        
+        // Set sequence type for mandate creation
+        if (params.sequenceType) {
+          paymentData.sequenceType = params.sequenceType;
+        }
+        
+        // Use existing mandate if provided
+        if (params.mandateId) {
+          paymentData.mandateId = params.mandateId;
+        }
       }
 
       const payment = await this.mollie.payments.create(paymentData);
@@ -333,32 +437,77 @@ export class MollieProvider implements PaymentProvider {
     }
   }
 
-  validateWebhook(body: any, signature: string): boolean {
-    // TODO: Implement proper webhook signature validation
-    // For now, always return true
-    this.logger.log('Validating Mollie webhook signature');
-    return true;
+  async validateWebhook(body: any, signature: string): Promise<boolean> {
+    // Mollie doesn't use webhook signatures in the same way as other providers
+    // Instead, they recommend verifying the webhook by fetching the resource
+    // from their API using the ID provided in the webhook
+    this.logger.log('Validating Mollie webhook - verifying by fetching resource');
+    
+    if (!body || !body.id) {
+      this.logger.error('Invalid webhook body: missing id');
+      return false;
+    }
+
+    try {
+      // Verify the webhook by fetching the resource from Mollie
+      // This ensures the webhook is legitimate
+      if (body.id.startsWith('tr_')) {
+        // Payment webhook
+        const payment = await this.mollieClient.payments.get(body.id);
+        return !!payment;
+      } else if (body.id.startsWith('sub_')) {
+        // Subscription webhook
+        const subscription = await this.mollieClient.subscriptions.get(body.id);
+        return !!subscription;
+      } else if (body.id.startsWith('re_')) {
+        // Refund webhook
+        const refund = await this.mollieClient.refunds.get(body.id);
+        return !!refund;
+      } else if (body.id.startsWith('chb_')) {
+        // Chargeback webhook
+        const chargeback = await this.mollieClient.chargebacks.get(body.id);
+        return !!chargeback;
+      }
+      
+      this.logger.error(`Unknown webhook resource type: ${body.id}`);
+      return false;
+    } catch (error) {
+      this.logger.error(`Failed to verify webhook resource: ${error.message}`);
+      return false;
+    }
   }
 
   parseWebhook(body: any): WebhookEvent {
     this.logger.log(`Parsing Mollie webhook: ${JSON.stringify(body)}`);
     
-    // Mollie sends webhooks with just the payment ID
+    // Mollie sends webhooks with just the resource ID
     // We need to determine the event type from the resource type
     let eventType = 'unknown';
+    let resourceType = 'unknown';
     
     if (body.id) {
       if (body.id.startsWith('tr_')) {
         eventType = 'payment.updated';
+        resourceType = 'payment';
       } else if (body.id.startsWith('sub_')) {
         eventType = 'subscription.updated';
+        resourceType = 'subscription';
+      } else if (body.id.startsWith('chb_')) {
+        eventType = 'chargeback.updated';
+        resourceType = 'chargeback';
+      } else if (body.id.startsWith('re_')) {
+        eventType = 'refund.updated';
+        resourceType = 'refund';
       }
     }
     
     return {
       id: body.id || 'unknown',
       type: eventType,
-      data: body,
+      data: {
+        ...body,
+        resourceType,
+      },
       createdAt: new Date(),
     };
   }

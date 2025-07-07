@@ -1235,7 +1235,7 @@ export default {
       loading: 'Loading payment history...',
       noHistory: 'No payment history found',
       date: 'Date',
-      description: 'Description',
+      descriptionColumn: 'Description',
       type: 'Type',
       status: 'Status',
       amount: 'Amount',

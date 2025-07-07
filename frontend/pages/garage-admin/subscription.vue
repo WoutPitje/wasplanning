@@ -710,7 +710,7 @@
               <thead class="text-xs text-muted-foreground uppercase bg-muted/50">
                 <tr>
                   <th scope="col" class="px-4 py-3">{{ t('subscription.paymentHistory.date') }}</th>
-                  <th scope="col" class="px-4 py-3">{{ t('subscription.paymentHistory.description') }}</th>
+                  <th scope="col" class="px-4 py-3">{{ t('subscription.paymentHistory.descriptionColumn') }}</th>
                   <th scope="col" class="px-4 py-3">{{ t('subscription.paymentHistory.type') }}</th>
                   <th scope="col" class="px-4 py-3">{{ t('subscription.paymentHistory.status') }}</th>
                   <th scope="col" class="px-4 py-3 text-right">{{ t('subscription.paymentHistory.amount') }}</th>

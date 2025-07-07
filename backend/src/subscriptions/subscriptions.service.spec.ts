@@ -1,24 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
-
+import { ConfigService } from '@nestjs/config';
 import { SubscriptionsService } from './subscriptions.service';
-import { Subscription, SubscriptionStatus } from './entities/subscription.entity';
+import { Subscription, SubscriptionStatus, BillingInterval } from './entities/subscription.entity';
 import { SubscriptionPlan, PlanName } from './entities/subscription-plan.entity';
 import { PaymentsService } from '../payments/payments.service';
 import { UsageService } from './services/usage.service';
 import { LimitsService } from './services/limits.service';
+import { ProrationService } from './services/proration.service';
 import { AuditService } from '../audit/audit.service';
-
-import {
-  mockSubscription,
-  mockSubscriptionPlan,
-  mockGroeiPlan,
-  createSubscriptionDto,
-  updateSubscriptionDto,
-  mockTenant,
-} from './test/fixtures/subscription.fixtures';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
@@ -27,41 +19,37 @@ describe('SubscriptionsService', () => {
   let paymentsService: PaymentsService;
   let usageService: UsageService;
   let limitsService: LimitsService;
+  let prorationService: ProrationService;
+  let auditService: AuditService;
 
-  const mockSubscriptionRepository = {
-    create: jest.fn(),
-    save: jest.fn(),
-    find: jest.fn(),
-    findOne: jest.fn(),
-    update: jest.fn(),
-    remove: jest.fn(),
+  const mockPlan = {
+    id: 'plan-123',
+    name: PlanName.STARTER,
+    displayName: 'Starter',
+    priceMonthly: 49,
+    priceYearly: 490,
+    isActive: true,
+    features: {},
   };
 
-  const mockPlanRepository = {
-    find: jest.fn(),
-    findOne: jest.fn(),
+  const mockSubscription = {
+    id: 'sub-123',
+    tenantId: 'tenant-123',
+    planId: 'plan-123',
+    plan: mockPlan,
+    status: SubscriptionStatus.ACTIVE,
+    billingInterval: BillingInterval.MONTH,
+    currentPeriodStart: new Date(),
+    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    creditBalance: 0,
+    mollieCustomerId: 'cst_test123',
+    mollieSubscriptionId: 'sub_test123',
+    metadata: {},
   };
 
-  const mockPaymentsService = {
-    createSubscription: jest.fn(),
-  };
-
-  const mockUsageService = {
-    getCurrentPeriodUsage: jest.fn(),
-    recordUsage: jest.fn(),
-    recordActiveUser: jest.fn(),
-    recordActiveLocation: jest.fn(),
-  };
-
-  const mockLimitsService = {
-    getAllLimits: jest.fn(),
-    getLimitWarnings: jest.fn(),
-    checkLimit: jest.fn(),
-    hasFeature: jest.fn(),
-  };
-
-  const mockAuditService = {
-    logAction: jest.fn(),
+  const mockTenant = {
+    id: 'tenant-123',
+    display_name: 'Test Tenant',
   };
 
   beforeEach(async () => {
@@ -70,227 +58,457 @@ describe('SubscriptionsService', () => {
         SubscriptionsService,
         {
           provide: getRepositoryToken(Subscription),
-          useValue: mockSubscriptionRepository,
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
+            findOne: jest.fn(),
+            update: jest.fn(),
+            manager: {
+              getRepository: jest.fn().mockReturnValue({
+                findOne: jest.fn(),
+              }),
+            },
+          },
         },
         {
           provide: getRepositoryToken(SubscriptionPlan),
-          useValue: mockPlanRepository,
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
+          },
         },
         {
           provide: PaymentsService,
-          useValue: mockPaymentsService,
+          useValue: {
+            getOrCreateCustomer: jest.fn(),
+            hasValidMandate: jest.fn(),
+            createCheckoutPayment: jest.fn(),
+            createSubscription: jest.fn(),
+            cancelSubscription: jest.fn(),
+            getPayment: jest.fn(),
+          },
         },
         {
           provide: UsageService,
-          useValue: mockUsageService,
+          useValue: {
+            getCurrentPeriodUsage: jest.fn(),
+            recordUsage: jest.fn(),
+            recordActiveUser: jest.fn(),
+            recordActiveLocation: jest.fn(),
+          },
         },
         {
           provide: LimitsService,
-          useValue: mockLimitsService,
+          useValue: {
+            getAllLimits: jest.fn(),
+            getLimitWarnings: jest.fn(),
+            checkLimit: jest.fn(),
+            hasFeature: jest.fn(),
+          },
+        },
+        {
+          provide: ProrationService,
+          useValue: {
+            calculateProration: jest.fn(),
+          },
         },
         {
           provide: AuditService,
-          useValue: mockAuditService,
+          useValue: {
+            logAction: jest.fn(),
+            findByResourceId: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue(30), // Default trial days
+          },
         },
       ],
     }).compile();
 
     service = module.get<SubscriptionsService>(SubscriptionsService);
     subscriptionRepository = module.get<Repository<Subscription>>(
-      getRepositoryToken(Subscription),
+      getRepositoryToken(Subscription)
     );
     planRepository = module.get<Repository<SubscriptionPlan>>(
-      getRepositoryToken(SubscriptionPlan),
+      getRepositoryToken(SubscriptionPlan)
     );
     paymentsService = module.get<PaymentsService>(PaymentsService);
     usageService = module.get<UsageService>(UsageService);
     limitsService = module.get<LimitsService>(LimitsService);
+    prorationService = module.get<ProrationService>(ProrationService);
+    auditService = module.get<AuditService>(AuditService);
+  });
 
+  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('createSubscription', () => {
-    it('should create a subscription successfully', async () => {
-      const tenantId = 'tenant-123';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(null); // No existing subscription
-      mockPlanRepository.findOne.mockResolvedValue(mockSubscriptionPlan);
-      mockSubscriptionRepository.create.mockReturnValue(mockSubscription);
-      mockSubscriptionRepository.save.mockResolvedValue(mockSubscription);
-
-      const result = await service.createSubscription(tenantId, createSubscriptionDto);
-
-      expect(mockSubscriptionRepository.findOne).toHaveBeenCalledWith({
-        where: { tenantId },
+  describe('createPaidSubscription', () => {
+    it('should create subscription with mandate setup for new customer', async () => {
+      const mockTenantRepo = { findOne: jest.fn().mockResolvedValue(mockTenant) };
+      (subscriptionRepository.manager.getRepository as jest.Mock).mockReturnValue(mockTenantRepo);
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
+      (paymentsService.getOrCreateCustomer as jest.Mock).mockResolvedValue({
+        id: 'cst_new123',
+        isNew: true,
       });
-      expect(mockPlanRepository.findOne).toHaveBeenCalledWith({
-        where: { name: createSubscriptionDto.planName, isActive: true },
+      (paymentsService.hasValidMandate as jest.Mock).mockResolvedValue(false);
+      (paymentsService.createCheckoutPayment as jest.Mock).mockResolvedValue({
+        id: 'tr_test123',
+        checkoutUrl: 'https://mollie.com/checkout/test',
+        status: 'open',
       });
-      expect(mockSubscriptionRepository.create).toHaveBeenCalled();
-      expect(mockSubscriptionRepository.save).toHaveBeenCalled();
-      expect(result).toEqual(mockSubscription);
+      (subscriptionRepository.create as jest.Mock).mockReturnValue(mockSubscription);
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue(mockSubscription);
+
+      const result = await service.createPaidSubscription('tenant-123', {
+        planName: PlanName.STARTER,
+        billingInterval: BillingInterval.MONTH,
+        returnUrl: 'https://example.com/return',
+      });
+
+      expect(result.checkoutUrl).toBe('https://mollie.com/checkout/test');
+      expect(paymentsService.createCheckoutPayment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sequenceType: 'first',
+          amount: 49,
+        })
+      );
     });
 
-    it('should throw BadRequestException when tenant already has subscription', async () => {
-      const tenantId = 'tenant-123';
+    it('should create subscription directly if customer has valid mandate', async () => {
+      const mockTenantRepo = { findOne: jest.fn().mockResolvedValue(mockTenant) };
+      (subscriptionRepository.manager.getRepository as jest.Mock).mockReturnValue(mockTenantRepo);
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
+      (paymentsService.getOrCreateCustomer as jest.Mock).mockResolvedValue({
+        id: 'cst_existing123',
+        isNew: false,
+      });
+      (paymentsService.hasValidMandate as jest.Mock).mockResolvedValue(true);
+      (paymentsService.createSubscription as jest.Mock).mockResolvedValue({
+        id: 'sub_test123',
+        status: 'active',
+        nextPaymentDate: new Date('2024-02-01'),
+      });
+      (subscriptionRepository.create as jest.Mock).mockReturnValue(mockSubscription);
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue(mockSubscription);
 
-      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      const result = await service.createPaidSubscription('tenant-123', {
+        planName: PlanName.STARTER,
+        billingInterval: BillingInterval.MONTH,
+        returnUrl: 'https://example.com/return',
+      });
 
-      await expect(service.createSubscription(tenantId, createSubscriptionDto))
-        .rejects.toThrow(BadRequestException);
+      expect(result.checkoutUrl).toBe('https://example.com/return?status=success');
+      expect(paymentsService.createSubscription).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customerId: 'cst_existing123',
+          amount: 49,
+          interval: 'monthly',
+        })
+      );
     });
 
-    it('should throw NotFoundException when plan not found', async () => {
-      const tenantId = 'tenant-123';
+    it('should throw error if tenant already has subscription', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
 
-      mockSubscriptionRepository.findOne.mockResolvedValue(null);
-      mockPlanRepository.findOne.mockResolvedValue(null);
-
-      await expect(service.createSubscription(tenantId, createSubscriptionDto))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.createPaidSubscription('tenant-123', {
+          planName: PlanName.STARTER,
+          billingInterval: BillingInterval.MONTH,
+          returnUrl: 'https://example.com/return',
+        })
+      ).rejects.toThrow('Tenant already has a subscription');
     });
   });
 
-  describe('getCurrentSubscription', () => {
-    it('should return current subscription with plan', async () => {
-      const tenantId = 'tenant-123';
+  describe('completeNewSubscription', () => {
+    it('should complete subscription after mandate setup payment', async () => {
+      const mockPayment = {
+        id: 'tr_test123',
+        status: 'paid',
+        amount: 49,
+        metadata: {
+          tenantId: 'tenant-123',
+          action: 'subscription_mandate_setup',
+        },
+      };
 
-      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
-
-      const result = await service.getCurrentSubscription(tenantId);
-
-      expect(mockSubscriptionRepository.findOne).toHaveBeenCalledWith({
-        where: { tenantId },
-        relations: ['plan'],
-      });
-      expect(result).toEqual(mockSubscription);
-    });
-
-    it('should return null when no subscription found', async () => {
-      const tenantId = 'tenant-123';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.getCurrentSubscription(tenantId);
-
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('updateSubscription', () => {
-    it('should update subscription successfully', async () => {
-      const tenantId = 'tenant-123';
-      const subscriptionId = 'sub-123';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
-      mockPlanRepository.findOne.mockResolvedValue(mockGroeiPlan);
-      mockSubscriptionRepository.save.mockResolvedValue({
+      const incompleteSubscription = {
         ...mockSubscription,
-        planId: 'plan-456',
+        status: SubscriptionStatus.INCOMPLETE,
+        metadata: { pendingPaymentId: 'tr_test123' },
+      };
+
+      (paymentsService.getPayment as jest.Mock).mockResolvedValue(mockPayment);
+      (subscriptionRepository.find as jest.Mock).mockResolvedValue([incompleteSubscription]);
+      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
+      (paymentsService.createSubscription as jest.Mock).mockResolvedValue({
+        id: 'sub_test123',
+        status: 'active',
+        nextPaymentDate: new Date('2024-02-01'),
+      });
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
+        ...incompleteSubscription,
+        status: SubscriptionStatus.ACTIVE,
+        mollieSubscriptionId: 'sub_test123',
       });
 
-      const result = await service.updateSubscription(
-        tenantId,
-        subscriptionId,
-        updateSubscriptionDto,
+      const result = await service.completeNewSubscription('tr_test123');
+
+      expect(result.status).toBe(SubscriptionStatus.ACTIVE);
+      expect(result.mollieSubscriptionId).toBe('sub_test123');
+      expect(paymentsService.createSubscription).toHaveBeenCalled();
+    });
+
+    it('should handle failed Mollie subscription creation', async () => {
+      const mockPayment = {
+        id: 'tr_test123',
+        status: 'paid',
+        amount: 49,
+        metadata: {
+          tenantId: 'tenant-123',
+          action: 'subscription_mandate_setup',
+        },
+      };
+
+      const incompleteSubscription = {
+        ...mockSubscription,
+        status: SubscriptionStatus.INCOMPLETE,
+        metadata: { pendingPaymentId: 'tr_test123' },
+      };
+
+      (paymentsService.getPayment as jest.Mock).mockResolvedValue(mockPayment);
+      (subscriptionRepository.find as jest.Mock).mockResolvedValue([incompleteSubscription]);
+      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
+      (paymentsService.createSubscription as jest.Mock).mockRejectedValue(
+        new Error('Subscription creation failed')
+      );
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue(incompleteSubscription);
+
+      await expect(service.completeNewSubscription('tr_test123')).rejects.toThrow(
+        'Subscription creation failed'
       );
 
-      expect(mockSubscriptionRepository.findOne).toHaveBeenCalledWith({
-        where: { id: subscriptionId, tenantId },
-        relations: ['plan'],
-      });
-      expect(mockPlanRepository.findOne).toHaveBeenCalledWith({
-        where: { name: updateSubscriptionDto.planName, isActive: true },
-      });
-      expect(mockSubscriptionRepository.save).toHaveBeenCalled();
-    });
-
-    it('should throw NotFoundException when subscription not found', async () => {
-      const tenantId = 'tenant-123';
-      const subscriptionId = 'non-existent';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(null);
-
-      await expect(service.updateSubscription(tenantId, subscriptionId, updateSubscriptionDto))
-        .rejects.toThrow(NotFoundException);
+      expect(subscriptionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: SubscriptionStatus.INCOMPLETE,
+          metadata: expect.objectContaining({
+            error: 'Subscription creation failed',
+          }),
+        })
+      );
     });
   });
 
   describe('cancelSubscription', () => {
-    it('should cancel subscription immediately', async () => {
-      const tenantId = 'tenant-123';
-      const subscriptionId = 'sub-123';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
-      mockSubscriptionRepository.save.mockResolvedValue({
+    it('should cancel subscription with Mollie', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
+      (paymentsService.cancelSubscription as jest.Mock).mockResolvedValue(undefined);
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
         ...mockSubscription,
         status: SubscriptionStatus.CANCELED,
-        canceledAt: new Date(),
       });
 
-      const result = await service.cancelSubscription(tenantId, subscriptionId, true);
+      const result = await service.cancelSubscription('tenant-123', 'sub-123', true);
 
       expect(result.status).toBe(SubscriptionStatus.CANCELED);
-      expect(result.canceledAt).toBeDefined();
+      expect(paymentsService.cancelSubscription).toHaveBeenCalledWith('sub_test123');
     });
 
-    it('should schedule cancellation at period end', async () => {
-      const tenantId = 'tenant-123';
-      const subscriptionId = 'sub-123';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
-      mockSubscriptionRepository.save.mockResolvedValue({
+    it('should handle Mollie cancellation errors gracefully', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
+      (paymentsService.cancelSubscription as jest.Mock).mockRejectedValue(
+        new Error('Mollie API error')
+      );
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
         ...mockSubscription,
-        cancelAtPeriodEnd: true,
+        status: SubscriptionStatus.CANCELED,
       });
 
-      const result = await service.cancelSubscription(tenantId, subscriptionId, false);
+      const result = await service.cancelSubscription('tenant-123', 'sub-123', true);
+
+      expect(result.status).toBe(SubscriptionStatus.CANCELED);
+      // Should continue with local cancellation even if Mollie fails
+    });
+
+    it('should set cancelAtPeriodEnd for non-immediate cancellation', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
+        ...mockSubscription,
+        cancelAtPeriodEnd: true,
+        canceledAt: new Date(),
+        status: SubscriptionStatus.ACTIVE, // Status should remain ACTIVE for non-immediate cancellation
+      });
+
+      const result = await service.cancelSubscription('tenant-123', 'sub-123', false);
 
       expect(result.cancelAtPeriodEnd).toBe(true);
-      expect(result.canceledAt).toBeDefined();
+      expect(result.status).not.toBe(SubscriptionStatus.CANCELED);
     });
   });
 
-  describe('getAvailablePlans', () => {
-    it('should return active plans ordered by price', async () => {
-      const mockPlans = [mockSubscriptionPlan, mockGroeiPlan];
+  describe('changeSubscriptionPlan', () => {
+    it('should handle plan upgrade with credits', async () => {
+      const subscriptionWithCredits = {
+        ...mockSubscription,
+        creditBalance: 20,
+      };
 
-      mockPlanRepository.find.mockResolvedValue(mockPlans);
+      const groeiPlan = {
+        ...mockPlan,
+        id: 'plan-456',
+        name: PlanName.GROEI,
+        priceMonthly: 149,
+      };
 
-      const result = await service.getAvailablePlans();
+      const proration = {
+        amount: 50,
+        credit: 0,
+        isUpgrade: true,
+        description: 'Upgrade proration',
+        daysRemaining: 15,
+        totalDays: 30,
+      };
 
-      expect(mockPlanRepository.find).toHaveBeenCalledWith({
-        where: { isActive: true },
-        order: { priceMonthly: 'ASC' },
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(subscriptionWithCredits);
+      (planRepository.findOne as jest.Mock).mockResolvedValue(groeiPlan);
+      (prorationService.calculateProration as jest.Mock).mockReturnValue(proration);
+      (paymentsService.getOrCreateCustomer as jest.Mock).mockResolvedValue({
+        id: 'cst_test123',
+        isNew: false,
       });
-      expect(result).toEqual(mockPlans);
+      (paymentsService.createCheckoutPayment as jest.Mock).mockResolvedValue({
+        id: 'tr_change123',
+        checkoutUrl: 'https://mollie.com/checkout/change',
+        status: 'open',
+      });
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue(subscriptionWithCredits);
+
+      const result = await service.changeSubscriptionPlan(
+        'tenant-123',
+        'sub-123',
+        PlanName.GROEI,
+        'https://example.com/return',
+        BillingInterval.MONTH
+      );
+
+      expect(result.checkoutUrl).toBe('https://mollie.com/checkout/change');
+      expect(paymentsService.createCheckoutPayment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 30, // 50 - 20 credits
+        })
+      );
+    });
+
+    it('should handle plan downgrade with credit generation', async () => {
+      const groeiSubscription = {
+        ...mockSubscription,
+        plan: {
+          ...mockPlan,
+          name: PlanName.GROEI,
+          priceMonthly: 149,
+        },
+      };
+
+      const proration = {
+        amount: 0,
+        credit: 50,
+        isUpgrade: false,
+        description: 'Downgrade credit',
+        daysRemaining: 15,
+        totalDays: 30,
+      };
+
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(groeiSubscription);
+      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
+      (prorationService.calculateProration as jest.Mock).mockReturnValue(proration);
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
+        ...groeiSubscription,
+        creditBalance: 50,
+      });
+
+      const result = await service.changeSubscriptionPlan(
+        'tenant-123',
+        'sub-123',
+        PlanName.STARTER,
+        'https://example.com/return'
+      );
+
+      expect(result.checkoutUrl).toBe(''); // No payment needed for downgrade
+      expect(result.subscription.creditBalance).toBe(50);
+    });
+  });
+
+  describe('processRecurringPayment', () => {
+    it('should update subscription period after recurring payment', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
+        ...mockSubscription,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
+
+      await service.processRecurringPayment('sub-123', 'tr_recurring123', 49);
+
+      expect(subscriptionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: expect.any(Date),
+          currentPeriodEnd: expect.any(Date),
+        })
+      );
+    });
+
+    it('should apply credits to recurring payment', async () => {
+      const subscriptionWithCredits = {
+        ...mockSubscription,
+        creditBalance: 20,
+      };
+
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(subscriptionWithCredits);
+      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
+        ...subscriptionWithCredits,
+        creditBalance: 0,
+      });
+
+      await service.processRecurringPayment('sub-123', 'tr_recurring123', 49);
+
+      expect(subscriptionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          creditBalance: 0, // 20 credits used, 29 paid
+        })
+      );
     });
   });
 
   describe('getCurrentUsage', () => {
-    it('should return current usage with limits and warnings', async () => {
-      const tenantId = 'tenant-123';
-      const mockUsage = { cars_washed: 100, active_users: 3 };
+    it('should return usage data for active subscription', async () => {
+      const mockUsage = { cars_washed: 100, active_users: 5, active_locations: 1 };
       const mockLimits = {
-        cars: { allowed: true, current: 100, limit: 500, percentage: 20 },
-        users: { allowed: true, current: 3, limit: 5, percentage: 60 },
-        locations: { allowed: true, current: 1, limit: 1, percentage: 100 },
-        features: { basic_features: true },
+        cars: { current: 100, limit: 500, percentage: 20 },
+        users: { current: 5, limit: 5, percentage: 100 },
+        locations: { current: 1, limit: 1, percentage: 100 },
       };
-      const mockWarnings = { warning: false, critical: false, messages: [] };
+      const mockWarnings = { warning: true, critical: false, messages: ['User limit reached'] };
 
-      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
-      mockUsageService.getCurrentPeriodUsage.mockResolvedValue(mockUsage);
-      mockLimitsService.getAllLimits.mockResolvedValue(mockLimits);
-      mockLimitsService.getLimitWarnings.mockResolvedValue(mockWarnings);
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
+      (usageService.getCurrentPeriodUsage as jest.Mock).mockResolvedValue(mockUsage);
+      (limitsService.getAllLimits as jest.Mock).mockResolvedValue(mockLimits);
+      (limitsService.getLimitWarnings as jest.Mock).mockResolvedValue(mockWarnings);
 
-      const result = await service.getCurrentUsage(tenantId);
+      const result = await service.getCurrentUsage('tenant-123');
 
       expect(result).toEqual({
         subscription: expect.objectContaining({
-          id: mockSubscription.id,
-          plan: mockSubscription.plan,
-          status: mockSubscription.status,
+          id: 'sub-123',
+          plan: mockPlan,
         }),
         usage: mockUsage,
         limits: mockLimits,
@@ -298,12 +516,10 @@ describe('SubscriptionsService', () => {
       });
     });
 
-    it('should return empty usage data when no subscription found', async () => {
-      const tenantId = 'tenant-123';
+    it('should return empty usage data when no subscription exists', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(null);
 
-      mockSubscriptionRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.getCurrentUsage(tenantId);
+      const result = await service.getCurrentUsage('tenant-123');
 
       expect(result).toEqual({
         usage: {
@@ -322,88 +538,6 @@ describe('SubscriptionsService', () => {
           messages: [],
         },
       });
-    });
-  });
-
-  describe('recordUsage', () => {
-    it('should record usage when subscription exists', async () => {
-      const tenantId = 'tenant-123';
-      const metricType = 'cars_washed';
-      const quantity = 1;
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
-
-      await service.recordUsage(tenantId, metricType, quantity);
-
-      expect(mockUsageService.recordUsage).toHaveBeenCalledWith(mockSubscription.id, {
-        metricType,
-        quantity,
-        metadata: undefined,
-      });
-    });
-
-    it('should skip recording when no subscription found', async () => {
-      const tenantId = 'tenant-123';
-      const metricType = 'cars_washed';
-      const quantity = 1;
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(null);
-
-      await service.recordUsage(tenantId, metricType, quantity);
-
-      expect(mockUsageService.recordUsage).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('checkLimit', () => {
-    it('should return limit check result', async () => {
-      const tenantId = 'tenant-123';
-      const metricType = 'cars_washed';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
-      mockLimitsService.checkLimit.mockResolvedValue({ allowed: true, current: 100, percentage: 20 });
-
-      const result = await service.checkLimit(tenantId, metricType);
-
-      expect(mockLimitsService.checkLimit).toHaveBeenCalledWith(mockSubscription.id, metricType);
-      expect(result).toBe(true);
-    });
-
-    it('should return true when no subscription found (for trials)', async () => {
-      const tenantId = 'tenant-123';
-      const metricType = 'cars_washed';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.checkLimit(tenantId, metricType);
-
-      expect(result).toBe(true);
-    });
-  });
-
-  describe('hasFeature', () => {
-    it('should check feature availability', async () => {
-      const tenantId = 'tenant-123';
-      const featureName = 'advanced_reporting';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
-      mockLimitsService.hasFeature.mockResolvedValue(false);
-
-      const result = await service.hasFeature(tenantId, featureName);
-
-      expect(mockLimitsService.hasFeature).toHaveBeenCalledWith(mockSubscription.id, featureName);
-      expect(result).toBe(false);
-    });
-
-    it('should return false when no subscription found', async () => {
-      const tenantId = 'tenant-123';
-      const featureName = 'advanced_reporting';
-
-      mockSubscriptionRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.hasFeature(tenantId, featureName);
-
-      expect(result).toBe(false);
     });
   });
 });

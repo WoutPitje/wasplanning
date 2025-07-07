@@ -5,7 +5,6 @@ import { Tenant } from '../auth/entities/tenant.entity';
 import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
 import { UsageRecord } from '../subscriptions/entities/usage-record.entity';
-import { BillingCycle } from '../subscriptions/entities/billing-cycle.entity';
 import { PaymentMethod } from '../payments/entities/payment-method.entity';
 import { PaymentTransaction } from '../payments/entities/payment-transaction.entity';
 
@@ -24,7 +23,7 @@ async function bootstrap() {
       SubscriptionPlan, 
       Subscription, 
       UsageRecord, 
-      BillingCycle, 
+ 
       PaymentMethod, 
       PaymentTransaction
     ],

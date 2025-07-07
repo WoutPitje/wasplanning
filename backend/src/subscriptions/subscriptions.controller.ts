@@ -120,7 +120,7 @@ export class SubscriptionsController {
   ) {
     const subscription = await this.subscriptionsService.getCurrentSubscription(req.user.tenant.id);
     if (!subscription) {
-      throw new Error('No active subscription found');
+      throw new NotFoundException('No active subscription found');
     }
 
     return await this.usageService.recordUsage(subscription.id, dto);
@@ -142,7 +142,7 @@ export class SubscriptionsController {
   ) {
     const subscription = await this.subscriptionsService.getCurrentSubscription(req.user.tenant.id);
     if (!subscription) {
-      throw new Error('No active subscription found');
+      throw new NotFoundException('No active subscription found');
     }
 
     const startDate = query.startDate ? new Date(query.startDate) : undefined;
@@ -157,17 +157,63 @@ export class SubscriptionsController {
   async getUpcomingBilling(@Request() req: any) {
     const subscription = await this.subscriptionsService.getCurrentSubscription(req.user.tenant.id);
     if (!subscription) {
-      throw new Error('No active subscription found');
+      throw new NotFoundException('No active subscription found');
     }
 
-    // TODO: Calculate upcoming bill based on usage and plan
+    // Get current period usage
+    const currentUsage = await this.usageService.getCurrentPeriodUsage(subscription.id);
+    
+    // Calculate base subscription amount
+    const baseAmount = subscription.billingInterval === 'year' 
+      ? parseFloat(subscription.plan.priceYearly.toString())
+      : parseFloat(subscription.plan.priceMonthly.toString());
+    
+    // Calculate usage-based charges if any
+    let usageCharges = 0;
+    const usageDetails = [];
+    
+    // If the plan has usage-based pricing
+    if (subscription.plan.billingType === 'hybrid' && subscription.plan.overagePricePerCar) {
+      const carsWashed = currentUsage.cars_washed || 0;
+      const planLimit = subscription.plan.maxCarsPerMonth || 0;
+      const overage = Math.max(0, carsWashed - planLimit);
+      
+      if (overage > 0) {
+        const perCarPrice = parseFloat(subscription.plan.overagePricePerCar.toString());
+        usageCharges = overage * perCarPrice;
+        usageDetails.push({
+          type: 'cars_washed_overage',
+          quantity: overage,
+          unitPrice: perCarPrice,
+          total: usageCharges
+        });
+      }
+    }
+    
+    // Apply any credits
+    const creditBalance = parseFloat(subscription.creditBalance?.toString() || '0');
+    const totalBeforeCredits = baseAmount + usageCharges;
+    const creditsApplied = Math.min(creditBalance, totalBeforeCredits);
+    const estimatedAmount = Math.max(0, totalBeforeCredits - creditsApplied);
+
     return {
       subscription: {
         id: subscription.id,
+        currentPeriodStart: subscription.currentPeriodStart,
         currentPeriodEnd: subscription.currentPeriodEnd,
         billingInterval: subscription.billingInterval,
+        plan: subscription.plan.name,
       },
-      estimatedAmount: subscription.plan.priceMonthly, // Simplified for now
+      billing: {
+        baseAmount,
+        usageCharges,
+        usageDetails,
+        totalBeforeCredits,
+        creditBalance,
+        creditsApplied,
+        estimatedAmount,
+      },
+      currentUsage,
       nextBillingDate: subscription.currentPeriodEnd,
     };
   }

@@ -6,6 +6,8 @@ export interface CreateSubscriptionParams {
   customerId: string;
   metadata?: Record<string, any>;
   paymentMethodId?: string;
+  mandateId?: string;
+  times?: number;
 }
 
 export interface UpdateSubscriptionParams {
@@ -32,7 +34,7 @@ export interface CreatePaymentParams {
 export interface Subscription {
   id: string;
   providerId: string;
-  status: 'active' | 'canceled' | 'suspended' | 'pending';
+  status: 'active' | 'canceled' | 'cancelled' | 'suspended' | 'pending' | 'paused' | 'completed';
   amount: number;
   currency: string;
   interval: string;
@@ -56,6 +58,7 @@ export interface Payment {
   currency: string;
   paidAt?: Date;
   metadata?: Record<string, any>;
+  subscriptionId?: string;
 }
 
 export interface WebhookEvent {
@@ -67,7 +70,7 @@ export interface WebhookEvent {
 
 export interface PaymentProvider {
   // Customer management
-  createCustomer(email: string, metadata?: Record<string, any>): Promise<string>;
+  createCustomer(email: string, name?: string, metadata?: Record<string, any>): Promise<string>;
   
   // Subscription management
   createSubscription(params: CreateSubscriptionParams): Promise<Subscription>;
@@ -85,6 +88,6 @@ export interface PaymentProvider {
   getPayment(id: string): Promise<Payment>;
   
   // Webhooks
-  validateWebhook(body: any, signature: string): boolean;
+  validateWebhook(body: any, signature: string): Promise<boolean>;
   parseWebhook(body: any): WebhookEvent;
 }

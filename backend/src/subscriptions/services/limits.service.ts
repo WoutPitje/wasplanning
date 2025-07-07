@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subscription } from '../entities/subscription.entity';
@@ -36,7 +36,7 @@ export class LimitsService {
     });
 
     if (!subscription) {
-      throw new Error('Subscription not found');
+      throw new NotFoundException(`Subscription with ID ${subscriptionId} not found`);
     }
 
     const plan = subscription.plan;
@@ -82,7 +82,7 @@ export class LimitsService {
     });
 
     if (!subscription) {
-      throw new Error('Subscription not found');
+      throw new NotFoundException(`Subscription with ID ${subscriptionId} not found`);
     }
 
     const hasFeature = subscription.plan.features[featureName] === true;
@@ -107,7 +107,7 @@ export class LimitsService {
     });
 
     if (!subscription) {
-      throw new Error('Subscription not found');
+      throw new NotFoundException(`Subscription with ID ${subscriptionId} not found`);
     }
 
     const [cars, users, locations] = await Promise.all([

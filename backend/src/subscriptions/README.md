@@ -17,16 +17,13 @@ subscriptions/
 ├── entities/
 │   ├── subscription.entity.ts          # Main subscription entity
 │   ├── subscription-plan.entity.ts     # Plan definitions
-│   ├── usage-record.entity.ts          # Usage tracking
-│   └── billing-cycle.entity.ts         # Billing period management
+│   └── usage-record.entity.ts          # Usage tracking
 ├── services/
 │   ├── usage.service.ts                # Usage tracking and reporting
 │   ├── limits.service.ts               # Limit enforcement
-│   ├── billing.service.ts              # Billing cycle management
 │   └── proration.service.ts            # Plan change calculations
 ├── subscriptions.controller.ts         # API endpoints
 ├── subscriptions.service.ts            # Core subscription logic
-├── subscription-payment.service.ts     # Payment integration
 └── subscriptions.module.ts             # Module definition
 ```
 
@@ -75,11 +72,14 @@ The system offers three tiers:
   - UNPAID: Multiple payment failures
 - currentPeriodStart: Date
 - currentPeriodEnd: Date
+- nextPaymentDate: Date
 - trialEnd: Date (optional)
 - canceledAt: Date (optional)
 - cancelAtPeriodEnd: boolean
 - billingInterval: MONTH | YEAR
-- providerSubscriptionId: string (Mollie ID)
+- creditBalance: decimal (for plan change credits)
+- mollieCustomerId: string (Mollie customer ID)
+- mollieSubscriptionId: string (Mollie subscription ID)
 - metadata: JSONB
 ```
 
@@ -88,48 +88,29 @@ The system offers three tiers:
 - id: UUID
 - name: PlanName (STARTER | GROEI | ENTERPRISE)
 - displayName: string
-- description: string
 - priceMonthly: decimal
 - priceYearly: decimal
-- currency: string (EUR)
-- limits: JSONB
-  - maxCarsPerMonth: number
-  - maxUsers: number
-  - maxLocations: number
-- features: string[]
-- overageConfig: JSONB (for usage-based billing)
+- billingType: BillingType (SUBSCRIPTION | USAGE_BASED | HYBRID)
+- maxCarsPerMonth: number (nullable for unlimited)
+- maxUsers: number (nullable for unlimited)
+- maxLocations: number (nullable for unlimited)
+- features: Record<string, boolean>
+- overagePricePerCar: decimal (for hybrid billing)
+- overagePricePerLocation: decimal (for hybrid billing)
 - isActive: boolean
-- sortOrder: number
 ```
 
 #### 3. **UsageRecord Entity**
 ```typescript
 - id: UUID
 - subscriptionId: UUID
-- billingCycleId: UUID (optional)
 - metric: UsageMetric
-  - CARS_WASHED
-  - ACTIVE_USERS
-  - ACTIVE_LOCATIONS
+  - cars_washed
+  - active_users
+  - active_locations
 - quantity: number
-- recordedAt: Date
+- period: Date
 - metadata: JSONB
-- aggregatedDate: Date (for daily aggregation)
-```
-
-#### 4. **BillingCycle Entity**
-```typescript
-- id: UUID
-- subscriptionId: UUID
-- startDate: Date
-- endDate: Date
-- status: BillingStatus
-- baseAmount: decimal
-- usageAmount: decimal
-- totalAmount: decimal
-- paidAt: Date (optional)
-- paymentIntentId: string (optional)
-- usageSummary: JSONB
 ```
 
 ### Core Services
@@ -202,23 +183,16 @@ getCurrentLimitsAndUsage(subscriptionId): Promise<LimitsAndUsage>
 hasFeature(subscriptionId, feature): Promise<boolean>
 ```
 
-#### 4. **BillingService**
-Manages billing cycles:
-- Creates billing cycles
-- Calculates charges (base + usage)
-- Tracks payment status
-- Provides billing history
+#### 4. **ProrationService**
+Handles plan change calculations:
+- Calculates credits for downgrades
+- Determines charges for upgrades
+- Uses full-period charging (no daily proration)
 
 Key methods:
 ```typescript
-// Create billing cycle
-createBillingCycle(subscriptionId): Promise<BillingCycle>
-
-// Calculate current charges
-calculateCurrentCharges(subscriptionId): Promise<ChargeCalculation>
-
-// Get billing history
-getBillingHistory(subscriptionId): Promise<BillingCycle[]>
+// Calculate plan change costs
+calculatePlanChange(subscription, newPlan, billingInterval): Promise<ProrationResult>
 ```
 
 ### Subscription Flows
@@ -233,27 +207,31 @@ getBillingHistory(subscriptionId): Promise<BillingCycle[]>
 6. Convert to paid or downgrade after trial
 ```
 
-#### 2. **Paid Subscription Flow**
+#### 2. **Paid Subscription Flow with Mollie**
 ```
 1. User selects plan and billing interval
 2. createPaidSubscription() creates checkout payment
 3. Status: INCOMPLETE
 4. User redirected to Mollie checkout
-5. Payment processed
+5. First payment establishes mandate
 6. Webhook triggers completeNewSubscription()
-7. Status: ACTIVE
-8. Billing period starts
+7. Mollie subscription created automatically
+8. Status: ACTIVE
+9. Recurring billing handled by Mollie
 ```
 
 #### 3. **Plan Change Flow**
 ```
 1. User selects new plan
-2. changeSubscriptionPlan() creates payment
-3. Full month/year charge (no proration currently)
-4. User completes payment
+2. changeSubscriptionPlan() calculates costs
+3. ProrationService determines:
+   - Full charge for upgrades
+   - Credit added for downgrades
+4. If payment needed, redirect to Mollie
 5. Webhook triggers completeSubscriptionChange()
-6. Plan updated, billing period reset
-7. New limits apply immediately
+6. Old Mollie subscription canceled
+7. New Mollie subscription created
+8. Plan updated, new limits apply
 ```
 
 #### 4. **Usage Tracking Flow**
@@ -266,14 +244,14 @@ getBillingHistory(subscriptionId): Promise<BillingCycle[]>
 6. Action blocked if limit exceeded
 ```
 
-#### 5. **Billing Cycle Flow**
+#### 5. **Mollie Recurring Billing Flow**
 ```
-1. Cron job creates billing cycle at period end
-2. Usage summarized for the period
-3. Charges calculated (base + overages)
-4. Payment processed via payment provider
-5. Invoice generated and sent
-6. Next billing cycle created
+1. Mollie automatically charges subscription
+2. Webhook received for payment status
+3. If paid: Transaction recorded
+4. If failed: Status updated to PAST_DUE
+5. Multiple failures: Status to UNPAID
+6. Email notifications sent
 ```
 
 ### API Endpoints
@@ -284,11 +262,15 @@ getBillingHistory(subscriptionId): Promise<BillingCycle[]>
 #### Authenticated Endpoints
 - `GET /subscriptions/current` - Get tenant's subscription
 - `POST /subscriptions` - Create trial subscription
-- `POST /subscriptions/paid` - Create paid subscription
+- `POST /subscriptions/paid` - Create paid subscription with Mollie checkout
 - `PATCH /subscriptions/:id` - Update subscription
 - `DELETE /subscriptions/:id` - Cancel subscription
 - `POST /subscriptions/:id/change-plan` - Change plan with payment
 - `POST /subscriptions/:id/reactivate` - Reactivate canceled subscription
+- `POST /subscriptions/complete-new/:paymentId` - Complete new subscription after payment
+- `POST /subscriptions/complete-change/:paymentId` - Complete plan change after payment
+- `POST /subscriptions/:id/preview-plan-change` - Preview plan change costs
+- `POST /subscriptions/:id/pay-overdue` - Pay overdue subscription
 
 #### Usage Endpoints
 - `GET /subscriptions/usage/current-period` - Current usage and limits
@@ -296,9 +278,9 @@ getBillingHistory(subscriptionId): Promise<BillingCycle[]>
 - `GET /subscriptions/usage/history` - Historical usage
 
 #### Billing Endpoints
-- `GET /subscriptions/billing/current` - Current billing period
-- `GET /subscriptions/billing/history` - Billing history
-- `GET /subscriptions/billing/upcoming` - Upcoming charges estimate
+- `GET /subscriptions/billing/upcoming` - Upcoming charges estimate with usage
+- `GET /subscriptions/credit-balance` - Credit balance and history
+- `GET /subscriptions/pending-payment` - Check for pending payments
 
 ### Frontend Integration
 
@@ -448,9 +430,10 @@ All subscription data is isolated by tenant:
    - Super admin can view all subscriptions
 
 3. **Webhook Security**
-   - Payment webhooks validate transaction ownership
-   - Metadata verification for context
+   - Mollie webhooks verified by fetching resource
+   - Payment ownership validated via metadata
    - Audit logging of all webhook events
+   - Idempotent webhook processing
 
 ### Testing
 
@@ -507,34 +490,55 @@ describe('Subscription Payment Flow', () => {
    - Failed payment reasons
    - Revenue by plan
 
+### Current Implementation Status
+
+✅ **Completed**
+- Mollie integration for subscription payments
+- Trial subscriptions with 30-day period
+- Paid subscriptions with monthly/yearly billing
+- Plan changes with full-period charging
+- Credit system for downgrades
+- Usage tracking and limit enforcement
+- Webhook processing for payment events
+- Multi-tenant isolation
+- Frontend integration
+
+⚠️ **Partial Implementation**
+- Proration (uses full-period charging instead)
+- Usage-based billing (structure in place, not active)
+- Email notifications (manual process)
+
+❌ **Not Implemented**
+- Automated trial expiration handling
+- Payment failure escalation
+- Scheduled billing tasks
+- Usage overage charges
+- Analytics dashboard
+
 ### Future Enhancements
 
-1. **Proration**
-   - Implement proper proration for plan changes
-   - Credit unused time
-   - Charge for upgrades
+1. **Enhanced Proration**
+   - Daily proration for plan changes
+   - Immediate vs end-of-period changes
+   - Partial refunds for downgrades
 
-2. **Recurring Billing**
-   - Automatic monthly/yearly charges
-   - Payment retry logic
-   - Dunning management
-
-3. **Usage-Based Billing**
-   - Overage charges for excess usage
+2. **Advanced Billing**
+   - Usage-based overage charges
    - Tiered pricing models
    - Custom pricing rules
+   - Multiple payment methods
 
-4. **Advanced Features**
-   - Multiple subscriptions per tenant
-   - Add-on products
-   - Coupon/discount codes
-   - Referral program
+3. **Automation**
+   - Scheduled trial expiration
+   - Automated payment retries
+   - Dunning email sequences
+   - Usage alerts and notifications
 
-5. **Analytics Dashboard**
-   - Revenue analytics
+4. **Analytics & Reporting**
+   - MRR/ARR dashboard
+   - Churn analytics
    - Usage trends
-   - Subscription lifecycle
-   - Cohort analysis
+   - Revenue forecasting
 
 ## Best Practices
 

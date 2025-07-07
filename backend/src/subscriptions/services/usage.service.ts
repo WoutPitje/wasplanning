@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { UsageRecord, MetricType } from '../entities/usage-record.entity';
@@ -67,7 +67,7 @@ export class UsageService {
     });
 
     if (!subscription) {
-      throw new Error('Subscription not found');
+      throw new NotFoundException(`Subscription with ID ${subscriptionId} not found`);
     }
 
     const whereClause: any = {

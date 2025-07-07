@@ -3,7 +3,6 @@ import { Tenant } from '../../auth/entities/tenant.entity';
 import { SubscriptionPlan } from './subscription-plan.entity';
 import { PaymentMethod } from '../../payments/entities/payment-method.entity';
 import { UsageRecord } from './usage-record.entity';
-import { BillingCycle } from './billing-cycle.entity';
 
 export enum SubscriptionStatus {
   TRIALING = 'trialing',
@@ -97,14 +96,14 @@ export class Subscription {
   @Column({ name: 'mollie_mandate_id', length: 255, nullable: true })
   mollieMandateId: string;
 
+  @Column({ name: 'mollie_subscription_id', length: 255, nullable: true })
+  mollieSubscriptionId: string;
+
   @Column({ type: 'jsonb', default: {} })
   metadata: Record<string, any>;
 
   @OneToMany(() => UsageRecord, (usage) => usage.subscription)
   usageRecords: UsageRecord[];
-
-  @OneToMany(() => BillingCycle, (cycle) => cycle.subscription)
-  billingCycles: BillingCycle[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

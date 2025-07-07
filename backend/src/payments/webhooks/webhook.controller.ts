@@ -42,7 +42,7 @@ export class WebhookController {
 
     try {
       // Validate webhook signature
-      const isValid = this.mollieProvider.validateWebhook(body, signature);
+      const isValid = await this.mollieProvider.validateWebhook(body, signature);
       if (!isValid) {
         this.logger.error('Invalid Mollie webhook signature');
         throw new BadRequestException('Invalid webhook signature');
@@ -166,9 +166,9 @@ export class WebhookController {
       if (payment.metadata) {
         const { action } = payment.metadata;
         
-        if (action === 'new_subscription') {
-          // Handle new subscription creation
-          this.logger.log('Processing new subscription payment');
+        if (action === 'new_subscription' || action === 'subscription_mandate_setup') {
+          // Handle new subscription creation or mandate setup
+          this.logger.log(`Processing ${action} payment`);
           try {
             await this.subscriptionsService.completeNewSubscription(payment.providerId);
             this.logger.log(`Successfully completed new subscription for payment ${payment.providerId}`);
@@ -186,6 +186,10 @@ export class WebhookController {
             this.logger.error(`Failed to complete subscription change: ${error.message}`);
             // Don't throw - we've already marked the payment as completed
           }
+        } else if (action === 'overdue_payment') {
+          // Handle overdue payment
+          this.logger.log('Processing overdue payment');
+          // The subscription service will handle this through normal payment completion
         }
       }
     } catch (error) {
@@ -251,8 +255,23 @@ export class WebhookController {
       // Get subscription details from Mollie
       const subscription = await this.mollieProvider.getSubscription(event.data.id);
       
-      // TODO: Update local subscription record with provider subscription ID
+      // This event is rarely used as subscriptions are created synchronously
       this.logger.log(`Subscription ${subscription.providerId} created in Mollie`);
+      
+      // Update local record if needed
+      if (subscription.metadata?.subscriptionId) {
+        const subscriptionRepo = this.paymentsService['transactionRepository'].manager.getRepository('Subscription');
+        await subscriptionRepo.update(
+          { id: subscription.metadata.subscriptionId },
+          { 
+            mollieSubscriptionId: subscription.providerId,
+            metadata: {
+              mollieStatus: subscription.status,
+              createdViaWebhook: true,
+            }
+          }
+        );
+      }
     } catch (error) {
       this.logger.error(`Failed to process subscription created event: ${error.message}`);
     }
@@ -262,11 +281,57 @@ export class WebhookController {
     this.logger.log(`Subscription updated: ${event.data.id}`);
     
     try {
-      // Get subscription details from Mollie
-      const subscription = await this.mollieProvider.getSubscription(event.data.id);
+      // For Mollie, we need to fetch the subscription to see what changed
+      // The subscription ID format is sub_xxxxx
+      const mollieSubscriptionId = event.data.id;
       
-      // TODO: Update local subscription record
-      this.logger.log(`Subscription ${subscription.providerId} updated`);
+      // Find local subscription by Mollie ID
+      const subscriptionRepo = this.paymentsService['transactionRepository'].manager.getRepository('Subscription');
+      const localSubscription = await subscriptionRepo.findOne({
+        where: { mollieSubscriptionId },
+        relations: ['plan'],
+      });
+      
+      if (!localSubscription) {
+        this.logger.warn(`No local subscription found for Mollie subscription ${mollieSubscriptionId}`);
+        return;
+      }
+      
+      // Get updated details from Mollie
+      const mollieSubscription = await this.mollieProvider.getSubscription(
+        mollieSubscriptionId,
+        localSubscription.mollieCustomerId
+      );
+      
+      // Update local subscription based on Mollie status
+      const previousStatus = localSubscription.status;
+      
+      switch (mollieSubscription.status) {
+        case 'active':
+          localSubscription.status = 'active' as any;
+          localSubscription.nextPaymentDate = mollieSubscription.nextPaymentDate;
+          break;
+        case 'canceled':
+        case 'cancelled':
+          localSubscription.status = 'canceled' as any;
+          localSubscription.canceledAt = new Date();
+          break;
+        case 'suspended':
+        case 'paused':
+          localSubscription.status = 'past_due' as any;
+          break;
+        case 'completed':
+          localSubscription.status = 'canceled' as any;
+          localSubscription.metadata.completedAt = new Date().toISOString();
+          break;
+      }
+      
+      localSubscription.metadata.mollieStatus = mollieSubscription.status;
+      localSubscription.metadata.lastWebhookUpdate = new Date().toISOString();
+      
+      await subscriptionRepo.save(localSubscription);
+      
+      this.logger.log(`Updated subscription ${localSubscription.id} status from ${previousStatus} to ${localSubscription.status}`);
     } catch (error) {
       this.logger.error(`Failed to process subscription updated event: ${error.message}`);
     }
@@ -276,11 +341,28 @@ export class WebhookController {
     this.logger.log(`Subscription canceled: ${event.data.id}`);
     
     try {
-      // Get subscription details from Mollie
-      const subscription = await this.mollieProvider.getSubscription(event.data.id);
+      const mollieSubscriptionId = event.data.id;
       
-      // TODO: Update local subscription status
-      this.logger.log(`Subscription ${subscription.providerId} canceled`);
+      // Find local subscription by Mollie ID
+      const subscriptionRepo = this.paymentsService['transactionRepository'].manager.getRepository('Subscription');
+      const localSubscription = await subscriptionRepo.findOne({
+        where: { mollieSubscriptionId },
+      });
+      
+      if (!localSubscription) {
+        this.logger.warn(`No local subscription found for canceled Mollie subscription ${mollieSubscriptionId}`);
+        return;
+      }
+      
+      // Update local subscription status
+      localSubscription.status = 'canceled' as any;
+      localSubscription.canceledAt = new Date();
+      localSubscription.metadata.canceledViaWebhook = true;
+      localSubscription.metadata.canceledAt = new Date().toISOString();
+      
+      await subscriptionRepo.save(localSubscription);
+      
+      this.logger.log(`Marked subscription ${localSubscription.id} as canceled via webhook`);
     } catch (error) {
       this.logger.error(`Failed to process subscription canceled event: ${error.message}`);
     }
@@ -293,18 +375,33 @@ export class WebhookController {
       // Get payment details from Mollie
       const payment = await this.mollieProvider.getPayment(event.data.id);
       
-      if (payment.metadata?.subscriptionId) {
-        // This is a recurring subscription payment
-        this.logger.log(`Processing recurring payment for subscription ${payment.metadata.subscriptionId}`);
+      // For subscription payments, Mollie includes subscriptionId in the payment object
+      // We need to find the local subscription by Mollie subscription ID
+      if (payment.metadata?.subscriptionId || payment.subscriptionId) {
+        const mollieSubscriptionId = payment.subscriptionId || payment.metadata?.subscriptionId;
         
-        // Update subscription period
-        await this.subscriptionsService.processRecurringPayment(
-          payment.metadata.subscriptionId,
-          payment.providerId,
-          payment.amount,
-        );
+        // Find local subscription
+        const subscriptionRepo = this.paymentsService['transactionRepository'].manager.getRepository('Subscription');
+        const localSubscription = await subscriptionRepo.findOne({
+          where: { mollieSubscriptionId },
+        });
         
-        this.logger.log(`Recurring payment processed for subscription ${payment.metadata.subscriptionId}`);
+        if (localSubscription) {
+          this.logger.log(`Processing recurring payment for subscription ${localSubscription.id}`);
+          
+          // Update subscription period
+          await this.subscriptionsService.processRecurringPayment(
+            localSubscription.id,
+            payment.providerId,
+            payment.amount,
+          );
+          
+          this.logger.log(`Recurring payment processed for subscription ${localSubscription.id}`);
+        } else {
+          this.logger.warn(`No local subscription found for Mollie subscription ${mollieSubscriptionId}`);
+        }
+      } else {
+        this.logger.warn(`Subscription payment ${payment.providerId} has no subscription ID`);
       }
     } catch (error) {
       this.logger.error(`Failed to process subscription payment paid event: ${error.message}`);
@@ -318,16 +415,30 @@ export class WebhookController {
       // Get payment details from Mollie
       const payment = await this.mollieProvider.getPayment(event.data.id);
       
-      if (payment.metadata?.subscriptionId) {
-        // Mark subscription as past due
-        this.logger.log(`Marking subscription ${payment.metadata.subscriptionId} as past due`);
+      // For subscription payments, find the local subscription
+      if (payment.metadata?.subscriptionId || payment.subscriptionId) {
+        const mollieSubscriptionId = payment.subscriptionId || payment.metadata?.subscriptionId;
         
-        await this.subscriptionsService.handleFailedPayment(
-          payment.metadata.subscriptionId,
-          payment.providerId,
-        );
+        // Find local subscription
+        const subscriptionRepo = this.paymentsService['transactionRepository'].manager.getRepository('Subscription');
+        const localSubscription = await subscriptionRepo.findOne({
+          where: { mollieSubscriptionId },
+        });
         
-        this.logger.log(`Failed payment handled for subscription ${payment.metadata.subscriptionId}`);
+        if (localSubscription) {
+          this.logger.log(`Marking subscription ${localSubscription.id} as past due`);
+          
+          await this.subscriptionsService.handleFailedPayment(
+            localSubscription.id,
+            payment.providerId,
+          );
+          
+          this.logger.log(`Failed payment handled for subscription ${localSubscription.id}`);
+        } else {
+          this.logger.warn(`No local subscription found for failed payment on Mollie subscription ${mollieSubscriptionId}`);
+        }
+      } else {
+        this.logger.warn(`Subscription payment failed ${payment.providerId} has no subscription ID`);
       }
     } catch (error) {
       this.logger.error(`Failed to process subscription payment failed event: ${error.message}`);

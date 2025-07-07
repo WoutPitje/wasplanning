@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn, Index } from 'typeorm';
 import { Subscription } from './subscription.entity';
-import { BillingCycle } from './billing-cycle.entity';
 
 export enum MetricType {
   CARS_WASHED = 'cars_washed',
@@ -21,12 +20,6 @@ export class UsageRecord {
   @Column({ name: 'subscription_id' })
   subscriptionId: string;
 
-  @ManyToOne(() => BillingCycle, { nullable: true })
-  @JoinColumn({ name: 'billing_cycle_id' })
-  billingCycle: BillingCycle;
-
-  @Column({ name: 'billing_cycle_id', nullable: true })
-  billingCycleId: string;
 
   @Column({
     name: 'metric_type',

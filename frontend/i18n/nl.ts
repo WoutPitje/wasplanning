@@ -1316,7 +1316,7 @@ export default {
       loading: 'Betalingsgeschiedenis laden...',
       noHistory: 'Geen betalingsgeschiedenis gevonden',
       date: 'Datum',
-      description: 'Omschrijving',
+      descriptionColumn: 'Omschrijving',
       type: 'Type',
       status: 'Status',
       amount: 'Bedrag',
