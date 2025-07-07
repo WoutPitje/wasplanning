@@ -8,6 +8,7 @@ import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { PaymentsService } from '../payments/payments.service';
 import { UsageService } from './services/usage.service';
 import { LimitsService } from './services/limits.service';
+import { ProrationService } from './services/proration.service';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()
@@ -24,6 +25,7 @@ export class SubscriptionsService {
     private usageService: UsageService,
     private limitsService: LimitsService,
     private auditService: AuditService,
+    private prorationService: ProrationService,
   ) {}
 
   async createSubscription(
@@ -293,6 +295,8 @@ export class SubscriptionsService {
         currentPeriodStart: subscription.currentPeriodStart,
         currentPeriodEnd: subscription.currentPeriodEnd,
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+        creditBalance: Number(subscription.creditBalance || 0),
+        billingInterval: subscription.billingInterval,
       },
       usage,
       limits,
@@ -348,6 +352,153 @@ export class SubscriptionsService {
     return this.limitsService.hasFeature(subscription.id, featureName);
   }
 
+  async getCreditBalance(tenantId: string): Promise<{
+    currentBalance: number;
+    transactions: Array<{
+      date: string;
+      type: 'earned' | 'used';
+      amount: number;
+      description: string;
+      relatedPlan?: string;
+    }>;
+  }> {
+    const subscription = await this.getCurrentSubscription(tenantId);
+    if (!subscription) {
+      return {
+        currentBalance: 0,
+        transactions: [],
+      };
+    }
+
+    // Get credit transactions from audit logs
+    const auditLogs = await this.auditService.findByResourceId(subscription.id);
+    
+    const creditTransactions = auditLogs
+      .filter(log => 
+        log.action.includes('DOWNGRADE') || 
+        log.action.includes('CREDIT') || 
+        log.action.includes('UPGRADED_WITH_CREDIT')
+      )
+      .map(log => {
+        const details = log.details as any;
+        let type: 'earned' | 'used' = 'earned';
+        let amount = 0;
+        let description = '';
+
+        if (log.action === 'SUBSCRIPTION_DOWNGRADED') {
+          type = 'earned';
+          amount = details.credit || 0;
+          description = `Credit from downgrade: ${details.oldPlan} → ${details.newPlan}`;
+        } else if (log.action === 'SUBSCRIPTION_UPGRADED_WITH_CREDIT') {
+          type = 'used';
+          amount = details.creditUsed || 0;
+          description = `Credit used for upgrade: ${details.oldPlan} → ${details.newPlan}`;
+        }
+
+        return {
+          date: log.created_at.toISOString(),
+          type,
+          amount,
+          description,
+          relatedPlan: details.newPlan || details.oldPlan,
+        };
+      })
+      .filter(transaction => transaction.amount > 0)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return {
+      currentBalance: Number(subscription.creditBalance || 0),
+      transactions: creditTransactions,
+    };
+  }
+
+  /**
+   * Preview plan change costs and credit usage without creating payment
+   */
+  async previewPlanChange(
+    tenantId: string,
+    subscriptionId: string,
+    newPlanName: PlanName,
+    billingInterval?: BillingInterval,
+  ): Promise<{
+    currentPlan: SubscriptionPlan;
+    newPlan: SubscriptionPlan;
+    proration: any;
+    creditBreakdown: {
+      currentBalance: number;
+      willBeUsed: number;
+      willRemain: number;
+      additionalPayment: number;
+    };
+  }> {
+    this.logger.log(`Previewing plan change for subscription ${subscriptionId} to ${newPlanName}`);
+
+    // Get current subscription
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { id: subscriptionId, tenantId },
+      relations: ['plan'],
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('Subscription not found');
+    }
+
+    // Get new plan
+    const newPlan = await this.planRepository.findOne({
+      where: { name: newPlanName, isActive: true },
+    });
+
+    if (!newPlan) {
+      throw new NotFoundException('New subscription plan not found');
+    }
+
+    // Use the new billing interval if provided, otherwise keep the current one
+    const newBillingInterval = billingInterval || subscription.billingInterval;
+    
+    // Calculate proration for the plan change
+    const proration = this.prorationService.calculateProration(
+      subscription,
+      subscription.plan,
+      newPlan,
+      newBillingInterval,
+    );
+
+    // Calculate credit breakdown
+    const existingCredit = Number(subscription.creditBalance || 0);
+    let creditToUse = 0;
+    let remainingCredit = existingCredit;
+    let additionalPayment = proration.amount;
+
+    if (proration.isUpgrade && existingCredit > 0 && proration.amount > 0) {
+      creditToUse = Math.min(existingCredit, proration.amount);
+      remainingCredit = existingCredit - creditToUse;
+      additionalPayment = Math.max(0, proration.amount - creditToUse);
+    } else if (!proration.isUpgrade) {
+      // For downgrades, add to existing credit
+      remainingCredit = existingCredit + proration.credit;
+      additionalPayment = 0;
+    }
+
+    return {
+      currentPlan: subscription.plan,
+      newPlan,
+      proration: {
+        ...proration,
+        daysRemaining: proration.daysRemaining,
+        description: proration.description,
+        isUpgrade: proration.isUpgrade,
+        originalAmount: proration.amount,
+        creditAmount: proration.credit,
+      },
+      creditBreakdown: {
+        currentBalance: existingCredit,
+        willBeUsed: creditToUse,
+        willRemain: remainingCredit,
+        additionalPayment,
+      },
+    };
+  }
+
   /**
    * Change subscription plan with payment processing
    * This creates a checkout URL for the user to complete payment
@@ -383,12 +534,110 @@ export class SubscriptionsService {
     // Use the new billing interval if provided, otherwise keep the current one
     const newBillingInterval = billingInterval || subscription.billingInterval;
     
-    // Calculate the amount to charge based on the new billing interval
-    const amount = newBillingInterval === BillingInterval.YEAR 
-      ? parseFloat(newPlan.priceYearly.toString()) 
-      : parseFloat(newPlan.priceMonthly.toString());
+    // Calculate proration for the plan change
+    const proration = this.prorationService.calculateProration(
+      subscription,
+      subscription.plan,
+      newPlan,
+      newBillingInterval,
+    );
 
-    // Create a one-time payment for the subscription change
+    // Add existing credit info
+    const existingCredit = Number(subscription.creditBalance || 0);
+    proration.existingCredit = existingCredit;
+
+    this.logger.log(`Proration result: ${JSON.stringify(proration)}`);
+    this.logger.log(`Existing credit balance: €${existingCredit}`);
+
+    // If downgrade (credit), update subscription immediately without payment
+    if (!proration.isUpgrade && proration.credit > 0) {
+      this.logger.log(`Downgrade detected - applying ${proration.credit} credit`);
+      
+      // Store the old plan name before updating
+      const oldPlanName = subscription.plan.name;
+      
+      // Update subscription
+      subscription.planId = newPlan.id;
+      subscription.plan = newPlan;
+      subscription.billingInterval = newBillingInterval;
+      subscription.creditBalance = Number(subscription.creditBalance || 0) + proration.credit;
+      
+      const updatedSubscription = await this.subscriptionRepository.save(subscription);
+      
+      // Audit log
+      await this.auditService.logAction({
+        action: 'SUBSCRIPTION_DOWNGRADED',
+        resource_type: 'Subscription',
+        resource_id: subscriptionId,
+        details: {
+          oldPlan: oldPlanName,
+          newPlan: newPlanName,
+          credit: proration.credit,
+          description: proration.description,
+        },
+        tenant_id: tenantId,
+      });
+      
+      return {
+        checkoutUrl: '', // No payment needed
+        subscription: updatedSubscription,
+      };
+    }
+
+    // For upgrades, check if we need payment after applying credits
+    let finalAmount = proration.amount;
+    
+    // Apply existing credit balance to the upgrade amount
+    if (proration.isUpgrade && existingCredit > 0) {
+      this.logger.log(`Applying €${existingCredit} credit to upgrade amount of €${proration.amount}`);
+      finalAmount = Math.max(0, proration.amount - existingCredit);
+      
+      // Update credit balance
+      if (finalAmount === 0) {
+        // All covered by credit, deduct what was used
+        subscription.creditBalance = existingCredit - proration.amount;
+      } else {
+        // Credit partially covered, set to 0
+        subscription.creditBalance = 0;
+      }
+      
+      this.logger.log(`Final amount after credit: €${finalAmount}`);
+    }
+    
+    // If no payment needed, update immediately
+    if (finalAmount === 0) {
+      this.logger.log('No payment needed after applying credits, updating subscription immediately');
+      
+      // Store the old plan name before updating
+      const oldPlanName = subscription.plan.name;
+      
+      subscription.planId = newPlan.id;
+      subscription.plan = newPlan;
+      subscription.billingInterval = newBillingInterval;
+      
+      const updatedSubscription = await this.subscriptionRepository.save(subscription);
+      
+      // Audit log
+      await this.auditService.logAction({
+        action: 'SUBSCRIPTION_UPGRADED_WITH_CREDIT',
+        resource_type: 'Subscription',
+        resource_id: subscriptionId,
+        details: {
+          oldPlan: oldPlanName,
+          newPlan: newPlanName,
+          creditUsed: proration.amount,
+          remainingCredit: subscription.creditBalance,
+        },
+        tenant_id: tenantId,
+      });
+      
+      return {
+        checkoutUrl: '',
+        subscription: updatedSubscription,
+      };
+    }
+
+    // Create a one-time payment for the prorated amount
     try {
       // First ensure we have a Mollie customer for this tenant
       const customer = await this.paymentsService.getOrCreateCustomer(tenantId, {
@@ -396,11 +645,17 @@ export class SubscriptionsService {
         metadata: { tenantId, action: 'subscription_change' },
       });
 
-      // Create payment for the new plan
+      // Update description to include credit info if applicable
+      let paymentDescription = proration.description;
+      if (existingCredit > 0 && finalAmount < proration.amount) {
+        paymentDescription += ` (€${existingCredit.toFixed(2)} credit applied)`;
+      }
+      
+      // Create payment for the final amount after credits
       const payment = await this.paymentsService.createCheckoutPayment({
-        amount,
+        amount: finalAmount,
         currency: 'EUR',
-        description: `Subscription upgrade to ${newPlan.displayName}`,
+        description: paymentDescription,
         customerId: customer.id,
         redirectUrl: returnUrl,
         webhookUrl: process.env.MOLLIE_WEBHOOK_URL,
@@ -410,8 +665,31 @@ export class SubscriptionsService {
           newPlanName,
           newBillingInterval,
           action: 'subscription_change',
+          prorationDetails: {
+            daysRemaining: proration.daysRemaining,
+            totalDays: proration.totalDays,
+            credit: proration.credit,
+            originalAmount: proration.amount,
+            creditApplied: proration.amount - finalAmount,
+          },
         },
       });
+      
+      // Store the payment ID and update credit balance if credits were used
+      subscription.metadata = {
+        ...subscription.metadata,
+        pendingChangePaymentId: payment.id,
+        pendingNewPlanName: newPlanName,
+        pendingNewBillingInterval: newBillingInterval,
+        creditApplied: proration.amount - finalAmount,
+      };
+      
+      // If we used credits for partial payment, update the balance
+      if (existingCredit > 0 && finalAmount > 0) {
+        subscription.creditBalance = 0;
+      }
+      
+      await this.subscriptionRepository.save(subscription);
 
       // Audit log subscription change attempt
       await this.auditService.logAction({
@@ -421,8 +699,9 @@ export class SubscriptionsService {
         details: {
           currentPlan: subscription.plan.name,
           newPlan: newPlanName,
-          amount,
+          amount: proration.amount,
           paymentId: payment.id,
+          prorationDescription: proration.description,
         },
         tenant_id: tenantId,
       });
@@ -601,6 +880,9 @@ export class SubscriptionsService {
         activationPaymentId: paymentId,
       };
       delete subscription.metadata.pendingPaymentId;
+      delete subscription.metadata.pendingChangePaymentId;
+      delete subscription.metadata.pendingNewPlanName;
+      delete subscription.metadata.pendingNewBillingInterval;
 
       const updatedSubscription = await this.subscriptionRepository.save(subscription);
 
@@ -699,6 +981,11 @@ export class SubscriptionsService {
       }
       
       this.logger.log(`After update - Plan ID: ${subscription.planId}, Status: ${subscription.status}`)
+      
+      // Clear pending payment metadata
+      delete subscription.metadata.pendingChangePaymentId;
+      delete subscription.metadata.pendingNewPlanName;
+      delete subscription.metadata.pendingNewBillingInterval;
 
       const updatedSubscription = await this.subscriptionRepository.save(subscription);
 
@@ -728,6 +1015,170 @@ export class SubscriptionsService {
       return reloadedSubscription || updatedSubscription;
     } catch (error) {
       this.logger.error('Failed to complete subscription change', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process a recurring subscription payment
+   * Called from webhook when a subscription payment is successful
+   */
+  async processRecurringPayment(
+    subscriptionId: string,
+    paymentId: string,
+    amount: number,
+  ): Promise<void> {
+    this.logger.log(`Processing recurring payment for subscription ${subscriptionId}`);
+
+    try {
+      const subscription = await this.subscriptionRepository.findOne({
+        where: { id: subscriptionId },
+        relations: ['plan'],
+      });
+
+      if (!subscription) {
+        throw new NotFoundException('Subscription not found');
+      }
+
+      // Update subscription period
+      const now = new Date();
+      subscription.currentPeriodStart = now;
+      
+      if (subscription.billingInterval === BillingInterval.YEAR) {
+        subscription.currentPeriodEnd = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+      } else {
+        subscription.currentPeriodEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+      }
+
+      // Apply any credits
+      if (subscription.creditBalance && subscription.creditBalance > 0) {
+        const creditUsed = Math.min(subscription.creditBalance, amount);
+        subscription.creditBalance = subscription.creditBalance - creditUsed;
+        this.logger.log(`Applied ${creditUsed} credit to payment`);
+      }
+
+      // Update next payment date
+      subscription.nextPaymentDate = subscription.currentPeriodEnd;
+      subscription.status = SubscriptionStatus.ACTIVE;
+
+      await this.subscriptionRepository.save(subscription);
+
+      // Audit log
+      await this.auditService.logAction({
+        action: 'SUBSCRIPTION_PAYMENT_PROCESSED',
+        resource_type: 'Subscription',
+        resource_id: subscriptionId,
+        details: {
+          paymentId,
+          amount,
+          newPeriodEnd: subscription.currentPeriodEnd,
+        },
+        tenant_id: subscription.tenantId,
+      });
+
+      this.logger.log(`Subscription ${subscriptionId} renewed until ${subscription.currentPeriodEnd}`);
+    } catch (error) {
+      this.logger.error('Failed to process recurring payment', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle a failed subscription payment
+   * Called from webhook when a subscription payment fails
+   */
+  async handleFailedPayment(
+    subscriptionId: string,
+    paymentId: string,
+  ): Promise<void> {
+    this.logger.log(`Handling failed payment for subscription ${subscriptionId}`);
+
+    try {
+      const subscription = await this.subscriptionRepository.findOne({
+        where: { id: subscriptionId },
+      });
+
+      if (!subscription) {
+        throw new NotFoundException('Subscription not found');
+      }
+
+      // Mark subscription as past due
+      subscription.status = SubscriptionStatus.PAST_DUE;
+
+      await this.subscriptionRepository.save(subscription);
+
+      // Audit log
+      await this.auditService.logAction({
+        action: 'SUBSCRIPTION_PAYMENT_FAILED',
+        resource_type: 'Subscription',
+        resource_id: subscriptionId,
+        details: {
+          paymentId,
+          previousStatus: subscription.status,
+        },
+        tenant_id: subscription.tenantId,
+      });
+
+      // TODO: Send notification email to tenant
+
+      this.logger.log(`Subscription ${subscriptionId} marked as past due`);
+    } catch (error) {
+      this.logger.error('Failed to handle failed payment', error);
+      throw error;
+    }
+  }
+
+  async payOverdueSubscription(tenantId: string, subscriptionId: string): Promise<{ checkoutUrl: string }> {
+    this.logger.log(`Creating overdue payment for subscription ${subscriptionId}`);
+    
+    try {
+      // Get the subscription
+      const subscription = await this.subscriptionRepository.findOne({
+        where: { id: subscriptionId, tenantId },
+        relations: ['plan'],
+      });
+
+      if (!subscription) {
+        throw new NotFoundException('Subscription not found');
+      }
+
+      if (subscription.status !== SubscriptionStatus.PAST_DUE) {
+        throw new BadRequestException('Subscription is not overdue');
+      }
+
+      // Calculate the amount to pay (current period price minus any credits)
+      const planPrice = subscription.billingInterval === BillingInterval.MONTH 
+        ? subscription.plan.priceMonthly 
+        : subscription.plan.priceYearly;
+      
+      const amountToPay = Math.max(0, planPrice - (subscription.creditBalance || 0));
+
+      // Create payment with Mollie
+      const payment = await this.paymentsService.createCheckoutPayment({
+        amount: amountToPay,
+        currency: 'EUR',
+        description: `Achterstallige betaling - ${subscription.plan.displayName}`,
+        redirectUrl: `${process.env.FRONTEND_URL}/garage-admin/payment-return`,
+        webhookUrl: `${process.env.API_URL}/payments/webhook`,
+        metadata: {
+          type: 'overdue_payment',
+          subscriptionId: subscription.id,
+          tenantId: subscription.tenantId,
+        },
+      });
+
+      // Store payment ID in subscription metadata
+      subscription.metadata = {
+        ...subscription.metadata,
+        pendingOverduePaymentId: payment.id,
+      };
+      await this.subscriptionRepository.save(subscription);
+
+      this.logger.log(`Created overdue payment ${payment.id} for subscription ${subscriptionId}`);
+      
+      return { checkoutUrl: payment.checkoutUrl };
+    } catch (error) {
+      this.logger.error('Failed to create overdue payment', error);
       throw error;
     }
   }

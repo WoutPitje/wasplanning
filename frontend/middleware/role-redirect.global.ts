@@ -3,17 +3,22 @@ import { UserRole } from '~/types/auth'
 export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
   
-  // Skip if not authenticated or already redirecting
-  if (!authStore.isAuthenticated || to.path === '/login') {
+  // Skip for login page
+  if (to.path === '/login') {
     return
   }
   
-  // Initialize auth if needed
-  if (!authStore.user) {
+  // Initialize auth from localStorage if needed (client-side only)
+  if (import.meta.client && !authStore.user && !authStore.isAuthenticated) {
     authStore.initAuth()
   }
   
-  // Skip if no user data yet
+  // Skip if not authenticated after initialization
+  if (!authStore.isAuthenticated) {
+    return
+  }
+  
+  // Skip if no user data yet (might be still loading)
   if (!authStore.user) {
     return
   }

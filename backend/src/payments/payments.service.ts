@@ -254,10 +254,16 @@ export class PaymentsService {
     providerTransactionId: string,
     status: TransactionStatus,
   ): Promise<void> {
-    await this.transactionRepository.update(
+    const result = await this.transactionRepository.update(
       { providerTransactionId },
       { status },
     );
+
+    if (result.affected === 0) {
+      this.logger.warn(`No transaction found with providerTransactionId: ${providerTransactionId}`);
+    } else {
+      this.logger.log(`Updated transaction ${providerTransactionId} status to ${status}`);
+    }
   }
 
   /**
@@ -305,6 +311,45 @@ export class PaymentsService {
         redirectUrl: params.redirectUrl,
         webhookUrl: params.webhookUrl,
         metadata: params.metadata,
+      });
+
+      // Extract tenantId from metadata
+      const tenantId = params.metadata?.tenantId;
+      if (!tenantId) {
+        this.logger.error('No tenantId found in payment metadata');
+        throw new BadRequestException('Invalid payment metadata: missing tenantId');
+      }
+
+      // Create a payment transaction record in the database
+      const transaction = this.transactionRepository.create({
+        tenantId,
+        provider: 'mollie',
+        providerTransactionId: payment.id,
+        type: params.metadata?.type || TransactionType.SUBSCRIPTION,
+        status: TransactionStatus.PENDING,
+        amount: params.amount,
+        currency: params.currency,
+        description: params.description,
+        metadata: params.metadata || {},
+      });
+
+      await this.transactionRepository.save(transaction);
+      this.logger.log(`Created payment transaction ${transaction.id} for Mollie payment ${payment.id}`);
+
+      // Audit log payment creation
+      await this.auditService.logAction({
+        action: 'PAYMENT_CREATED',
+        resource_type: 'PaymentTransaction',
+        resource_id: transaction.id,
+        details: {
+          amount: params.amount,
+          currency: params.currency,
+          status: TransactionStatus.PENDING,
+          provider: 'mollie',
+          providerTransactionId: payment.id,
+          type: transaction.type,
+        },
+        tenant_id: tenantId,
       });
 
       return payment;

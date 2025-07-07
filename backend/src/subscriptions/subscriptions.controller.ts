@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -171,6 +172,22 @@ export class SubscriptionsController {
     };
   }
 
+  @Post(':id/preview-plan-change')
+  @ApiOperation({ summary: 'Preview plan change costs and credit usage' })
+  @ApiResponse({ status: 200, description: 'Plan change preview calculated successfully' })
+  async previewPlanChange(
+    @Request() req: any,
+    @Param('id') subscriptionId: string,
+    @Body() body: { newPlanName: string; billingInterval?: string },
+  ) {
+    return await this.subscriptionsService.previewPlanChange(
+      req.user.tenant.id,
+      subscriptionId,
+      body.newPlanName as any,
+      body.billingInterval as any,
+    );
+  }
+
   @Post(':id/change-plan')
   @ApiOperation({ summary: 'Change subscription plan with payment' })
   @ApiResponse({ status: 200, description: 'Plan change initiated successfully' })
@@ -195,10 +212,51 @@ export class SubscriptionsController {
     return await this.subscriptionsService.completeSubscriptionChange(paymentId);
   }
 
+  @Get('pending-payment')
+  @ApiOperation({ summary: 'Get pending payment for current subscription' })
+  @ApiResponse({ status: 200, description: 'Pending payment info retrieved' })
+  async getPendingPayment(@Request() req: any) {
+    const subscription = await this.subscriptionsService.getCurrentSubscription(req.user.tenant.id);
+    if (!subscription) {
+      throw new NotFoundException('No subscription found');
+    }
+    
+    const pendingPaymentId = subscription.metadata?.pendingChangePaymentId || subscription.metadata?.pendingPaymentId;
+    if (!pendingPaymentId) {
+      return null;
+    }
+    
+    return {
+      paymentId: pendingPaymentId,
+      action: subscription.metadata?.pendingChangePaymentId ? 'change' : 'new',
+      planName: subscription.metadata?.pendingNewPlanName || subscription.plan?.name,
+    };
+  }
+
+  @Get('credit-balance')
+  @ApiOperation({ summary: 'Get credit balance and transaction history' })
+  @ApiResponse({ status: 200, description: 'Credit information retrieved successfully' })
+  async getCreditBalance(@Request() req: any) {
+    return await this.subscriptionsService.getCreditBalance(req.user.tenant.id);
+  }
+
   @Post('complete-new/:paymentId')
   @ApiOperation({ summary: 'Complete new subscription creation after payment' })
   @ApiResponse({ status: 200, description: 'Subscription created successfully' })
   async completeNewSubscription(@Param('paymentId') paymentId: string) {
     return await this.subscriptionsService.completeNewSubscription(paymentId);
+  }
+
+  @Post(':id/pay-overdue')
+  @ApiOperation({ summary: 'Create payment for overdue subscription' })
+  @ApiResponse({ status: 200, description: 'Payment checkout URL created successfully' })
+  async payOverdueSubscription(
+    @Request() req: any,
+    @Param('id') subscriptionId: string,
+  ) {
+    return await this.subscriptionsService.payOverdueSubscription(
+      req.user.tenant.id,
+      subscriptionId,
+    );
   }
 }

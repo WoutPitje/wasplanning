@@ -1,8 +1,8 @@
 export default defineNuxtRouteMiddleware((to, from) => {
   const authStore = useAuthStore()
   
-  // Initialize auth from localStorage if not already done
-  if (!authStore.isAuthenticated) {
+  // Initialize auth from localStorage if not already done (client-side only)
+  if (import.meta.client && !authStore.isAuthenticated) {
     authStore.initAuth()
   }
   

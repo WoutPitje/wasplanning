@@ -8,6 +8,7 @@ export default {
     tryAgain: 'Probeer opnieuw',
     save: 'Opslaan',
     cancel: 'Annuleren',
+    close: 'Sluiten',
     delete: 'Verwijderen',
     edit: 'Bewerken',
     view: 'Bekijken',
@@ -1196,6 +1197,7 @@ export default {
     viewPlans: 'Bekijk Beschikbare Pakketten',
     cancelSubscription: 'Abonnement Opzeggen',
     reactivate: 'Heractiveer Abonnement',
+    payNow: 'Nu Betalen',
     
     noSubscription: {
       title: 'Geen Actief Abonnement',
@@ -1214,6 +1216,7 @@ export default {
       year: 'Jaarlijks',
       monthly: 'Maandelijks',
       yearly: 'Jaarlijks',
+      interval: 'Facturatieperiode',
       savePercent: '2 maanden gratis',
       yearlyTotal: '{price} per jaar'
     },
@@ -1234,6 +1237,25 @@ export default {
       title: 'Trial Periode',
       endsOn: 'Trial eindigt op'
     },
+
+    credit: {
+      title: 'Tegoed Saldo',
+      description: 'Beschikbaar voor toekomstige betalingen',
+      viewHistory: 'Bekijk Geschiedenis',
+      breakdown: 'Tegoed Overzicht',
+      current: 'Huidig saldo',
+      currentBalance: 'Huidig Saldo',
+      willBeUsed: 'Wordt gebruikt',
+      remaining: 'Blijft over',
+      earned: 'Verdiend',
+      used: 'Gebruikt',
+      history: {
+        title: 'Tegoed Geschiedenis',
+        description: 'Overzicht van uw tegoed transacties'
+      },
+      loadingHistory: 'Geschiedenis laden...',
+      noHistory: 'Geen tegoed transacties gevonden'
+    },
     
     cancellation: {
       title: 'Abonnement Opgezegd',
@@ -1253,6 +1275,9 @@ export default {
     changePlan: {
       title: 'Wijzig Pakket',
       description: 'Upgrade of downgrade naar een ander pakket',
+      calculatingCosts: 'Kosten berekenen...',
+      paymentRequired: 'Te betalen',
+      noPayment: 'Geen betaling vereist',
       confirm: {
         title: 'Pakket Wijziging Bevestigen',
         description: 'Weet u zeker dat u wilt overstappen naar dit pakket?',
@@ -1281,6 +1306,31 @@ export default {
       description: 'U staat op het punt om een abonnement af te sluiten',
       redirectNotice: 'U wordt doorgestuurd naar onze beveiligde betaalomgeving om de betaling te voltooien.',
       button: 'Ga Naar Betaling'
+    },
+    
+    paymentHistory: {
+      title: 'Betalingsgeschiedenis',
+      description: 'Overzicht van al uw betalingen en transacties',
+      viewHistory: 'Bekijk Betalingsgeschiedenis',
+      allTransactions: 'Alle transacties voor uw abonnement',
+      loading: 'Betalingsgeschiedenis laden...',
+      noHistory: 'Geen betalingsgeschiedenis gevonden',
+      date: 'Datum',
+      description: 'Omschrijving',
+      type: 'Type',
+      status: 'Status',
+      amount: 'Bedrag',
+      types: {
+        payment: 'Betaling',
+        refund: 'Terugbetaling',
+        subscription: 'Abonnement'
+      },
+      statuses: {
+        pending: 'In behandeling',
+        completed: 'Voltooid',
+        failed: 'Mislukt',
+        canceled: 'Geannuleerd'
+      }
     }
   }
 }

@@ -65,11 +65,41 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const success = ref(false)
 const successMessage = ref('')
-const paymentId = computed(() => route.query.paymentId as string | undefined)
+const paymentId = computed(() => {
+  // Mollie returns the payment ID as 'id' parameter
+  return (route.query.paymentId || route.query.id) as string | undefined
+})
 const action = computed(() => route.query.action as string | undefined)
 
 const processPaymentReturn = async () => {
-  if (!paymentId.value) {
+  console.log('Payment return URL:', window.location.href)
+  console.log('Query params:', route.query)
+  console.log('Payment ID:', paymentId.value)
+  
+  let finalPaymentId = paymentId.value
+  let finalAction = action.value
+  
+  // If no payment ID in URL, try to get it from pending payment
+  if (!finalPaymentId) {
+    try {
+      const pendingPayment = await $fetch<any>(`${config.public.apiUrl}/subscriptions/pending-payment`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${authStore.accessToken}`
+        }
+      })
+      
+      if (pendingPayment && pendingPayment.paymentId) {
+        console.log('Found pending payment:', pendingPayment)
+        finalPaymentId = pendingPayment.paymentId
+        finalAction = pendingPayment.action || action.value
+      }
+    } catch (err) {
+      console.error('Failed to fetch pending payment:', err)
+    }
+  }
+  
+  if (!finalPaymentId) {
     error.value = t('garageAdmin.payment.error.missingPaymentId')
     loading.value = false
     return
@@ -77,7 +107,7 @@ const processPaymentReturn = async () => {
 
   try {
     // First, check the payment status with Mollie
-    const paymentStatus = await $fetch<any>(`${config.public.apiUrl}/payments/${paymentId.value}/status`, {
+    const paymentStatus = await $fetch<any>(`${config.public.apiUrl}/payments/${finalPaymentId}/status`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${authStore.accessToken}`
@@ -94,13 +124,13 @@ const processPaymentReturn = async () => {
     let endpoint = ''
     
     // Determine which endpoint to call based on action
-    if (action.value === 'new') {
-      endpoint = `/subscriptions/complete-new/${paymentId.value}`
-    } else if (action.value === 'change') {
-      endpoint = `/subscriptions/complete-change/${paymentId.value}`
+    if (finalAction === 'new') {
+      endpoint = `/subscriptions/complete-new/${finalPaymentId}`
+    } else if (finalAction === 'change') {
+      endpoint = `/subscriptions/complete-change/${finalPaymentId}`
     } else {
       // Try to determine from payment metadata or default to new
-      endpoint = `/subscriptions/complete-new/${paymentId.value}`
+      endpoint = `/subscriptions/complete-new/${finalPaymentId}`
     }
 
     const response = await $fetch(`${config.public.apiUrl}${endpoint}`, {
@@ -113,7 +143,7 @@ const processPaymentReturn = async () => {
     success.value = true
     
     // Set appropriate success message
-    if (action.value === 'change') {
+    if (finalAction === 'change') {
       successMessage.value = t('garageAdmin.payment.success.planChanged')
     } else {
       successMessage.value = t('garageAdmin.payment.success.subscriptionCreated')
@@ -150,8 +180,14 @@ const retryPayment = () => {
 onMounted(() => {
   // Log the current URL for debugging
   console.log('Payment return URL:', window.location.href)
-  console.log('Payment ID:', paymentId.value)
+  console.log('Full query params:', window.location.search)
+  console.log('Route query:', route.query)
+  console.log('Payment ID from route:', paymentId.value)
   console.log('Action:', action.value)
+  
+  // Also check if Mollie appended payment info to URL path
+  const urlParts = window.location.pathname.split('/')
+  console.log('URL path parts:', urlParts)
   
   processPaymentReturn()
 })

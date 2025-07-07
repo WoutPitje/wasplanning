@@ -269,6 +269,29 @@ export const useSubscriptions = () => {
     }
   }
 
+  const previewPlanChange = async (subscriptionId: string, newPlan: SubscriptionPlan, billingInterval: 'monthly' | 'yearly'): Promise<any | null> => {
+    try {
+      pending.value = true
+      error.value = null
+      
+      const response = await $fetch<any>(`${config.public.apiUrl}/subscriptions/${subscriptionId}/preview-plan-change`, {
+        method: 'POST',
+        headers: getAuthHeader(),
+        body: { 
+          newPlanName: newPlan.name,
+          billingInterval: billingInterval === 'yearly' ? 'year' : 'month',
+        }
+      })
+      
+      return response
+    } catch (err: any) {
+      error.value = err.data?.message || err.message || 'Failed to preview plan change'
+      return null
+    } finally {
+      pending.value = false
+    }
+  }
+
   const changePlan = async (subscriptionId: string, newPlan: SubscriptionPlan, billingInterval: 'monthly' | 'yearly'): Promise<{ checkoutUrl: string } | Subscription | null> => {
     try {
       pending.value = true
@@ -290,6 +313,44 @@ export const useSubscriptions = () => {
       return response
     } catch (err: any) {
       error.value = err.data?.message || err.message || 'Failed to change plan'
+      return null
+    } finally {
+      pending.value = false
+    }
+  }
+
+  const getCreditBalance = async (): Promise<any | null> => {
+    try {
+      pending.value = true
+      error.value = null
+      
+      const response = await $fetch<any>(`${config.public.apiUrl}/subscriptions/credit-balance`, {
+        method: 'GET',
+        headers: getAuthHeader()
+      })
+      
+      return response
+    } catch (err: any) {
+      error.value = err.data?.message || err.message || 'Failed to fetch credit balance'
+      return null
+    } finally {
+      pending.value = false
+    }
+  }
+
+  const getPaymentHistory = async (): Promise<any[] | null> => {
+    try {
+      pending.value = true
+      error.value = null
+      
+      const response = await $fetch<any[]>(`${config.public.apiUrl}/payments/transactions`, {
+        method: 'GET',
+        headers: getAuthHeader()
+      })
+      
+      return response
+    } catch (err: any) {
+      error.value = err.data?.message || err.message || 'Failed to fetch payment history'
       return null
     } finally {
       pending.value = false
@@ -388,9 +449,12 @@ export const useSubscriptions = () => {
 
     // Payment and Checkout
     createPaidSubscription,
+    previewPlanChange,
     changePlan,
     completeNewSubscription,
     completeChangePlan,
+    getCreditBalance,
+    getPaymentHistory,
 
     // Utilities
     formatPrice,

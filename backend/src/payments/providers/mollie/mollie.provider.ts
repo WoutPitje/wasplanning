@@ -267,6 +267,7 @@ export class MollieProvider implements PaymentProvider {
     metadata?: any;
   }): Promise<{ id: string; checkoutUrl: string; status: string }> {
     this.logger.log(`Creating Mollie checkout payment: ${JSON.stringify(params)}`);
+    this.logger.log(`Redirect URL being sent to Mollie: ${params.redirectUrl}`);
     
     try {
       const paymentData: any = {

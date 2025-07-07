@@ -126,6 +126,16 @@ export class AuditService {
     });
   }
 
+  async findByResourceId(resourceId: string, limit = 50): Promise<AuditLog[]> {
+    return this.auditLogRepository.find({
+      where: { resource_id: resourceId },
+      order: {
+        created_at: 'DESC',
+      },
+      take: limit,
+    });
+  }
+
   async getAuditStats(tenantId: string | null, days = 7) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);

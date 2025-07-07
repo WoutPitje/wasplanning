@@ -110,6 +110,12 @@ export class WebhookController {
       case 'subscription.canceled':
         await this.handleSubscriptionCanceled(event);
         break;
+      case 'subscription.payment_paid':
+        await this.handleSubscriptionPaymentPaid(event);
+        break;
+      case 'subscription.payment_failed':
+        await this.handleSubscriptionPaymentFailed(event);
+        break;
       default:
         this.logger.log(`Unhandled webhook event type: ${event.type}`);
     }
@@ -279,4 +285,53 @@ export class WebhookController {
       this.logger.error(`Failed to process subscription canceled event: ${error.message}`);
     }
   }
+
+  private async handleSubscriptionPaymentPaid(event: any): Promise<void> {
+    this.logger.log(`Subscription payment paid: ${event.data.id}`);
+    
+    try {
+      // Get payment details from Mollie
+      const payment = await this.mollieProvider.getPayment(event.data.id);
+      
+      if (payment.metadata?.subscriptionId) {
+        // This is a recurring subscription payment
+        this.logger.log(`Processing recurring payment for subscription ${payment.metadata.subscriptionId}`);
+        
+        // Update subscription period
+        await this.subscriptionsService.processRecurringPayment(
+          payment.metadata.subscriptionId,
+          payment.providerId,
+          payment.amount,
+        );
+        
+        this.logger.log(`Recurring payment processed for subscription ${payment.metadata.subscriptionId}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to process subscription payment paid event: ${error.message}`);
+    }
+  }
+
+  private async handleSubscriptionPaymentFailed(event: any): Promise<void> {
+    this.logger.log(`Subscription payment failed: ${event.data.id}`);
+    
+    try {
+      // Get payment details from Mollie
+      const payment = await this.mollieProvider.getPayment(event.data.id);
+      
+      if (payment.metadata?.subscriptionId) {
+        // Mark subscription as past due
+        this.logger.log(`Marking subscription ${payment.metadata.subscriptionId} as past due`);
+        
+        await this.subscriptionsService.handleFailedPayment(
+          payment.metadata.subscriptionId,
+          payment.providerId,
+        );
+        
+        this.logger.log(`Failed payment handled for subscription ${payment.metadata.subscriptionId}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to process subscription payment failed event: ${error.message}`);
+    }
+  }
+
 }

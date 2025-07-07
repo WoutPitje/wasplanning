@@ -31,6 +31,7 @@ export interface Subscription {
   trialEnd?: string
   canceledAt?: string
   cancelAtPeriodEnd: boolean
+  creditBalance?: number
   metadata: Record<string, any>
   createdAt: string
   updatedAt: string

@@ -49,9 +49,14 @@ export default defineNuxtConfig({
       routes: ['/workshop', '/washer', '/planner']
     }
   },
-  // Disable SSR for admin routes to prevent hydration issues
+  // Disable SSR for all authenticated routes to prevent hydration issues
   routeRules: {
-    '/admin/**': { ssr: false }
+    '/admin/**': { ssr: false },
+    '/garage-admin/**': { ssr: false },
+    '/washer/**': { ssr: false },
+    '/wasplanner/**': { ssr: false },
+    '/workshop/**': { ssr: false },
+    '/delivery/**': { ssr: false }
   },
   shadcn: {
     prefix: '',

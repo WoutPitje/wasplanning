@@ -1104,5 +1104,152 @@ export default {
         swagger: 'Swagger Documentation'
       }
     }
+  },
+
+  // Subscription Management
+  subscription: {
+    title: 'Subscription Management',
+    description: 'Manage your subscription, view usage and change your plan',
+    seoTitle: 'Subscription - Wasplanning',
+    seoDescription: 'Manage your Wasplanning subscription and view your usage.',
+    
+    viewPlans: 'View Available Plans',
+    cancelSubscription: 'Cancel Subscription',
+    reactivate: 'Reactivate Subscription',
+    payNow: 'Pay Now',
+    
+    noSubscription: {
+      title: 'No Active Subscription',
+      description: 'You currently have no active subscription. Choose a plan to start using Wasplanning.',
+      trialInfo: 'All new subscriptions start with a 30-day free trial.'
+    },
+    
+    current: {
+      title: 'Current Subscription',
+      description: 'Your current subscription information and status',
+      badge: 'Current plan'
+    },
+    
+    billing: {
+      month: 'Monthly',
+      year: 'Yearly',
+      monthly: 'Monthly',
+      yearly: 'Yearly',
+      interval: 'Billing Period',
+      savePercent: '2 months free',
+      yearlyTotal: '{price} per year'
+    },
+    
+    status: {
+      title: 'Status',
+      trialing: 'Trial period',
+      active: 'Active',
+      past_due: 'Payment overdue',
+      canceled: 'Canceled',
+      unpaid: 'Unpaid',
+      incomplete: 'Awaiting payment'
+    },
+    
+    renewsOn: 'Renews on',
+    
+    trial: {
+      title: 'Trial Period',
+      endsOn: 'Trial ends on'
+    },
+
+    credit: {
+      title: 'Credit Balance',
+      description: 'Available for future payments',
+      viewHistory: 'View History',
+      breakdown: 'Credit Overview',
+      current: 'Current balance',
+      currentBalance: 'Current Balance',
+      willBeUsed: 'Will be used',
+      remaining: 'Remaining',
+      earned: 'Earned',
+      used: 'Used',
+      history: {
+        title: 'Credit History',
+        description: 'Overview of your credit transactions'
+      },
+      loadingHistory: 'Loading history...',
+      noHistory: 'No credit transactions found'
+    },
+    
+    cancellation: {
+      title: 'Subscription Canceled',
+      message: 'Your subscription is canceled and ends on {date}. You can still reactivate it.'
+    },
+    
+    usage: {
+      title: 'Usage Overview',
+      description: 'Your current usage for this billing period',
+      cars: 'Cars washed',
+      users: 'Active users',
+      locations: 'Active locations',
+      limitExceeded: 'Limit exceeded',
+      approachingLimit: 'Approaching limit'
+    },
+    
+    changePlan: {
+      title: 'Change Plan',
+      description: 'Upgrade or downgrade to a different plan',
+      calculatingCosts: 'Calculating costs...',
+      paymentRequired: 'Payment required',
+      noPayment: 'No payment required',
+      confirm: {
+        title: 'Confirm Plan Change',
+        description: 'Are you sure you want to switch to this plan?',
+        effective: 'The change takes effect immediately and will be prorated.',
+        button: 'Change Plan'
+      }
+    },
+    
+    cancel: {
+      title: 'Cancel Subscription',
+      description: 'Are you sure you want to cancel your subscription?',
+      warning: 'Your subscription remains active until {date}. After that, you lose access to all features.',
+      immediately: 'Cancel immediately',
+      immediatelyWarning: 'You will lose access to all features immediately.',
+      confirm: 'Yes, Cancel'
+    },
+    
+    selectPlan: {
+      title: 'Choose Your Plan',
+      description: 'Select the plan that best fits your garage',
+      button: 'Select This Plan'
+    },
+    
+    purchase: {
+      title: 'Confirm Your Choice',
+      description: 'You are about to subscribe',
+      redirectNotice: 'You will be redirected to our secure payment environment to complete the payment.',
+      button: 'Go to Payment'
+    },
+    
+    paymentHistory: {
+      title: 'Payment History',
+      description: 'Overview of all your payments and transactions',
+      viewHistory: 'View Payment History',
+      allTransactions: 'All transactions for your subscription',
+      loading: 'Loading payment history...',
+      noHistory: 'No payment history found',
+      date: 'Date',
+      description: 'Description',
+      type: 'Type',
+      status: 'Status',
+      amount: 'Amount',
+      types: {
+        payment: 'Payment',
+        refund: 'Refund',
+        subscription: 'Subscription'
+      },
+      statuses: {
+        pending: 'Pending',
+        completed: 'Completed',
+        failed: 'Failed',
+        canceled: 'Canceled'
+      }
+    }
   }
 }

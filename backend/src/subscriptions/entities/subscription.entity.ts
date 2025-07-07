@@ -84,6 +84,19 @@ export class Subscription {
   @Column({ name: 'cancel_at_period_end', default: false })
   cancelAtPeriodEnd: boolean;
 
+  // Proration and credits
+  @Column({ name: 'credit_balance', type: 'decimal', precision: 10, scale: 2, default: 0 })
+  creditBalance: number;
+
+  @Column({ name: 'next_payment_date', type: 'timestamp', nullable: true })
+  nextPaymentDate: Date;
+
+  @Column({ name: 'mollie_customer_id', length: 255, nullable: true })
+  mollieCustomerId: string;
+
+  @Column({ name: 'mollie_mandate_id', length: 255, nullable: true })
+  mollieMandateId: string;
+
   @Column({ type: 'jsonb', default: {} })
   metadata: Record<string, any>;
 
