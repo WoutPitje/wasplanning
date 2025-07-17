@@ -1,16 +1,19 @@
 # Wash Planning System
 
-A real-time vehicle wash management system for auto service centers, coordinating between workshop, wash station, and planning departments.
+A multi-tenant SaaS vehicle wash management system for auto service centers, coordinating between workshop, wash station, and planning departments with subscription-based billing.
 
 ## Features
 
+- **Multi-Tenant Architecture** - Complete tenant isolation with per-tenant databases and data
+- **Subscription Management** - Tiered pricing with usage-based limits and Stripe integration
 - **Real-time Status Tracking** - Track vehicles from workshop to wash station to completion
-- **Role-based Access** - Separate interfaces for Werkplaats, Wassers, Haal/Breng Planners, Wasplanners, and Admins
+- **Role-based Access Control** - Six distinct roles with hierarchical permissions
 - **Smart Task Assignment** - Match wash tasks to available washers based on skills
 - **Mobile Responsive** - Fully responsive from 320px width, optimized for all devices
 - **Real-time Updates** - WebSocket notifications for instant status changes
 - **Multi-language Support** - Dutch (primary) and English interface translations
-- **Audit Logging** - Complete audit trail for compliance and security monitoring
+- **Comprehensive Audit Logging** - Complete audit trail for compliance and security monitoring
+- **Subscription Limits** - Usage-based restrictions with automatic warnings and enforcement
 
 ## Tech Stack
 
@@ -21,6 +24,9 @@ A real-time vehicle wash management system for auto service centers, coordinatin
 - **Real-time**: Socket.io
 - **API Docs**: Swagger/OpenAPI
 - **i18n**: Vue I18n (Dutch/English)
+- **Payments**: Stripe (subscriptions, payment methods, webhooks)
+- **Email**: SMTP with Handlebars templates
+- **Security**: JWT auth, role-based access, rate limiting
 
 ## Quick Start
 
@@ -172,16 +178,80 @@ Once the backend is running, access the Swagger documentation at:
 http://localhost:3001/api/docs
 ```
 
-## User Roles
+## User Roles & Permissions
 
-1. **Werkplaats** - Submit wash requests only
-2. **Wassers** - View queue, update wash status
-3. **Haal/Breng Planners** - View completion status for return trips
-4. **Wasplanners** - Manage queue and task assignments
-5. **Garage Admin** - Manage users and settings for their garage
-6. **Super Admin** - Manage all garages and global settings
+### Role Hierarchy
 
-## Multi-Location Support (Planned)
+1. **SUPER_ADMIN** (System Administrator)
+   - Universal access across all tenants
+   - Can impersonate other users for support
+   - Manages tenants and system-wide settings
+   - Bypasses all role and tenant restrictions
+   - Can view all audit logs
+
+2. **GARAGE_ADMIN** (Tenant Administrator)
+   - Full access within their tenant only
+   - Can create and manage users (except other admins)
+   - Manages subscription and billing
+   - Views tenant audit logs
+   - Cannot access other tenants
+
+3. **WASPLANNERS** (Wash Planners)
+   - Manages wash queue and assignments
+   - Views all wash-related data
+   - Can assign tasks to washers
+   - Limited to their tenant
+
+4. **WASSERS** (Washers)
+   - Views assigned wash tasks
+   - Updates wash status
+   - Limited to their own tasks
+   - Mobile-optimized interface
+
+5. **WERKPLAATS** (Workshop Staff)
+   - Creates wash requests
+   - Views status of submitted requests
+   - Cannot modify assignments
+   - Limited to their location
+
+6. **HAAL_BRENG_PLANNERS** (Pickup/Delivery Planners)
+   - Views completed washes
+   - Manages pickup/delivery schedules
+   - Cannot modify wash tasks
+   - Coordinates vehicle logistics
+
+## Subscription Plans & Limits
+
+### Available Plans
+
+1. **Free Plan**
+   - 50 cars washed per month
+   - 5 active users
+   - 1 location
+   - Basic features
+
+2. **Standard Plan** (€100/month)
+   - 500 cars washed per month
+   - 20 active users
+   - 3 locations
+   - All features
+   - Email support
+
+3. **Enterprise Plan** (€400/month)
+   - Unlimited cars washed
+   - Unlimited active users
+   - Unlimited locations
+   - Priority support
+   - Custom integrations
+
+### Limit Enforcement
+- Real-time usage tracking
+- Warnings at 80% usage
+- Hard limits prevent exceeding quotas
+- Automatic email notifications
+- Mid-cycle upgrades with proration
+
+## Multi-Location Support
 
 The system will support multiple locations per tenant:
 
@@ -234,21 +304,40 @@ const { t } = useI18n()
 
 ### Backend (.env)
 ```env
+# Database
 DATABASE_URL=postgresql://dev:dev123@localhost:5432/wasplanning
 REDIS_URL=redis://localhost:6379
+
+# Authentication
 JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=7d
+
+# Server
 PORT=3001
+CORS_ORIGIN=http://localhost:3000
+
+# Storage (MinIO)
 MINIO_ENDPOINT=localhost
 MINIO_PORT=9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 MINIO_USE_SSL=false
+MINIO_BUCKET_NAME=wasplanning
 
 # Email Configuration (Development uses MailHog)
 SMTP_HOST=localhost
 SMTP_PORT=1025
 SMTP_FROM_EMAIL=noreply@wasplanning.nl
 SMTP_FROM_NAME=Wasplanning System
+
+# Stripe (Required for subscriptions)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# Application URLs
+FRONTEND_URL=http://localhost:3000
+API_URL=http://localhost:3001
 ```
 
 ### Frontend (.env)
@@ -270,48 +359,133 @@ The frontend is designed to be fully responsive and functional on all devices:
 - **Typography**: Minimum 14px font size on mobile
 - **Spacing**: Touch-friendly padding and margins
 
-## Audit Logging
+## Security & Compliance
+
+### Authentication & Authorization
+
+#### Decorators
+- `@Public()` - Mark endpoints as publicly accessible
+- `@Roles(...roles)` - Restrict access to specific roles
+- `@CurrentUser()` - Inject authenticated user into method
+- `@NoImpersonation()` - Prevent impersonated access
+- `@RateLimit(options)` - Apply rate limiting
+- `@CheckLimit(limitType)` - Check subscription limits
+- `@AllowReadOnly()` - Allow read-only access for restricted subscriptions
+
+#### Guards (Applied in Order)
+1. **JwtAuthGuard** - JWT authentication (skipped for @Public)
+2. **RolesGuard** - Role-based access control
+3. **TenantGuard** - Tenant isolation enforcement
+4. **SubscriptionGuard** - Subscription limit checking
+5. **NoImpersonationGuard** - Block impersonated users
+
+### Tenant Isolation
+
+- All data is strictly isolated per tenant
+- Tenant context automatically added to requests
+- Cross-tenant access prevented at multiple levels
+- Super admins can access all tenants
+- Queries filtered by tenant_id automatically
+
+### Audit Logging
 
 The system includes comprehensive audit logging for security and compliance:
 
-### Features
-- **Complete Activity Tracking**: All user actions are logged with timestamp, IP address, and details
-- **Multi-tenant Isolation**: Each tenant's audit logs are completely isolated
-- **Role-based Access**: Super admins and garage admins can view audit logs
-- **Advanced Filtering**: Filter by user, action type, resource, or date range
-- **CSV Export**: Export audit logs for compliance reporting
-- **Non-blocking**: Audit failures don't impact application functionality
+#### Features
+- **Complete Activity Tracking**: All actions logged with timestamp, IP, user agent
+- **Multi-tenant Isolation**: Tenant-specific audit trails
+- **Role-based Access**: Admins can view and export logs
+- **Advanced Filtering**: By user, action, resource, date range
+- **CSV Export**: For compliance reporting
+- **Non-blocking**: Failures don't impact functionality
 
-### Tracked Actions
-- **Authentication**: Login, logout, impersonation start/stop
-- **User Management**: Create, update, deactivate users, password resets
-- **Tenant Management**: Create, update, deactivate tenants
-- **File Operations**: Upload, download, delete files (planned)
-- **Vehicle Operations**: Create, update wash requests (planned)
+#### Tracked Actions
+- **Authentication**: Login, logout, impersonation
+- **User Management**: CRUD operations, password resets
+- **Tenant Management**: Create, update, suspend, resume
+- **Subscription & Billing**: Plan changes, payments, limits
+- **Settings**: Configuration changes
+- **Limit Violations**: Exceeded limits and warnings
 
-### Implementation for Developers
-When adding new features that require audit logging:
+## Developer Guidelines
 
-1. Inject the `AuditService` into your controller:
+### Controller Implementation Pattern
+
 ```typescript
-constructor(private readonly auditService: AuditService) {}
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@Roles(UserRole.GARAGE_ADMIN)
+@Controller('resources')
+export class ResourceController {
+  constructor(
+    private readonly resourceService: ResourceService,
+    private readonly auditService: AuditService,
+  ) {}
+
+  @Post()
+  @CheckLimit(LimitType.RESOURCES)
+  async create(@Body() dto: CreateDto, @Request() req: any) {
+    // Service handles business logic
+    const resource = await this.resourceService.create(
+      dto,
+      req.user.tenant.id,
+    );
+
+    // Audit after successful operation
+    await this.auditService.logAction({
+      tenant_id: req.user.tenant.id,
+      user_id: req.user.id,
+      action: 'resource.created',
+      resource_type: 'resource',
+      resource_id: resource.id,
+      details: { name: resource.name },
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
+    return resource;
+  }
+}
 ```
 
-2. Log actions after successful operations:
+### Service Implementation Pattern
+
 ```typescript
-await this.auditService.logAction({
-  tenant_id: req.user.tenant.id,
-  user_id: req.user.id,
-  action: 'resource.created',
-  resource_type: 'resource_name',
-  resource_id: resource.id,
-  details: { /* additional context */ },
-  ip_address: req.ip,
-  user_agent: req.headers['user-agent']
-});
+@Injectable()
+export class ResourceService {
+  async create(dto: CreateDto, tenantId: string) {
+    // Always include tenant_id in queries
+    const existing = await this.repository.findOne({
+      where: { 
+        name: dto.name,
+        tenant_id: tenantId,
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException('Resource already exists');
+    }
+
+    // Create with tenant association
+    const resource = this.repository.create({
+      ...dto,
+      tenant_id: tenantId,
+    });
+
+    return this.repository.save(resource);
+  }
+}
 ```
 
-3. Use consistent action naming: `resource.action` (e.g., `user.created`, `tenant.updated`)
+### Key Development Rules
+
+1. **Always use guards in correct order**: JWT → Roles → Tenant
+2. **Never trust client-provided tenant IDs**: Use `req.user.tenant.id`
+3. **Include tenant_id in all queries**: Prevent cross-tenant data leaks
+4. **Audit significant actions**: User changes, settings, payments
+5. **Check subscription limits**: Before creating limited resources
+6. **Handle errors gracefully**: Return meaningful error messages
+7. **Use TypeORM transactions**: For multi-step operations
+8. **Validate DTOs thoroughly**: Use class-validator decorators
 
 ### Viewing Audit Logs
 - **Super Admin**: Can view all audit logs at `/admin/audit`

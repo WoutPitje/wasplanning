@@ -2,11 +2,11 @@ import { DataSource } from 'typeorm';
 import { runSeeds } from '../database/seeds';
 import { User } from '../auth/entities/user.entity';
 import { Tenant } from '../auth/entities/tenant.entity';
-import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
+import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
 import { UsageRecord } from '../subscriptions/entities/usage-record.entity';
-import { PaymentMethod } from '../payments/entities/payment-method.entity';
-import { PaymentTransaction } from '../payments/entities/payment-transaction.entity';
+import { Location } from '../locations/entities/location.entity';
+import { UserLocation } from '../locations/entities/user-location.entity';
 
 async function bootstrap() {
   // Create DataSource
@@ -18,14 +18,13 @@ async function bootstrap() {
     password: process.env.DATABASE_PASSWORD || 'wasplanning_dev',
     database: process.env.DATABASE_NAME || 'wasplanning',
     entities: [
-      User, 
-      Tenant, 
-      SubscriptionPlan, 
-      Subscription, 
-      UsageRecord, 
- 
-      PaymentMethod, 
-      PaymentTransaction
+      User,
+      Tenant,
+      Subscription,
+      SubscriptionPlan,
+      UsageRecord,
+      Location,
+      UserLocation,
     ],
     synchronize: false, // Don't auto-sync in production
     logging: false,

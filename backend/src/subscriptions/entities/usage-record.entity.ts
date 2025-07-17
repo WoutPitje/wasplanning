@@ -1,42 +1,47 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn, Index } from 'typeorm';
-import { Subscription } from './subscription.entity';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  Unique,
+} from 'typeorm';
 
-export enum MetricType {
+export enum UsageType {
   CARS_WASHED = 'cars_washed',
   ACTIVE_USERS = 'active_users',
-  ACTIVE_LOCATIONS = 'active_locations',
+  LOCATIONS = 'locations',
 }
 
 @Entity('usage_records')
-@Index('idx_usage_subscription_metric', ['subscriptionId', 'metricType', 'recordedAt'])
+@Unique(['tenant_id', 'record_type', 'period_start'])
+@Index(['tenant_id', 'period_start'])
 export class UsageRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Subscription, (subscription) => subscription.usageRecords, { nullable: false })
-  @JoinColumn({ name: 'subscription_id' })
-  subscription: Subscription;
-
-  @Column({ name: 'subscription_id' })
-  subscriptionId: string;
-
+  @Column('uuid')
+  tenant_id: string;
 
   @Column({
-    name: 'metric_type',
     type: 'enum',
-    enum: MetricType,
+    enum: UsageType,
   })
-  metricType: MetricType;
+  record_type: UsageType;
 
-  @Column({ type: 'integer' })
-  quantity: number;
+  @Column('date')
+  period_start: Date;
 
-  @Column({ name: 'unit_price', type: 'decimal', precision: 10, scale: 4, nullable: true })
-  unitPrice: number;
+  @Column('date')
+  period_end: Date;
 
-  @Column({ name: 'recorded_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  recordedAt: Date;
+  @Column('int', { default: 0 })
+  count: number;
 
-  @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
 }

@@ -7,6 +7,7 @@ export default {
     retry: 'Opnieuw proberen',
     tryAgain: 'Probeer opnieuw',
     save: 'Opslaan',
+    saving: 'Bezig met opslaan...',
     cancel: 'Annuleren',
     close: 'Sluiten',
     delete: 'Verwijderen',
@@ -26,7 +27,8 @@ export default {
     previous: 'Vorige',
     next: 'Volgende',
     month: 'maand',
-    hours: 'uur'
+    hours: 'uur',
+    keepSubscription: 'Behoud abonnement'
   },
   
   // App
@@ -101,7 +103,12 @@ export default {
         activeUsers: 'Actieve gebruikers',
         statsLoading: 'Statistieken laden...',
         usersByRole: 'Gebruikers per rol',
-        lastUpdated: 'Laatst bijgewerkt'
+        lastUpdated: 'Laatst bijgewerkt',
+        subscription: 'Abonnement',
+        plan: 'Pakket',
+        subscriptionStatus: 'Status',
+        expiresOn: 'Verloopt op',
+        usage: 'Gebruik'
       },
       
       // Edit
@@ -198,9 +205,13 @@ export default {
         name: 'Naam',
         systemName: 'Systeem Naam',
         status: 'Status',
+        subscription: 'Abonnement',
         users: 'Gebruikers',
         createdAt: 'Aangemaakt',
-        actions: 'Acties'
+        actions: 'Acties',
+        expires: 'Verloopt',
+        renews: 'Verlengt',
+        cancelsAt: 'Annuleert op'
       }
     },
     
@@ -282,7 +293,18 @@ export default {
       title: 'Garage Instellingen',
       subtitle: 'Beheer uw garage configuratie',
       generalSettings: 'Algemene Instellingen',
-      placeholder: 'Garage instellingen komen hier...'
+      placeholder: 'Garage instellingen komen hier...',
+      tenantSettings: 'Garage Informatie',
+      logo: 'Logo',
+      uploadLogo: 'Logo Uploaden',
+      logoRequirements: 'JPEG, PNG, GIF of WebP. Max 2MB.',
+      customBrandingNotAvailable: 'Aangepaste branding is niet beschikbaar in uw huidige pakket.',
+      upgradePlan: 'Pakket Upgraden',
+      tenantName: 'Garage Naam',
+      subscriptionPlan: 'Abonnement',
+      fileTooLarge: 'Bestand is groter dan 2MB',
+      logoUploaded: 'Logo succesvol geüpload',
+      logoUploadFailed: 'Logo uploaden mislukt'
     },
     users: {
       title: 'Gebruikersbeheer',
@@ -373,6 +395,7 @@ export default {
     logout: 'Uitloggen',
     tenants: 'Tenants',
     users: 'Gebruikers',
+    locations: 'Locaties',
     auditLogs: 'Audit Logs',
     queue: 'Wachtrij',
     planning: 'Planning',
@@ -517,6 +540,123 @@ export default {
       loadFailed: 'Gebruikers laden mislukt',
       passwordMismatch: 'Wachtwoorden komen niet overeen'
     }
+  },
+  
+  // Locations
+  locations: {
+    title: 'Locaties',
+    subtitle: 'Beheer locaties binnen uw garage',
+    addNew: 'Nieuwe Locatie',
+    noLocations: 'Geen locaties',
+    noLocationsDescription: 'Begin door een nieuwe locatie toe te voegen.',
+    search: 'Zoek locaties',
+    searchPlaceholder: 'Zoek op naam of adres...',
+    
+    // Table
+    table: {
+      name: 'Naam',
+      address: 'Adres',
+      status: 'Status',
+      users: 'Gebruikers',
+      actions: 'Acties',
+      createdAt: 'Aangemaakt'
+    },
+    
+    // Status
+    status: {
+      active: 'Actief',
+      inactive: 'Inactief'
+    },
+    
+    // Details
+    details: {
+      title: 'Locatie Details',
+      subtitle: 'Bekijk locatie informatie en toegewezen gebruikers',
+      locationInfo: 'Locatie Informatie',
+      assignedUsers: 'Toegewezen Gebruikers',
+      noUsers: 'Geen gebruikers toegewezen aan deze locatie',
+      manageUsers: 'Beheer Gebruikers',
+      createdAt: 'Aangemaakt op',
+      updatedAt: 'Bijgewerkt op'
+    },
+    
+    // Form
+    form: {
+      createTitle: 'Nieuwe Locatie Aanmaken',
+      createDescription: 'Voeg een nieuwe locatie toe aan uw garage',
+      editTitle: 'Locatie Bewerken',
+      editDescription: 'Werk locatie informatie bij',
+      locationInfo: 'Locatie Informatie',
+      locationInfoDescription: 'Basisinformatie over de locatie',
+      name: 'Naam',
+      namePlaceholder: 'Bijv. Hoofdvestiging',
+      nameDescription: 'Een unieke naam voor deze locatie',
+      address: 'Adres',
+      addressPlaceholder: 'Bijv. Hoofdstraat 123, 1234 AB Amsterdam',
+      addressDescription: 'Het adres van deze locatie',
+      submit: 'Locatie Aanmaken',
+      update: 'Wijzigingen Opslaan'
+    },
+    
+    // Actions
+    actions: {
+      view: 'Bekijken',
+      edit: 'Bewerken',
+      deactivate: 'Deactiveren',
+      activate: 'Activeren',
+      assignUsers: 'Gebruikers Toewijzen',
+      viewDetails: 'Details Bekijken',
+      manageUsers: 'Gebruikers Beheren'
+    },
+    
+    // Users Dialog
+    usersDialog: {
+      title: 'Gebruikers Toewijzen',
+      description: 'Selecteer gebruikers om aan deze locatie toe te wijzen',
+      searchUsers: 'Zoek gebruikers...',
+      currentlyAssigned: 'Momenteel toegewezen',
+      availableUsers: 'Beschikbare gebruikers',
+      save: 'Opslaan',
+      cancel: 'Annuleren',
+      saving: 'Bezig met opslaan...'
+    },
+    
+    // User Assignment
+    userAssignment: {
+      title: 'Gebruikers Toewijzen',
+      description: 'Selecteer gebruikers om toe te wijzen aan {location}',
+      searchPlaceholder: 'Zoek gebruikers...',
+      noUsersFound: 'Geen gebruikers gevonden',
+      selectedCount: '{count} gebruiker(s) geselecteerd',
+      assignButton: 'Toewijzen'
+    },
+    
+    // Limits
+    limitReached: 'Locatielimiet Bereikt',
+    limitReachedDescription: 'U heeft het maximum aantal locaties voor uw abonnement bereikt.',
+    limitWarning: 'Locatielimiet Waarschuwing',
+    limitWarningDescription: 'U heeft {current} van {limit} locaties gebruikt.',
+    upgradeSubscription: 'Upgrade Abonnement',
+    
+    // Success messages
+    success: {
+      created: 'Locatie succesvol aangemaakt',
+      updated: 'Locatie succesvol bijgewerkt',
+      deleted: 'Locatie succesvol verwijderd',
+      usersAssigned: 'Gebruikers succesvol toegewezen'
+    },
+    
+    // Error messages
+    errors: {
+      loadFailed: 'Locaties laden mislukt',
+      createFailed: 'Locatie aanmaken mislukt',
+      updateFailed: 'Locatie bijwerken mislukt',
+      deleteFailed: 'Locatie verwijderen mislukt',
+      assignUsersFailed: 'Gebruikers toewijzen mislukt'
+    },
+    
+    // Confirm
+    confirmDelete: 'Weet u zeker dat u deze locatie wilt deactiveren?'
   },
   
   // Header
@@ -1186,151 +1326,204 @@ export default {
       }
     }
   },
-
+  
   // Subscription Management
   subscription: {
-    title: 'Abonnement Beheer',
-    description: 'Beheer uw abonnement, bekijk gebruik en wijzig uw pakket',
-    seoTitle: 'Abonnement - Wasplanning',
-    seoDescription: 'Beheer uw Wasplanning abonnement en bekijk uw gebruik.',
+    title: 'Abonnement',
+    subtitle: 'Beheer uw abonnement en facturatie',
+    perMonth: 'per maand',
+    unlimited: 'Onbeperkt',
+    current: 'Huidig',
+    currentPlan: 'Huidig Abonnement',
+    currentPlanDescription: 'Uw huidige abonnement en status',
+    availablePlans: 'Beschikbare Abonnementen',
+    billingPeriod: 'Facturatieperiode',
+    changeTo: 'Wijzig naar',
+    changePlanDescription: 'Vergelijk abonnementen en beheer uw abonnement',
+    viewPlans: 'Bekijk alle abonnementen',
+    downgrade: 'Downgraden',
+    cars: 'auto\'s',
+    users: 'gebruikers',
+    locations: 'locaties',
+    invoicesDescription: 'Download facturen en bekijk betalingsgeschiedenis',
+    viewInvoices: 'Bekijk facturen',
+    vehicles: 'voertuigen',
+    appointmentsPerMonth: 'afspraken per maand',
     
-    viewPlans: 'Bekijk Beschikbare Pakketten',
-    cancelSubscription: 'Abonnement Opzeggen',
-    reactivate: 'Heractiveer Abonnement',
-    payNow: 'Nu Betalen',
-    
-    noSubscription: {
-      title: 'Geen Actief Abonnement',
-      description: 'U heeft momenteel geen actief abonnement. Kies een pakket om te beginnen met Wasplanning.',
-      trialInfo: 'Alle nieuwe abonnementen starten met 30 dagen gratis trial.'
-    },
-    
-    current: {
-      title: 'Huidig Abonnement',
-      description: 'Uw huidige abonnement informatie en status',
-      badge: 'Huidige pakket'
-    },
-    
-    billing: {
-      month: 'Maandelijks',
-      year: 'Jaarlijks',
-      monthly: 'Maandelijks',
-      yearly: 'Jaarlijks',
-      interval: 'Facturatieperiode',
-      savePercent: '2 maanden gratis',
-      yearlyTotal: '{price} per jaar'
+    plans: {
+      free: 'Gratis',
+      standard: 'Standaard',
+      enterprise: 'Enterprise'
     },
     
     status: {
-      title: 'Status',
-      trialing: 'Trial periode',
+      ACTIVE: 'Actief',
+      PAST_DUE: 'Betaling achterstallig',
+      CANCELED: 'Geannuleerd',
+      INCOMPLETE: 'Incompleet',
+      TRIALING: 'Proefperiode',
+      EXPIRED: 'Verlopen',
+      // Lowercase versions for backend compatibility
       active: 'Actief',
       past_due: 'Betaling achterstallig',
-      canceled: 'Opgezegd',
-      unpaid: 'Onbetaald',
-      incomplete: 'Wacht op betaling'
+      canceled: 'Geannuleerd',
+      incomplete: 'Incompleet',
+      trialing: 'Proefperiode',
+      expired: 'Verlopen'
     },
     
-    renewsOn: 'Verlengd op',
-    
-    trial: {
-      title: 'Trial Periode',
-      endsOn: 'Trial eindigt op'
-    },
-
-    credit: {
-      title: 'Tegoed Saldo',
-      description: 'Beschikbaar voor toekomstige betalingen',
-      viewHistory: 'Bekijk Geschiedenis',
-      breakdown: 'Tegoed Overzicht',
-      current: 'Huidig saldo',
-      currentBalance: 'Huidig Saldo',
-      willBeUsed: 'Wordt gebruikt',
-      remaining: 'Blijft over',
-      earned: 'Verdiend',
-      used: 'Gebruikt',
-      history: {
-        title: 'Tegoed Geschiedenis',
-        description: 'Overzicht van uw tegoed transacties'
-      },
-      loadingHistory: 'Geschiedenis laden...',
-      noHistory: 'Geen tegoed transacties gevonden'
+    gracePeriod: {
+      title: 'Betaling mislukt',
+      description: 'Uw betaling is mislukt. Update uw betaalmethode voor {date} om toegang te behouden.'
     },
     
-    cancellation: {
-      title: 'Abonnement Opgezegd',
-      message: 'Uw abonnement is opgezegd en eindigt op {date}. U kunt het nog heractiveren.'
+    pendingCancellation: {
+      title: 'Geplande downgrade naar gratis plan',
+      description: 'Uw abonnement wordt gedowngraded naar het gratis plan op {date}. U kunt op elk moment weer upgraden.',
+      cancelDowngrade: 'Huidig plan behouden'
+    },
+    
+    payment: {
+      authenticationRequired: 'Betalingsauthenticatie vereist. Controleer uw bank-app of SMS voor bevestiging.',
+      paymentMethodRequired: 'Voeg een betaalmethode toe om uw abonnementsupgrade te voltooien.'
     },
     
     usage: {
-      title: 'Gebruik Overzicht',
-      description: 'Uw huidige gebruik voor deze facturatieperiode',
-      cars: 'Auto\'s gewassen',
-      users: 'Actieve gebruikers',
-      locations: 'Actieve locaties',
+      title: 'Gebruik',
+      description: 'Uw huidige gebruik ten opzichte van de limieten',
+      overview: 'Gebruik Overzicht',
+      period: 'Periode',
+      users: 'Gebruikers',
+      vehicles: 'Voertuigen',
+      appointments: 'Afspraken deze maand',
+      cars_washed: 'Auto\'s gewassen',
+      active_users: 'Actieve gebruikers',
+      locations: 'Locaties',
       limitExceeded: 'Limiet overschreden',
-      approachingLimit: 'Benadert limiet'
+      limitExceededDescription: 'U heeft een of meer limieten van uw abonnement overschreden. Overweeg een upgrade naar een hoger plan.',
+      highUsage: 'Hoog gebruik',
+      highUsageDescription: 'U nadert de limieten van uw abonnement. Houd uw gebruik in de gaten of overweeg een upgrade.'
+    },
+    
+    features: {
+      priority_support: 'Prioriteit support',
+      api_access: 'API toegang',
+      custom_reports: 'Aangepaste rapporten',
+      multi_location: 'Multi-locatie support',
+      advanced_analytics: 'Geavanceerde analytics',
+      export_data: 'Data exporteren',
+      custom_branding: 'Eigen branding',
+      advanced_reporting: 'Geavanceerde rapportage'
+    },
+    
+    paymentMethods: {
+      title: 'Betaalmethoden',
+      description: 'Beheer uw betaalmethoden',
+      add: 'Betaalmethode toevoegen',
+      addTitle: 'Nieuwe betaalmethode toevoegen',
+      addDescription: 'Voeg een creditcard of betaalmethode toe aan uw account',
+      addButton: 'Toevoegen',
+      card: 'Kaart',
+      expires: 'Verloopt',
+      default: 'Standaard',
+      setDefault: 'Als standaard instellen',
+      confirmDelete: 'Weet u zeker dat u deze betaalmethode wilt verwijderen?',
+      empty: 'Geen betaalmethoden gevonden',
+      setupError: 'Kon betaalsessie niet starten',
+      addError: 'Kon betaalmethode niet toevoegen'
+    },
+    
+    paymentMethodRequired: {
+      title: 'Betaalmethode Vereist',
+      description: 'Een geldige betaalmethode is vereist om te upgraden naar een betaald abonnement. Voeg eerst een betaalmethode toe om door te gaan.',
+      addButton: 'Betaalmethode Toevoegen'
     },
     
     changePlan: {
-      title: 'Wijzig Pakket',
-      description: 'Upgrade of downgrade naar een ander pakket',
-      calculatingCosts: 'Kosten berekenen...',
-      paymentRequired: 'Te betalen',
-      noPayment: 'Geen betaling vereist',
-      confirm: {
-        title: 'Pakket Wijziging Bevestigen',
-        description: 'Weet u zeker dat u wilt overstappen naar dit pakket?',
-        effective: 'De wijziging gaat direct in en wordt pro-rata berekend.',
-        button: 'Wijzig Pakket'
-      }
+      title: 'Abonnement wijzigen',
+      description: 'Bevestig uw abonnementswijziging',
+      from: 'Van',
+      to: 'Naar',
+      confirm: 'Bevestig wijziging',
+      upgradeInfo: 'U wordt direct gefactureerd voor het prijsverschil.',
+      downgradeInfo: 'De wijziging gaat in aan het einde van uw huidige facturatieperiode.',
+      downgradeToFreeInfo: 'Uw abonnement wordt gedowngraded naar het gratis plan aan het einde van uw huidige facturatieperiode. Tot die tijd behoudt u toegang tot de functies van uw huidige plan.'
     },
     
     cancel: {
-      title: 'Abonnement Opzeggen',
-      description: 'Zeker weten dat u uw abonnement wilt opzeggen?',
-      warning: 'Uw abonnement blijft actief tot {date}. Daarna verliest u toegang tot alle functies.',
-      immediately: 'Direct opzeggen',
-      immediatelyWarning: 'U verliest direct toegang tot alle functies.',
-      confirm: 'Ja, Opzeggen'
+      title: 'Abonnement annuleren',
+      description: 'Annuleer uw abonnement aan het einde van de facturatieperiode',
+      button: 'Abonnement annuleren',
+      dialogTitle: 'Abonnement annuleren',
+      dialogDescription: 'Weet u zeker dat u uw abonnement wilt annuleren? Uw account wordt gedowngraded naar het gratis plan aan het einde van uw huidige facturatieperiode.',
+      warning: 'Waarschuwing',
+      warningDescription: 'Dit zal uw account downgraden naar het gratis plan.',
+      consequences: 'Wat gebeurt er daarna',
+      consequence1: 'Huidig plan blijft actief tot het einde van de facturatieperiode',
+      consequence2: 'Automatische downgrade naar gratis plan na afloop facturatieperiode',
+      consequence3: 'U kunt op elk moment weer upgraden',
+      confirmButton: 'Ja, downgrade naar gratis plan'
     },
     
-    selectPlan: {
-      title: 'Kies Uw Pakket',
-      description: 'Selecteer het pakket dat het beste bij uw garage past',
-      button: 'Selecteer Dit Pakket'
+    errors: {
+      forbidden: 'U heeft geen toegang tot deze pagina. Alleen garage beheerders kunnen abonnementen beheren.'
     },
     
-    purchase: {
-      title: 'Bevestig Uw Keuze',
-      description: 'U staat op het punt om een abonnement af te sluiten',
-      redirectNotice: 'U wordt doorgestuurd naar onze beveiligde betaalomgeving om de betaling te voltooien.',
-      button: 'Ga Naar Betaling'
+    // Nieuwe vertalingen voor upgrade pagina
+    upgrade: {
+      title: 'Kies Uw Abonnement',
+      subtitle: 'Selecteer het abonnement dat het beste bij uw garage past',
+      button: 'Upgraden',
+      importantInfo: 'Belangrijke Informatie',
+      upgradeInfo: 'Bij Upgraden',
+      upgradePoint1: 'Wijzigingen gaan direct in',
+      upgradePoint2: 'Pro-rata verrekening voor huidige maand',
+      upgradePoint3: 'Nieuwe limieten direct van toepassing',
+      downgradeInfo: 'Bij Downgraden',
+      downgradePoint1: 'Wijzigingen aan einde facturatieperiode',
+      downgradePoint2: 'Huidige functies blijven tot dan beschikbaar',
+      downgradePoint3: 'Zorg dat gebruik past binnen nieuwe limieten',
+      carsPerMonth: '{count} auto\'s per maand',
+      activeUsers: '{count} actieve gebruikers',
+      locations: '{count} locaties',
+      saveWithAnnual: 'Bespaar {amount} met jaarlijkse facturatie'
     },
     
-    paymentHistory: {
-      title: 'Betalingsgeschiedenis',
-      description: 'Overzicht van al uw betalingen en transacties',
-      viewHistory: 'Bekijk Betalingsgeschiedenis',
-      allTransactions: 'Alle transacties voor uw abonnement',
-      loading: 'Betalingsgeschiedenis laden...',
-      noHistory: 'Geen betalingsgeschiedenis gevonden',
-      date: 'Datum',
-      descriptionColumn: 'Omschrijving',
-      type: 'Type',
-      status: 'Status',
-      amount: 'Bedrag',
-      types: {
-        payment: 'Betaling',
-        refund: 'Terugbetaling',
-        subscription: 'Abonnement'
+    // Nieuwe vertalingen voor facturen pagina
+    invoices: {
+      title: 'Facturatiegeschiedenis',
+      subtitle: 'Bekijk en download uw eerdere facturen',
+      summary: 'Facturatie Overzicht',
+      totalPaid: 'Totaal Betaald',
+      averageMonthly: 'Gemiddeld per Maand',
+      totalInvoices: 'Totaal Facturen',
+      history: 'Factuurgeschiedenis',
+      allYears: 'Alle jaren',
+      invoice: 'Factuur',
+      download: 'Download PDF',
+      view: 'Bekijk Online',
+      downloadNotAvailable: 'Download niet beschikbaar',
+      viewNotAvailable: 'Online bekijken niet beschikbaar',
+      empty: {
+        title: 'Nog geen facturen',
+        description: 'Uw facturen verschijnen hier zodra u upgradet naar een betaald abonnement'
       },
-      statuses: {
-        pending: 'In behandeling',
-        completed: 'Voltooid',
-        failed: 'Mislukt',
-        canceled: 'Geannuleerd'
+      status: {
+        paid: 'Betaald',
+        open: 'Open',
+        void: 'Ongeldig',
+        uncollectible: 'Oninbaar',
+        draft: 'Concept'
       }
-    }
+    },
+    
+    // Aanvullende vertalingen
+    recommended: 'Aanbevolen',
+    month: 'maand',
+    scheduledCancel: 'Wordt binnenkort geannuleerd',
+    quickUsage: 'Snel Overzicht',
+    daysRemaining: '{days} dagen resterend',
+    keepPlan: 'Huidig plan behouden',
+    viewDetails: 'Bekijk details'
   }
 }

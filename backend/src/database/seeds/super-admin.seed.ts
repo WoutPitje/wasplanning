@@ -10,7 +10,7 @@ export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
   console.log('🌱 Seeding Super Admin...');
 
   // Check if super admin tenant already exists
- 
+
   const existingSuperAdmin = await userRepository.findOne({
     where: { email: 'admin@wasplanning.nl' },
   });

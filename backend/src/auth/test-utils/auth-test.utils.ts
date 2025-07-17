@@ -36,6 +36,7 @@ export class AuthTestUtils {
       updated_at: new Date(),
       tenant_id: mockTenant.id,
       tenant: mockTenant,
+      userLocations: [],
       ...overrides,
     };
   }

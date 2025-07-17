@@ -1,7 +1,7 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 import * as path from 'path';
-import { seedSubscriptionPlans } from '../src/database/seeds/subscription-plans.seed';
+import { seedSubscriptionPlans } from '../src/database/seeds/02-subscription-plans.seed';
 
 // Load test environment variables
 config({ path: '.env.test' });
@@ -24,11 +24,11 @@ export async function setupTestDatabase() {
   try {
     await testDataSource.initialize();
     console.log('Test database initialized');
-    
+
     // Drop and recreate schema to ensure clean state
     await testDataSource.synchronize(true);
     console.log('Test database schema synchronized');
-    
+
     // Seed subscription plans for tests
     await seedSubscriptionPlans(testDataSource);
     console.log('Test data seeded');

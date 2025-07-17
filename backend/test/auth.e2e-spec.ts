@@ -1,13 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
 import * as request from 'supertest';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { AuthModule } from '../src/auth/auth.module';
+import { TestAppModule } from './test-app.module';
 import { User, UserRole } from '../src/auth/entities/user.entity';
 import { Tenant } from '../src/auth/entities/tenant.entity';
 
@@ -21,28 +18,7 @@ describe('Auth (e2e)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          envFilePath: '.env.test',
-        }),
-        TypeOrmModule.forRoot({
-          type: 'postgres',
-          host: process.env.DATABASE_HOST || 'localhost',
-          port: parseInt(process.env.DATABASE_PORT || '5432'),
-          username: process.env.DATABASE_USERNAME || 'wasplanning',
-          password: process.env.DATABASE_PASSWORD || 'wasplanning_dev',
-          database: process.env.DATABASE_NAME || 'wasplanning_test',
-          entities: [User, Tenant],
-          synchronize: true, // Only for testing
-          dropSchema: true, // Clean database for each test run
-        }),
-        JwtModule.register({
-          secret: 'test-jwt-secret',
-          signOptions: { expiresIn: '1h' },
-        }),
-        AuthModule,
-      ],
+      imports: [TestAppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -59,7 +35,17 @@ describe('Auth (e2e)', () => {
   });
 
   beforeEach(async () => {
-    // Clean up database - delete all records
+    // Clean up database - delete all records in correct order
+    // First delete audit logs
+    await app.get(DataSource).query('DELETE FROM audit_logs');
+    // Then delete related entities
+    await app.get(DataSource).query('DELETE FROM user_locations');
+    await app.get(DataSource).query('DELETE FROM locations');
+    await app.get(DataSource).query('DELETE FROM usage_records');
+    await app.get(DataSource).query('DELETE FROM payment_methods');
+    await app.get(DataSource).query('DELETE FROM webhook_events');
+    await app.get(DataSource).query('DELETE FROM subscriptions');
+    // Finally delete users and tenants
     await userRepository.createQueryBuilder().delete().execute();
     await tenantRepository.createQueryBuilder().delete().execute();
 
@@ -186,8 +172,8 @@ describe('Auth (e2e)', () => {
       });
 
       expect(updatedUser).toBeDefined();
-      expect(updatedUser!.last_login).toBeDefined();
-      expect(updatedUser!.last_login.getTime()).toBeGreaterThanOrEqual(
+      expect(updatedUser.last_login).toBeDefined();
+      expect(updatedUser.last_login.getTime()).toBeGreaterThanOrEqual(
         beforeLogin.getTime(),
       );
     });

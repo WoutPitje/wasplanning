@@ -1,190 +1,252 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Subscription } from '../entities/subscription.entity';
+import { Repository, In } from 'typeorm';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from '../entities/subscription.entity';
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
 import { UsageService } from './usage.service';
-import { MetricType } from '../entities/usage-record.entity';
+import { UsageType } from '../entities/usage-record.entity';
+import { User } from '../../auth/entities/user.entity';
+import { Location } from '../../locations/entities/location.entity';
 
-export interface LimitCheck {
-  allowed: boolean;
-  limit?: number;
-  current: number;
-  percentage: number;
-  feature?: string;
+export enum LimitType {
+  CARS_WASHED = 'cars_washed',
+  ACTIVE_USERS = 'active_users',
+  LOCATIONS = 'locations',
 }
 
 @Injectable()
 export class LimitsService {
-  private readonly logger = new Logger(LimitsService.name);
-
   constructor(
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPlan)
-    private planRepository: Repository<SubscriptionPlan>,
+    private subscriptionPlanRepository: Repository<SubscriptionPlan>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(Location)
+    private locationRepository: Repository<Location>,
     private usageService: UsageService,
   ) {}
 
-  async checkLimit(
-    subscriptionId: string,
-    metricType: MetricType,
-  ): Promise<LimitCheck> {
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { id: subscriptionId },
-      relations: ['plan'],
-    });
-
-    if (!subscription) {
-      throw new NotFoundException(`Subscription with ID ${subscriptionId} not found`);
+  /**
+   * Check if washing another car is allowed
+   */
+  async canWashCar(tenantId: string): Promise<boolean> {
+    const subscription = await this.getActiveSubscription(tenantId);
+    if (!subscription || !subscription.plan) {
+      return false;
     }
 
-    const plan = subscription.plan;
-    const currentUsage = await this.usageService.getCurrentPeriodUsage(subscriptionId);
-    const current = currentUsage[metricType] || 0;
-
-    let limit: number | undefined;
-    let allowed = true;
-
-    switch (metricType) {
-      case MetricType.CARS_WASHED:
-        limit = plan.maxCarsPerMonth;
-        break;
-      case MetricType.ACTIVE_USERS:
-        limit = plan.maxUsers;
-        break;
-      case MetricType.ACTIVE_LOCATIONS:
-        limit = plan.maxLocations;
-        break;
+    const limit = subscription.plan.max_cars_per_month;
+    if (limit === null) {
+      return true; // Unlimited
     }
 
-    if (limit !== null && limit !== undefined) {
-      allowed = current < limit;
-    }
+    const currentUsage = await this.usageService.getMonthlyUsage(
+      tenantId,
+      UsageType.CARS_WASHED,
+    );
 
-    const percentage = limit ? Math.min((current / limit) * 100, 100) : 0;
-
-    return {
-      allowed,
-      limit,
-      current,
-      percentage,
-    };
+    return currentUsage < limit;
   }
 
-  async checkFeature(
-    subscriptionId: string,
-    featureName: string,
-  ): Promise<LimitCheck> {
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { id: subscriptionId },
-      relations: ['plan'],
-    });
-
-    if (!subscription) {
-      throw new NotFoundException(`Subscription with ID ${subscriptionId} not found`);
+  /**
+   * Check if creating another user is allowed
+   */
+  async canCreateUser(tenantId: string): Promise<boolean> {
+    const subscription = await this.getActiveSubscription(tenantId);
+    if (!subscription || !subscription.plan) {
+      return false;
     }
 
-    const hasFeature = subscription.plan.features[featureName] === true;
+    const limit = subscription.plan.max_active_users;
+    if (limit === null) {
+      return true; // Unlimited
+    }
 
-    return {
-      allowed: hasFeature,
-      current: hasFeature ? 1 : 0,
-      percentage: hasFeature ? 100 : 0,
-      feature: featureName,
-    };
+    // Count actual active users in the tenant
+    const activeUserCount = await this.countActiveUsers(tenantId);
+
+    return activeUserCount < limit;
   }
 
-  async getAllLimits(subscriptionId: string): Promise<{
-    cars: LimitCheck;
-    users: LimitCheck;
-    locations: LimitCheck;
-    features: Record<string, boolean>;
+  /**
+   * Check if creating another location is allowed
+   */
+  async canCreateLocation(tenantId: string): Promise<boolean> {
+    const subscription = await this.getActiveSubscription(tenantId);
+    if (!subscription || !subscription.plan) {
+      return false;
+    }
+
+    const limit = subscription.plan.max_locations;
+    if (limit === null) {
+      return true; // Unlimited
+    }
+
+    const locationCount = await this.countActiveLocations(tenantId);
+    return locationCount < limit;
+  }
+
+  /**
+   * Get usage percentage for a specific limit type
+   */
+  async getUsagePercentage(tenantId: string, type: LimitType): Promise<number> {
+    const subscription = await this.getActiveSubscription(tenantId);
+    if (!subscription || !subscription.plan) {
+      return 0;
+    }
+
+    let limit: number | null;
+    let currentUsage: number;
+
+    switch (type) {
+      case LimitType.CARS_WASHED:
+        limit = subscription.plan.max_cars_per_month;
+        currentUsage = await this.usageService.getMonthlyUsage(
+          tenantId,
+          UsageType.CARS_WASHED,
+        );
+        break;
+      case LimitType.ACTIVE_USERS:
+        limit = subscription.plan.max_active_users;
+        currentUsage = await this.countActiveUsers(tenantId);
+        break;
+      case LimitType.LOCATIONS:
+        limit = subscription.plan.max_locations;
+        currentUsage = await this.countActiveLocations(tenantId);
+        break;
+      default:
+        return 0;
+    }
+
+    if (limit === null) {
+      return 0; // Unlimited = 0% usage
+    }
+
+    return Math.round((currentUsage / limit) * 100);
+  }
+
+  /**
+   * Check if usage is approaching limit (80% threshold)
+   */
+  async isApproachingLimit(
+    tenantId: string,
+    type: LimitType,
+  ): Promise<boolean> {
+    const percentage = await this.getUsagePercentage(tenantId, type);
+    return percentage >= 80;
+  }
+
+  /**
+   * Get current limits and usage for a tenant
+   */
+  async getLimitsAndUsage(tenantId: string): Promise<{
+    cars_washed: { current: number; limit: number | null; percentage: number };
+    active_users: { current: number; limit: number | null; percentage: number };
+    locations: { current: number; limit: number | null; percentage: number };
   }> {
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { id: subscriptionId },
-      relations: ['plan'],
-    });
-
-    if (!subscription) {
-      throw new NotFoundException(`Subscription with ID ${subscriptionId} not found`);
+    const subscription = await this.getActiveSubscription(tenantId);
+    if (!subscription || !subscription.plan) {
+      throw new Error('No active subscription found');
     }
 
-    const [cars, users, locations] = await Promise.all([
-      this.checkLimit(subscriptionId, MetricType.CARS_WASHED),
-      this.checkLimit(subscriptionId, MetricType.ACTIVE_USERS),
-      this.checkLimit(subscriptionId, MetricType.ACTIVE_LOCATIONS),
-    ]);
+    const carsUsage = await this.usageService.getMonthlyUsage(
+      tenantId,
+      UsageType.CARS_WASHED,
+    );
+    const usersUsage = await this.countActiveUsers(tenantId);
 
     return {
-      cars,
-      users,
-      locations,
-      features: subscription.plan.features,
+      cars_washed: {
+        current: carsUsage,
+        limit: subscription.plan.max_cars_per_month,
+        percentage: await this.getUsagePercentage(
+          tenantId,
+          LimitType.CARS_WASHED,
+        ),
+      },
+      active_users: {
+        current: usersUsage,
+        limit: subscription.plan.max_active_users,
+        percentage: await this.getUsagePercentage(
+          tenantId,
+          LimitType.ACTIVE_USERS,
+        ),
+      },
+      locations: {
+        current: await this.countActiveLocations(tenantId),
+        limit: subscription.plan.max_locations,
+        percentage: await this.getUsagePercentage(
+          tenantId,
+          LimitType.LOCATIONS,
+        ),
+      },
     };
   }
 
-  async canCreateWashTask(subscriptionId: string): Promise<boolean> {
-    const check = await this.checkLimit(subscriptionId, MetricType.CARS_WASHED);
-    return check.allowed;
-  }
+  /**
+   * Get active subscription with plan details
+   */
+  private async getActiveSubscription(
+    tenantId: string,
+  ): Promise<Subscription | null> {
+    // First try to find an active or incomplete subscription
+    let subscription = await this.subscriptionRepository.findOne({
+      where: {
+        tenant_id: tenantId,
+        status: In([SubscriptionStatus.ACTIVE, SubscriptionStatus.INCOMPLETE]),
+      },
+      relations: ['plan'],
+    });
 
-  async canAddUser(subscriptionId: string): Promise<boolean> {
-    const check = await this.checkLimit(subscriptionId, MetricType.ACTIVE_USERS);
-    return check.allowed;
-  }
+    // If no subscription exists, create a FREE subscription
+    if (!subscription) {
+      const freePlan = await this.subscriptionPlanRepository.findOne({
+        where: { name: 'free' },
+      });
 
-  async canAddLocation(subscriptionId: string): Promise<boolean> {
-    const check = await this.checkLimit(subscriptionId, MetricType.ACTIVE_LOCATIONS);
-    return check.allowed;
-  }
-
-  async hasFeature(subscriptionId: string, featureName: string): Promise<boolean> {
-    const check = await this.checkFeature(subscriptionId, featureName);
-    return check.allowed;
-  }
-
-  async getLimitWarnings(subscriptionId: string): Promise<{
-    warning: boolean;
-    critical: boolean;
-    messages: string[];
-  }> {
-    const limits = await this.getAllLimits(subscriptionId);
-    const messages: string[] = [];
-    let warning = false;
-    let critical = false;
-
-    // Check for 80% warning threshold
-    if (limits.cars.limit && limits.cars.percentage >= 80) {
-      warning = true;
-      if (limits.cars.percentage >= 95) {
-        critical = true;
-        messages.push(`Critical: Car wash limit almost reached (${limits.cars.current}/${limits.cars.limit})`);
-      } else {
-        messages.push(`Warning: Car wash limit at ${Math.round(limits.cars.percentage)}% (${limits.cars.current}/${limits.cars.limit})`);
+      if (!freePlan) {
+        return null; // Let the caller handle this
       }
+
+      // Create a new FREE subscription
+      subscription = await this.subscriptionRepository.save({
+        tenant_id: tenantId,
+        plan: freePlan,
+        status: SubscriptionStatus.ACTIVE,
+        current_period_start: new Date(),
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      });
     }
 
-    if (limits.users.limit && limits.users.percentage >= 80) {
-      warning = true;
-      if (limits.users.percentage >= 95) {
-        critical = true;
-        messages.push(`Critical: User limit almost reached (${limits.users.current}/${limits.users.limit})`);
-      } else {
-        messages.push(`Warning: User limit at ${Math.round(limits.users.percentage)}% (${limits.users.current}/${limits.users.limit})`);
-      }
-    }
+    return subscription;
+  }
 
-    if (limits.locations.limit && limits.locations.percentage >= 80) {
-      warning = true;
-      if (limits.locations.percentage >= 95) {
-        critical = true;
-        messages.push(`Critical: Location limit almost reached (${limits.locations.current}/${limits.locations.limit})`);
-      } else {
-        messages.push(`Warning: Location limit at ${Math.round(limits.locations.percentage)}% (${limits.locations.current}/${limits.locations.limit})`);
-      }
-    }
+  /**
+   * Count active users in a tenant
+   */
+  private async countActiveUsers(tenantId: string): Promise<number> {
+    return this.userRepository.count({
+      where: {
+        tenant_id: tenantId,
+        is_active: true,
+      },
+    });
+  }
 
-    return { warning, critical, messages };
+  /**
+   * Count active locations for a tenant
+   */
+  private async countActiveLocations(tenantId: string): Promise<number> {
+    return this.locationRepository.count({
+      where: {
+        tenant_id: tenantId,
+        is_active: true,
+      },
+    });
   }
 }

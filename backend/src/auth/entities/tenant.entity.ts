@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { User } from './user.entity';
+import { Subscription } from '../../subscriptions/entities/subscription.entity';
 
 @Entity('tenants')
 export class Tenant {
@@ -39,4 +41,7 @@ export class Tenant {
 
   @OneToMany(() => User, (user) => user.tenant)
   users: User[];
+
+  @OneToOne(() => Subscription, (subscription) => subscription.tenant)
+  subscription?: Subscription;
 }

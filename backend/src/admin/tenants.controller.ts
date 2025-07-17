@@ -157,7 +157,7 @@ export class TenantsController {
   async remove(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     // Get tenant info before deactivation for logging
     const tenant = await this.tenantsService.findOne(id);
-    
+
     const result = await this.tenantsService.remove(id);
 
     // Log tenant deactivation

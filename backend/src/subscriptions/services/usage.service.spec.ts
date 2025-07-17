@@ -2,16 +2,32 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsageService } from './usage.service';
-import { UsageRecord, MetricType } from '../entities/usage-record.entity';
+import { UsageRecord, UsageType } from '../entities/usage-record.entity';
 import { Subscription } from '../entities/subscription.entity';
-import { RecordUsageDto } from '../dto/record-usage.dto';
-import { AuditService } from '../../audit/audit.service';
 
 describe('UsageService', () => {
   let service: UsageService;
   let usageRecordRepository: Repository<UsageRecord>;
   let subscriptionRepository: Repository<Subscription>;
-  let auditService: AuditService;
+
+  const mockTenantId = 'test-tenant-id';
+  const mockUserId = 'test-user-id';
+
+  const mockSubscription = {
+    tenant_id: mockTenantId,
+    current_period_start: new Date('2025-01-01'),
+    current_period_end: new Date('2025-01-31'),
+  };
+
+  const mockUsageRecordRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+    query: jest.fn(),
+  };
+
+  const mockSubscriptionRepository = {
+    findOne: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -19,273 +35,132 @@ describe('UsageService', () => {
         UsageService,
         {
           provide: getRepositoryToken(UsageRecord),
-          useValue: {
-            create: jest.fn(),
-            save: jest.fn(),
-            find: jest.fn(),
-            findOne: jest.fn(),
-            createQueryBuilder: jest.fn(),
-            query: jest.fn(),
-          },
+          useValue: mockUsageRecordRepository,
         },
         {
           provide: getRepositoryToken(Subscription),
-          useValue: {
-            findOne: jest.fn(),
-          },
-        },
-        {
-          provide: AuditService,
-          useValue: {
-            logAction: jest.fn(),
-          },
+          useValue: mockSubscriptionRepository,
         },
       ],
     }).compile();
 
     service = module.get<UsageService>(UsageService);
     usageRecordRepository = module.get<Repository<UsageRecord>>(
-      getRepositoryToken(UsageRecord)
+      getRepositoryToken(UsageRecord),
     );
     subscriptionRepository = module.get<Repository<Subscription>>(
-      getRepositoryToken(Subscription)
+      getRepositoryToken(Subscription),
     );
-    auditService = module.get<AuditService>(AuditService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('recordUsage', () => {
-    it('should record usage successfully', async () => {
-      const dto: RecordUsageDto = {
-        metricType: MetricType.CARS_WASHED,
-        quantity: 1,
-        metadata: { washTaskId: 'wash-123' },
-      };
+  describe('incrementCarCount', () => {
+    it('should increment car count atomically', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
 
-      const mockUsageRecord = {
-        id: 'usage-123',
-        subscriptionId: 'sub-123',
-        metricType: MetricType.CARS_WASHED,
-        quantity: 1,
-        metadata: { washTaskId: 'wash-123' },
-      };
+      await service.incrementCarCount(mockTenantId);
 
-      const mockSubscription = {
-        id: 'sub-123',
-        tenantId: 'tenant-123',
-      };
-
-      (usageRecordRepository.create as jest.Mock).mockReturnValue(mockUsageRecord);
-      (usageRecordRepository.save as jest.Mock).mockResolvedValue(mockUsageRecord);
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
-
-      const result = await service.recordUsage('sub-123', dto);
-
-      expect(result).toEqual(mockUsageRecord);
-      expect(usageRecordRepository.create).toHaveBeenCalledWith({
-        subscriptionId: 'sub-123',
-        metricType: MetricType.CARS_WASHED,
-        quantity: 1,
-        metadata: { washTaskId: 'wash-123' },
-      });
-      expect(auditService.logAction).toHaveBeenCalled();
-    });
-
-    it('should handle errors when recording usage', async () => {
-      const dto: RecordUsageDto = {
-        metricType: MetricType.CARS_WASHED,
-        quantity: 1,
-      };
-
-      (usageRecordRepository.create as jest.Mock).mockReturnValue({});
-      (usageRecordRepository.save as jest.Mock).mockRejectedValue(new Error('Database error'));
-
-      await expect(service.recordUsage('sub-123', dto)).rejects.toThrow('Database error');
+      expect(mockUsageRecordRepository.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO usage_records'),
+        [
+          mockTenantId,
+          UsageType.CARS_WASHED,
+          mockSubscription.current_period_start,
+          mockSubscription.current_period_end,
+        ],
+      );
     });
   });
 
-  describe('getCurrentPeriodUsage', () => {
-    it('should calculate current period usage correctly', async () => {
-      const mockSubscription = {
-        id: 'sub-123',
-        currentPeriodStart: new Date('2024-01-01'),
-        currentPeriodEnd: new Date('2024-01-31'),
-      };
+  describe('getMonthlyUsage', () => {
+    it('should return usage count for cars washed', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      mockUsageRecordRepository.findOne.mockResolvedValue({
+        count: 42,
+      });
 
-      const mockUsageRecords = [
-        { metricType: MetricType.CARS_WASHED, quantity: 5 },
-        { metricType: MetricType.CARS_WASHED, quantity: 3 },
-        { metricType: MetricType.ACTIVE_USERS, quantity: 1 },
-      ];
+      const result = await service.getMonthlyUsage(
+        mockTenantId,
+        UsageType.CARS_WASHED,
+      );
 
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
-      (usageRecordRepository.find as jest.Mock).mockResolvedValue(mockUsageRecords);
+      expect(result).toBe(42);
+      expect(mockUsageRecordRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          tenant_id: mockTenantId,
+          record_type: UsageType.CARS_WASHED,
+          period_start: mockSubscription.current_period_start,
+        },
+      });
+    });
 
-      const result = await service.getCurrentPeriodUsage('sub-123');
+    it('should return 0 if no usage record exists', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      mockUsageRecordRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.getMonthlyUsage(
+        mockTenantId,
+        UsageType.CARS_WASHED,
+      );
+
+      expect(result).toBe(0);
+    });
+  });
+
+  describe('initializeMonthlyRecords', () => {
+    it('should create usage records for all types', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      mockUsageRecordRepository.findOne.mockResolvedValue(null);
+
+      await service.initializeMonthlyRecords(mockTenantId);
+
+      expect(mockUsageRecordRepository.save).toHaveBeenCalledTimes(2);
+      expect(mockUsageRecordRepository.save).toHaveBeenCalledWith({
+        tenant_id: mockTenantId,
+        record_type: UsageType.CARS_WASHED,
+        period_start: mockSubscription.current_period_start,
+        period_end: mockSubscription.current_period_end,
+        count: 0,
+      });
+      expect(mockUsageRecordRepository.save).toHaveBeenCalledWith({
+        tenant_id: mockTenantId,
+        record_type: UsageType.ACTIVE_USERS,
+        period_start: mockSubscription.current_period_start,
+        period_end: mockSubscription.current_period_end,
+        count: 0,
+      });
+    });
+
+    it('should not create duplicate records', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      mockUsageRecordRepository.findOne.mockResolvedValue({
+        id: 'existing-record',
+      });
+
+      await service.initializeMonthlyRecords(mockTenantId);
+
+      expect(mockUsageRecordRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getUsageStats', () => {
+    it('should return usage statistics for current period', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      mockUsageRecordRepository.findOne
+        .mockResolvedValueOnce({ count: 25 }) // cars
+        .mockResolvedValueOnce({ count: 5 }); // users
+
+      const result = await service.getUsageStats(mockTenantId);
 
       expect(result).toEqual({
-        [MetricType.CARS_WASHED]: 8,
-        [MetricType.ACTIVE_USERS]: 1,
+        cars_washed: 25,
+        active_users: 5,
+        period_start: mockSubscription.current_period_start,
+        period_end: mockSubscription.current_period_end,
       });
-    });
-
-    it('should handle empty usage data', async () => {
-      const mockSubscription = {
-        id: 'sub-123',
-        currentPeriodStart: new Date('2024-01-01'),
-        currentPeriodEnd: new Date('2024-01-31'),
-      };
-
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
-      (usageRecordRepository.find as jest.Mock).mockResolvedValue([]);
-
-      const result = await service.getCurrentPeriodUsage('sub-123');
-
-      expect(result).toEqual({});
-    });
-  });
-
-  describe('recordActiveUser', () => {
-    it('should record active user successfully', async () => {
-      const mockUsageRecord = {
-        id: 'usage-123',
-        subscriptionId: 'sub-123',
-        metricType: MetricType.ACTIVE_USERS,
-        metadata: { userId: 'user-456' },
-      };
-
-      (usageRecordRepository.findOne as jest.Mock).mockResolvedValue(null);
-      (usageRecordRepository.create as jest.Mock).mockReturnValue(mockUsageRecord);
-      (usageRecordRepository.save as jest.Mock).mockResolvedValue(mockUsageRecord);
-
-      const result = await service.recordActiveUser('sub-123', 'user-456');
-
-      expect(result).toEqual(mockUsageRecord);
-    });
-
-    it('should return existing record if user already recorded today', async () => {
-      const existingRecord = {
-        id: 'existing-123',
-        subscriptionId: 'sub-123',
-        metricType: MetricType.ACTIVE_USERS,
-        metadata: { userId: 'user-456' },
-      };
-
-      (usageRecordRepository.findOne as jest.Mock).mockResolvedValue(existingRecord);
-
-      const result = await service.recordActiveUser('sub-123', 'user-456');
-
-      expect(result).toEqual(existingRecord);
-      expect(usageRecordRepository.save).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('recordActiveLocation', () => {
-    it('should record active location successfully', async () => {
-      const mockUsageRecord = {
-        id: 'usage-123',
-        subscriptionId: 'sub-123',
-        metricType: MetricType.ACTIVE_LOCATIONS,
-        metadata: { locationId: 'loc-456' },
-      };
-
-      (usageRecordRepository.findOne as jest.Mock).mockResolvedValue(null);
-      (usageRecordRepository.create as jest.Mock).mockReturnValue(mockUsageRecord);
-      (usageRecordRepository.save as jest.Mock).mockResolvedValue(mockUsageRecord);
-
-      const result = await service.recordActiveLocation('sub-123', 'loc-456');
-
-      expect(result).toEqual(mockUsageRecord);
-    });
-  });
-
-  describe('getUsageHistory', () => {
-    it('should return usage history', async () => {
-      const mockRecords = [
-        {
-          id: '1',
-          metricType: MetricType.CARS_WASHED,
-          quantity: 5,
-          recordedAt: new Date('2024-01-01'),
-        },
-        {
-          id: '2',
-          metricType: MetricType.CARS_WASHED,
-          quantity: 3,
-          recordedAt: new Date('2024-01-02'),
-        },
-      ];
-
-      (usageRecordRepository.find as jest.Mock).mockResolvedValue(mockRecords);
-
-      const result = await service.getUsageHistory(
-        'sub-123',
-        new Date('2024-01-01'),
-        new Date('2024-01-31')
-      );
-
-      expect(result).toEqual(mockRecords);
-    });
-  });
-
-  describe('getUsageSummary', () => {
-    it('should return aggregated usage summary', async () => {
-      const mockRecords = [
-        { metricType: MetricType.CARS_WASHED, quantity: 5 },
-        { metricType: MetricType.CARS_WASHED, quantity: 3 },
-        { metricType: MetricType.ACTIVE_USERS, quantity: 1 },
-      ];
-
-      (usageRecordRepository.find as jest.Mock).mockResolvedValue(mockRecords);
-
-      const result = await service.getUsageSummary(
-        'sub-123',
-        new Date('2024-01-01'),
-        new Date('2024-01-31')
-      );
-
-      expect(result).toEqual({
-        [MetricType.CARS_WASHED]: 8,
-        [MetricType.ACTIVE_USERS]: 1,
-      });
-    });
-  });
-
-  describe('getDailyUsage', () => {
-    it('should return daily usage breakdown', async () => {
-      const mockRecords = [
-        {
-          metricType: MetricType.CARS_WASHED,
-          quantity: 5,
-          recordedAt: new Date('2024-01-01'),
-        },
-        {
-          metricType: MetricType.CARS_WASHED,
-          quantity: 3,
-          recordedAt: new Date('2024-01-01'),
-        },
-        {
-          metricType: MetricType.CARS_WASHED,
-          quantity: 2,
-          recordedAt: new Date('2024-01-02'),
-        },
-      ];
-
-      (usageRecordRepository.find as jest.Mock).mockResolvedValue(mockRecords);
-
-      const result = await service.getDailyUsage(
-        'sub-123',
-        new Date('2024-01-01'),
-        new Date('2024-01-02')
-      );
-
-      expect(result).toEqual([
-        { date: '2024-01-01', cars_washed: 8 },
-        { date: '2024-01-02', cars_washed: 2 },
-      ]);
     });
   });
 });

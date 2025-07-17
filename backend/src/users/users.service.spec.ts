@@ -10,11 +10,15 @@ import { UsersService } from './users.service';
 import { User, UserRole } from '../auth/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
 import { EmailService } from '../email/email.service';
+import { LimitsService } from '../subscriptions/services/limits.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('UsersService', () => {
   let service: UsersService;
   let userRepository: Repository<User>;
   let authService: AuthService;
+  let limitsService: LimitsService;
+  let auditService: AuditService;
 
   const mockUser = {
     id: 'user-uuid',
@@ -79,12 +83,27 @@ describe('UsersService', () => {
             sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
           },
         },
+        {
+          provide: LimitsService,
+          useValue: {
+            canCreateUser: jest.fn().mockResolvedValue(true),
+            getLimitsAndUsage: jest.fn(),
+          },
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            logAction: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
     authService = module.get<AuthService>(AuthService);
+    limitsService = module.get<LimitsService>(LimitsService);
+    auditService = module.get<AuditService>(AuditService);
   });
 
   afterEach(() => {
@@ -104,6 +123,7 @@ describe('UsersService', () => {
       const dtoWithPassword = { ...createUserDto, password: 'mypassword123' };
       mockUserRepository.findOne.mockResolvedValue(null);
       mockAuthService.createUser.mockResolvedValue(mockUser);
+      jest.spyOn(limitsService, 'canCreateUser').mockResolvedValue(true);
 
       const result = await service.create(dtoWithPassword);
 
@@ -115,6 +135,7 @@ describe('UsersService', () => {
     it('should create a user with generated password', async () => {
       mockUserRepository.findOne.mockResolvedValue(null);
       mockAuthService.createUser.mockResolvedValue(mockUser);
+      jest.spyOn(limitsService, 'canCreateUser').mockResolvedValue(true);
 
       const result = await service.create(createUserDto);
 
@@ -136,6 +157,37 @@ describe('UsersService', () => {
       await expect(service.create(createUserDto)).rejects.toThrow(
         `User with email ${createUserDto.email} already exists`,
       );
+    });
+
+    it('should throw ForbiddenException when subscription limit is exceeded', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+      jest.spyOn(limitsService, 'canCreateUser').mockResolvedValue(false);
+      jest.spyOn(limitsService, 'getLimitsAndUsage').mockResolvedValue({
+        cars_washed: { current: 0, limit: 50, percentage: 0 },
+        active_users: { current: 2, limit: 2, percentage: 100 },
+        locations: { current: 0, limit: 1, percentage: 0 },
+      });
+
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+
+      expect(auditService.logAction).toHaveBeenCalledWith({
+        tenant_id: 'tenant-uuid',
+        user_id: null,
+        action: 'limit.exceeded',
+        resource_type: 'user',
+        resource_id: null,
+        details: {
+          type: 'active_users',
+          current_usage: 2,
+          limit: 2,
+          attempted_action: 'create_user',
+          email: 'newuser@test-garage.nl',
+        },
+        ip_address: '127.0.0.1',
+        user_agent: 'System',
+      });
     });
   });
 
@@ -355,5 +407,4 @@ describe('UsersService', () => {
       ).rejects.toThrow(NotFoundException);
     });
   });
-
 });

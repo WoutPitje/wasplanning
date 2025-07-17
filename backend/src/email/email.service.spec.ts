@@ -125,7 +125,9 @@ describe('EmailService', () => {
     beforeEach(() => {
       // Mock template file
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue('<html><body>Hello {{firstName}}!</body></html>');
+      mockFs.readFileSync.mockReturnValue(
+        '<html><body>Hello {{firstName}}!</body></html>',
+      );
     });
 
     it('should send email successfully', async () => {
@@ -185,7 +187,7 @@ describe('EmailService', () => {
         expect.objectContaining({
           from: 'custom@example.com',
           replyTo: 'reply@example.com',
-        })
+        }),
       );
     });
 
@@ -214,7 +216,9 @@ describe('EmailService', () => {
         from: 'invalid-email',
       };
 
-      await expect(service.sendEmail(emailData)).rejects.toThrow('Invalid from email address: invalid-email');
+      await expect(service.sendEmail(emailData)).rejects.toThrow(
+        'Invalid from email address: invalid-email',
+      );
     });
 
     it('should throw error for invalid to email address', async () => {
@@ -228,7 +232,9 @@ describe('EmailService', () => {
         data: { firstName: 'John' },
       };
 
-      await expect(service.sendEmail(emailData)).rejects.toThrow('Invalid to email address: invalid-email');
+      await expect(service.sendEmail(emailData)).rejects.toThrow(
+        'Invalid to email address: invalid-email',
+      );
     });
 
     it('should use fallback from email when config is missing', async () => {
@@ -259,7 +265,7 @@ describe('EmailService', () => {
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           from: 'noreply@wasplanning.nl', // Should use fallback
-        })
+        }),
       );
     });
 
@@ -274,7 +280,7 @@ describe('EmailService', () => {
       };
 
       await expect(service.sendEmail(emailData)).rejects.toThrow(
-        'Template not found: user_welcome'
+        'Template not found: user_welcome',
       );
     });
   });
@@ -282,7 +288,9 @@ describe('EmailService', () => {
   describe('sendWelcomeEmail', () => {
     beforeEach(() => {
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue('<html><body>Welcome {{firstName}}!</body></html>');
+      mockFs.readFileSync.mockReturnValue(
+        '<html><body>Welcome {{firstName}}!</body></html>',
+      );
       mockTransporter.sendMail.mockResolvedValue({
         messageId: 'welcome-id',
         accepted: ['user@example.com'],
@@ -323,7 +331,7 @@ describe('EmailService', () => {
         expect.objectContaining({
           to: 'jane@example.com',
           subject: 'Welkom bij het Wasplanning Systeem',
-        })
+        }),
       );
     });
   });
@@ -331,8 +339,12 @@ describe('EmailService', () => {
   describe('renderTemplate', () => {
     it('should render template with provided data', async () => {
       // Mock existsSync to return true for first location
-      mockFs.existsSync.mockImplementation((path) => String(path).includes('templates'));
-      mockFs.readFileSync.mockReturnValue('Hello {{name}}, your password is {{password}}');
+      mockFs.existsSync.mockImplementation((path) =>
+        String(path).includes('templates'),
+      );
+      mockFs.readFileSync.mockReturnValue(
+        'Hello {{name}}, your password is {{password}}',
+      );
 
       const result = await service['renderTemplate'](EmailType.USER_WELCOME, {
         name: 'John',
@@ -346,7 +358,7 @@ describe('EmailService', () => {
       mockFs.existsSync.mockReturnValue(false);
 
       await expect(
-        service['renderTemplate'](EmailType.USER_WELCOME, {})
+        service['renderTemplate'](EmailType.USER_WELCOME, {}),
       ).rejects.toThrow('Template not found: user_welcome');
     });
 
@@ -357,7 +369,10 @@ describe('EmailService', () => {
         .mockReturnValueOnce(true); // Second location succeeds
       mockFs.readFileSync.mockReturnValue('Template found!');
 
-      const result = await service['renderTemplate'](EmailType.USER_WELCOME, {});
+      const result = await service['renderTemplate'](
+        EmailType.USER_WELCOME,
+        {},
+      );
 
       expect(result).toBe('Template found!');
       expect(mockFs.existsSync).toHaveBeenCalledTimes(2); // Should try multiple locations
@@ -365,7 +380,9 @@ describe('EmailService', () => {
 
     it('should render template with complex data structures', async () => {
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue('{{#if hasPassword}}Password: {{password}}{{/if}}');
+      mockFs.readFileSync.mockReturnValue(
+        '{{#if hasPassword}}Password: {{password}}{{/if}}',
+      );
 
       const result = await service['renderTemplate'](EmailType.USER_WELCOME, {
         hasPassword: true,
@@ -382,7 +399,7 @@ describe('EmailService', () => {
       });
 
       await expect(
-        service['renderTemplate'](EmailType.USER_WELCOME, {})
+        service['renderTemplate'](EmailType.USER_WELCOME, {}),
       ).rejects.toThrow('Failed to render email template: user_welcome');
     });
   });

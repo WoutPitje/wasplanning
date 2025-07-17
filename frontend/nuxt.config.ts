@@ -18,6 +18,7 @@ export default defineNuxtConfig({
       wsUrl: process.env.NUXT_PUBLIC_WS_URL || 'ws://localhost:3001',
       appName: 'Wasplanning',
       appVersion: '1.0.0',
+      stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
     }
   },
   app: {

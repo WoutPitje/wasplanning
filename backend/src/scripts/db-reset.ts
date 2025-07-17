@@ -40,7 +40,6 @@ async function resetDatabase() {
     console.log('\nRunning seed script...');
     const seedScript = await import('./seed');
     // The seed script should run automatically when imported
-    
   } catch (error) {
     console.error('Error resetting database:', error);
     process.exit(1);

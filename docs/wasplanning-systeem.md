@@ -247,10 +247,9 @@ Real-time overzicht van alle belangrijke cijfers:
 ## Prijsmodel
 
 ### Betaling & Facturatie
-- **Veilige betalingen** via Mollie payment gateway
+- **Veilige betalingen** via betrouwbare payment provider
 - **Automatische incasso** voor maandelijkse abonnementen
 - **Ondersteuning** voor alle Nederlandse betaalmethoden (iDEAL, Bancontact, creditcard)
-- **Prorating** bij pakket upgrades/downgrades
 - **Automatische factuur** generatie en verzending
 - **BTW compliance** volgens Nederlandse wetgeving
 
@@ -258,67 +257,67 @@ Real-time overzicht van alle belangrijke cijfers:
 
 ```mermaid
 graph TD
-    subgraph "🚗 Starter - €49/maand"
-        S1[1 locatie]
-        S2[Tot 500 auto's/maand]
-        S3[5 gebruikers]
-        S4[Basis functies]
+    subgraph "🆓 Gratis"
+        F1[1 locatie]
+        F2[Tot 50 auto's/maand]
+        F3[2 gebruikers]
+        F4[Basis functies]
     end
     
-    subgraph "🏢 Groei - €149/maand"
-        G1[Tot 3 locaties]
-        G2[Tot 2.000 auto's/maand]
-        G3[Onbeperkt gebruikers]
-        G4[Alle functies + API]
+    subgraph "🏢 Standaard - €100/maand"
+        S1[Tot 3 locaties]
+        S2[Tot 1.500 auto's/maand]
+        S3[10 gebruikers]
+        S4[Alle functies + rapportages]
     end
     
-    subgraph "🏭 Enterprise - €299/maand"
+    subgraph "🏭 Enterprise - €400/maand"
         E1[Onbeperkt locaties]
         E2[Onbeperkt auto's]
-        E3[Multi-tenant dashboard]
-        E4[Custom integraties]
+        E3[Onbeperkt gebruikers]
+        E4[Custom integraties + API]
     end
 ```
 
-#### 🚗 **Starter** - €49/maand
+#### 🆓 **Gratis**
 - **1 locatie**
-- **Tot 500 auto's/maand**
+- **Tot 50 auto's/maand**
 - Basis functies
-- 5 gebruikers
-- Email support
-- Basis locatie functionaliteiten
+- 2 gebruikers
+- Community support
+- Basis wasplanning functionaliteiten
 
-#### 🏢 **Groei** - €149/maand  
+#### 🏢 **Standaard** - €100/maand  
 - **Tot 3 locaties**
-- **Tot 2.000 auto's/maand**
+- **Tot 1.500 auto's/maand**
 - Alle functies + rapportages
-- Onbeperkt gebruikers
-- Priority support
-- API toegang
-- Geavanceerde multi-location functies
-- Cross-location gebruiker toewijzingen
+- 10 gebruikers
+- Email support
+- Geavanceerde planning functies
+- Multi-location management
+- Export mogelijkheden
 
-#### 🏭 **Enterprise** - €299/maand
+#### 🏭 **Enterprise** - €400/maand
 - **Onbeperkt locaties**
 - **Onbeperkt auto's**
+- **Onbeperkt gebruikers**
 - Multi-tenant dashboard
 - Custom integraties
-- Dedicated support
-- SLA garantie
+- Priority support
+- API toegang
 - Custom branding
-- Geavanceerde multi-location analytics
-- Franchise/keten beheer functies
-- Cross-location resource planning
+- Geavanceerde analytics
+- Franchise/keten beheer
+- SLA garantie
 
 ### Extra Opties
-- **Extra locatie** (Groei pakket): €39/locatie/maand
-- **Overschrijding auto's**: €0,10 per extra auto
+- **Extra gebruiker** (Standaard pakket): €5/gebruiker/maand
 - **WhiteLabel**: €99/maand extra
 - **On-premise installatie**: Op aanvraag
 
 ### Voordelen
 - **Geen setup kosten**
-- **30 dagen gratis proberen**
+- **Direct beginnen** met gratis pakket
 - **Maandelijks opzegbaar**
 - **Inclusief updates**
 
@@ -349,7 +348,7 @@ timeline
 ### Fase 1: Pilot (Maand 1-3)
 - 3 pilot garages
 - Focus op garages met 5+ wassers
-- Gratis tijdens pilot periode
+- Starten met gratis pakket
 - Wekelijkse feedback sessies
 
 ### Fase 2: Early Adopters (Maand 4-6)  
@@ -374,10 +373,10 @@ timeline
 - **Huidige tijdsbesteding**: 10 min/auto coördinatie = 50 uur/maand
 - **Met systeem**: 2 min/auto = 10 uur/maand
 - **Besparing**: 40 uur × €35/uur = €1.400/maand
-- **Kosten Starter**: €49/maand
-- **ROI**: €1.351/maand (2700% rendement)
+- **Kosten Standaard**: €100/maand
+- **ROI**: €1.300/maand (1300% rendement)
 
-### Middelgrote Keten (1.500 auto's, 2 locaties)
-- **Besparing**: 200 uur × €35 = €7.000/maand
-- **Kosten Groei**: €149/maand
-- **ROI**: €6.851/maand
+### Grote Keten (3.000 auto's, 5 locaties)
+- **Besparing**: 400 uur × €35 = €14.000/maand
+- **Kosten Enterprise**: €400/maand
+- **ROI**: €13.600/maand

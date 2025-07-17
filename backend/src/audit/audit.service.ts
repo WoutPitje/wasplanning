@@ -56,7 +56,7 @@ export class AuditService {
     const queryBuilder = this.auditLogRepository
       .createQueryBuilder('audit_log')
       .leftJoinAndSelect('audit_log.user', 'user');
-    
+
     // Only filter by tenant if tenantId is provided (for non-super admins)
     if (tenantId) {
       queryBuilder.where('audit_log.tenant_id = :tenantId', { tenantId });
@@ -116,7 +116,7 @@ export class AuditService {
     if (tenantId) {
       where.tenant_id = tenantId;
     }
-    
+
     return this.auditLogRepository.find({
       where,
       order: {
@@ -144,11 +144,11 @@ export class AuditService {
       .createQueryBuilder('audit_log')
       .select('audit_log.action', 'action')
       .addSelect('COUNT(*)', 'count');
-    
+
     if (tenantId) {
       queryBuilder.where('audit_log.tenant_id = :tenantId', { tenantId });
     }
-    
+
     const stats = await queryBuilder
       .andWhere('audit_log.created_at >= :startDate', { startDate })
       .groupBy('audit_log.action')
@@ -159,19 +159,16 @@ export class AuditService {
     return stats;
   }
 
-  async exportAuditLogsAsCsv(query: AuditQueryDto, tenantId: string | null): Promise<Buffer> {
-    const {
-      user_id,
-      action,
-      resource_type,
-      start_date,
-      end_date,
-    } = query;
+  async exportAuditLogsAsCsv(
+    query: AuditQueryDto,
+    tenantId: string | null,
+  ): Promise<Buffer> {
+    const { user_id, action, resource_type, start_date, end_date } = query;
 
     const queryBuilder = this.auditLogRepository
       .createQueryBuilder('audit_log')
       .leftJoinAndSelect('audit_log.user', 'user');
-    
+
     // Only filter by tenant if tenantId is provided (for non-super admins)
     if (tenantId) {
       queryBuilder.where('audit_log.tenant_id = :tenantId', { tenantId });
@@ -219,7 +216,7 @@ export class AuditService {
       'Details',
     ];
 
-    const csvRows = logs.map(log => {
+    const csvRows = logs.map((log) => {
       const date = new Date(log.created_at);
       return [
         date.toLocaleDateString('en-US'),
@@ -236,14 +233,18 @@ export class AuditService {
     // Build CSV string
     const csvContent = [
       csvHeaders.join(','),
-      ...csvRows.map(row => 
-        row.map(cell => {
-          // Escape quotes and wrap in quotes if contains comma or quotes
-          const escaped = String(cell).replace(/"/g, '""');
-          return escaped.includes(',') || escaped.includes('"') || escaped.includes('\n') 
-            ? `"${escaped}"` 
-            : escaped;
-        }).join(',')
+      ...csvRows.map((row) =>
+        row
+          .map((cell) => {
+            // Escape quotes and wrap in quotes if contains comma or quotes
+            const escaped = String(cell).replace(/"/g, '""');
+            return escaped.includes(',') ||
+              escaped.includes('"') ||
+              escaped.includes('\n')
+              ? `"${escaped}"`
+              : escaped;
+          })
+          .join(','),
       ),
     ].join('\n');
 

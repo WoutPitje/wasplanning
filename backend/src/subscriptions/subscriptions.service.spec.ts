@@ -1,56 +1,79 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
+import { NotFoundException } from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
-import { Subscription, SubscriptionStatus, BillingInterval } from './entities/subscription.entity';
-import { SubscriptionPlan, PlanName } from './entities/subscription-plan.entity';
-import { PaymentsService } from '../payments/payments.service';
-import { UsageService } from './services/usage.service';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from './entities/subscription.entity';
+import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { LimitsService } from './services/limits.service';
+import { UsageService } from './services/usage.service';
+import { BillingService } from './services/billing.service';
 import { ProrationService } from './services/proration.service';
-import { AuditService } from '../audit/audit.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
   let subscriptionRepository: Repository<Subscription>;
-  let planRepository: Repository<SubscriptionPlan>;
-  let paymentsService: PaymentsService;
-  let usageService: UsageService;
+  let subscriptionPlanRepository: Repository<SubscriptionPlan>;
   let limitsService: LimitsService;
-  let prorationService: ProrationService;
-  let auditService: AuditService;
+
+  const mockTenantId = 'test-tenant-id';
 
   const mockPlan = {
-    id: 'plan-123',
-    name: PlanName.STARTER,
-    displayName: 'Starter',
-    priceMonthly: 49,
-    priceYearly: 490,
-    isActive: true,
-    features: {},
+    id: 'plan-id',
+    name: 'standard',
+    display_name: 'Standaard',
+    price_cents: 10000,
+    max_cars_per_month: 1500,
+    max_active_users: 10,
+    max_locations: 3,
+    features: {
+      api_access: true,
+      advanced_reporting: true,
+      custom_branding: false,
+      priority_support: false,
+      export_data: true,
+      multi_location: true,
+    },
   };
 
   const mockSubscription = {
-    id: 'sub-123',
-    tenantId: 'tenant-123',
-    planId: 'plan-123',
-    plan: mockPlan,
+    id: 'sub-id',
+    tenant_id: mockTenantId,
     status: SubscriptionStatus.ACTIVE,
-    billingInterval: BillingInterval.MONTH,
-    currentPeriodStart: new Date(),
-    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    creditBalance: 0,
-    mollieCustomerId: 'cst_test123',
-    mollieSubscriptionId: 'sub_test123',
-    metadata: {},
+    current_period_start: new Date('2025-01-01'),
+    current_period_end: new Date('2025-01-31'),
+    plan: mockPlan,
+    stripe_customer_id: 'cus_123',
+    stripe_subscription_id: 'sub_123',
   };
 
-  const mockTenant = {
-    id: 'tenant-123',
-    display_name: 'Test Tenant',
+  const mockUsage = {
+    cars_washed: { current: 750, limit: 1500, percentage: 50 },
+    active_users: { current: 5, limit: 10, percentage: 50 },
+    locations: { current: 1, limit: 3, percentage: 33 },
   };
+
+  const mockSubscriptionRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockSubscriptionPlanRepository = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+  };
+
+  const mockLimitsService = {
+    getLimitsAndUsage: jest.fn(),
+    canWashCar: jest.fn(),
+    canCreateUser: jest.fn(),
+    canCreateLocation: jest.fn(),
+  };
+
+  const mockUsageService = {};
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -58,486 +81,200 @@ describe('SubscriptionsService', () => {
         SubscriptionsService,
         {
           provide: getRepositoryToken(Subscription),
-          useValue: {
-            create: jest.fn(),
-            save: jest.fn(),
-            find: jest.fn(),
-            findOne: jest.fn(),
-            update: jest.fn(),
-            manager: {
-              getRepository: jest.fn().mockReturnValue({
-                findOne: jest.fn(),
-              }),
-            },
-          },
+          useValue: mockSubscriptionRepository,
         },
         {
           provide: getRepositoryToken(SubscriptionPlan),
-          useValue: {
-            find: jest.fn(),
-            findOne: jest.fn(),
-          },
-        },
-        {
-          provide: PaymentsService,
-          useValue: {
-            getOrCreateCustomer: jest.fn(),
-            hasValidMandate: jest.fn(),
-            createCheckoutPayment: jest.fn(),
-            createSubscription: jest.fn(),
-            cancelSubscription: jest.fn(),
-            getPayment: jest.fn(),
-          },
-        },
-        {
-          provide: UsageService,
-          useValue: {
-            getCurrentPeriodUsage: jest.fn(),
-            recordUsage: jest.fn(),
-            recordActiveUser: jest.fn(),
-            recordActiveLocation: jest.fn(),
-          },
+          useValue: mockSubscriptionPlanRepository,
         },
         {
           provide: LimitsService,
-          useValue: {
-            getAllLimits: jest.fn(),
-            getLimitWarnings: jest.fn(),
-            checkLimit: jest.fn(),
-            hasFeature: jest.fn(),
-          },
+          useValue: mockLimitsService,
+        },
+        {
+          provide: UsageService,
+          useValue: mockUsageService,
+        },
+        {
+          provide: BillingService,
+          useValue: {},
         },
         {
           provide: ProrationService,
-          useValue: {
-            calculateProration: jest.fn(),
-          },
-        },
-        {
-          provide: AuditService,
-          useValue: {
-            logAction: jest.fn(),
-            findByResourceId: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue(30), // Default trial days
-          },
+          useValue: {},
         },
       ],
     }).compile();
 
     service = module.get<SubscriptionsService>(SubscriptionsService);
     subscriptionRepository = module.get<Repository<Subscription>>(
-      getRepositoryToken(Subscription)
+      getRepositoryToken(Subscription),
     );
-    planRepository = module.get<Repository<SubscriptionPlan>>(
-      getRepositoryToken(SubscriptionPlan)
+    subscriptionPlanRepository = module.get<Repository<SubscriptionPlan>>(
+      getRepositoryToken(SubscriptionPlan),
     );
-    paymentsService = module.get<PaymentsService>(PaymentsService);
-    usageService = module.get<UsageService>(UsageService);
     limitsService = module.get<LimitsService>(LimitsService);
-    prorationService = module.get<ProrationService>(ProrationService);
-    auditService = module.get<AuditService>(AuditService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('createPaidSubscription', () => {
-    it('should create subscription with mandate setup for new customer', async () => {
-      const mockTenantRepo = { findOne: jest.fn().mockResolvedValue(mockTenant) };
-      (subscriptionRepository.manager.getRepository as jest.Mock).mockReturnValue(mockTenantRepo);
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(null);
-      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
-      (paymentsService.getOrCreateCustomer as jest.Mock).mockResolvedValue({
-        id: 'cst_new123',
-        isNew: true,
-      });
-      (paymentsService.hasValidMandate as jest.Mock).mockResolvedValue(false);
-      (paymentsService.createCheckoutPayment as jest.Mock).mockResolvedValue({
-        id: 'tr_test123',
-        checkoutUrl: 'https://mollie.com/checkout/test',
-        status: 'open',
-      });
-      (subscriptionRepository.create as jest.Mock).mockReturnValue(mockSubscription);
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue(mockSubscription);
+  describe('getCurrentSubscription', () => {
+    it('should return current subscription with usage', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      mockLimitsService.getLimitsAndUsage.mockResolvedValue(mockUsage);
 
-      const result = await service.createPaidSubscription('tenant-123', {
-        planName: PlanName.STARTER,
-        billingInterval: BillingInterval.MONTH,
-        returnUrl: 'https://example.com/return',
-      });
+      const result = await service.getCurrentSubscription(mockTenantId);
 
-      expect(result.checkoutUrl).toBe('https://mollie.com/checkout/test');
-      expect(paymentsService.createCheckoutPayment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sequenceType: 'first',
-          amount: 49,
-        })
-      );
+      expect(result).toMatchObject({
+        id: 'sub-id',
+        tenant_id: mockTenantId,
+        plan_name: 'standard',
+        plan_display_name: 'Standaard',
+        status: SubscriptionStatus.ACTIVE,
+        price_cents: 10000,
+        price_euros: 100,
+        usage: mockUsage,
+        features: mockPlan.features,
+      });
+      expect(result.days_remaining).toBeGreaterThanOrEqual(0);
     });
 
-    it('should create subscription directly if customer has valid mandate', async () => {
-      const mockTenantRepo = { findOne: jest.fn().mockResolvedValue(mockTenant) };
-      (subscriptionRepository.manager.getRepository as jest.Mock).mockReturnValue(mockTenantRepo);
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(null);
-      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
-      (paymentsService.getOrCreateCustomer as jest.Mock).mockResolvedValue({
-        id: 'cst_existing123',
-        isNew: false,
-      });
-      (paymentsService.hasValidMandate as jest.Mock).mockResolvedValue(true);
-      (paymentsService.createSubscription as jest.Mock).mockResolvedValue({
-        id: 'sub_test123',
-        status: 'active',
-        nextPaymentDate: new Date('2024-02-01'),
-      });
-      (subscriptionRepository.create as jest.Mock).mockReturnValue(mockSubscription);
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue(mockSubscription);
-
-      const result = await service.createPaidSubscription('tenant-123', {
-        planName: PlanName.STARTER,
-        billingInterval: BillingInterval.MONTH,
-        returnUrl: 'https://example.com/return',
-      });
-
-      expect(result.checkoutUrl).toBe('https://example.com/return?status=success');
-      expect(paymentsService.createSubscription).toHaveBeenCalledWith(
-        expect.objectContaining({
-          customerId: 'cst_existing123',
-          amount: 49,
-          interval: 'monthly',
-        })
-      );
-    });
-
-    it('should throw error if tenant already has subscription', async () => {
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
+    it('should throw Error when no subscription found and free plan is missing', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(null);
+      mockSubscriptionPlanRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.createPaidSubscription('tenant-123', {
-          planName: PlanName.STARTER,
-          billingInterval: BillingInterval.MONTH,
-          returnUrl: 'https://example.com/return',
-        })
-      ).rejects.toThrow('Tenant already has a subscription');
-    });
-  });
-
-  describe('completeNewSubscription', () => {
-    it('should complete subscription after mandate setup payment', async () => {
-      const mockPayment = {
-        id: 'tr_test123',
-        status: 'paid',
-        amount: 49,
-        metadata: {
-          tenantId: 'tenant-123',
-          action: 'subscription_mandate_setup',
-        },
-      };
-
-      const incompleteSubscription = {
-        ...mockSubscription,
-        status: SubscriptionStatus.INCOMPLETE,
-        metadata: { pendingPaymentId: 'tr_test123' },
-      };
-
-      (paymentsService.getPayment as jest.Mock).mockResolvedValue(mockPayment);
-      (subscriptionRepository.find as jest.Mock).mockResolvedValue([incompleteSubscription]);
-      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
-      (paymentsService.createSubscription as jest.Mock).mockResolvedValue({
-        id: 'sub_test123',
-        status: 'active',
-        nextPaymentDate: new Date('2024-02-01'),
-      });
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
-        ...incompleteSubscription,
-        status: SubscriptionStatus.ACTIVE,
-        mollieSubscriptionId: 'sub_test123',
-      });
-
-      const result = await service.completeNewSubscription('tr_test123');
-
-      expect(result.status).toBe(SubscriptionStatus.ACTIVE);
-      expect(result.mollieSubscriptionId).toBe('sub_test123');
-      expect(paymentsService.createSubscription).toHaveBeenCalled();
-    });
-
-    it('should handle failed Mollie subscription creation', async () => {
-      const mockPayment = {
-        id: 'tr_test123',
-        status: 'paid',
-        amount: 49,
-        metadata: {
-          tenantId: 'tenant-123',
-          action: 'subscription_mandate_setup',
-        },
-      };
-
-      const incompleteSubscription = {
-        ...mockSubscription,
-        status: SubscriptionStatus.INCOMPLETE,
-        metadata: { pendingPaymentId: 'tr_test123' },
-      };
-
-      (paymentsService.getPayment as jest.Mock).mockResolvedValue(mockPayment);
-      (subscriptionRepository.find as jest.Mock).mockResolvedValue([incompleteSubscription]);
-      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
-      (paymentsService.createSubscription as jest.Mock).mockRejectedValue(
-        new Error('Subscription creation failed')
-      );
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue(incompleteSubscription);
-
-      await expect(service.completeNewSubscription('tr_test123')).rejects.toThrow(
-        'Subscription creation failed'
-      );
-
-      expect(subscriptionRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: SubscriptionStatus.INCOMPLETE,
-          metadata: expect.objectContaining({
-            error: 'Subscription creation failed',
-          }),
-        })
+        service.getCurrentSubscription(mockTenantId),
+      ).rejects.toThrow(
+        'Free plan not found in database. Please run seed data.',
       );
     });
   });
 
-  describe('cancelSubscription', () => {
-    it('should cancel subscription with Mollie', async () => {
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
-      (paymentsService.cancelSubscription as jest.Mock).mockResolvedValue(undefined);
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
-        ...mockSubscription,
-        status: SubscriptionStatus.CANCELED,
-      });
+  describe('getAvailablePlans', () => {
+    it('should return all plans with current plan marked', async () => {
+      const plans = [
+        { ...mockPlan, id: '1', name: 'free', price_cents: 0 },
+        { ...mockPlan, id: 'plan-id', name: 'standard', price_cents: 10000 }, // Use same ID as mockPlan
+        { ...mockPlan, id: '3', name: 'enterprise', price_cents: 40000 },
+      ];
+      mockSubscriptionPlanRepository.find.mockResolvedValue(plans);
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
 
-      const result = await service.cancelSubscription('tenant-123', 'sub-123', true);
+      const result = await service.getAvailablePlans(mockTenantId);
 
-      expect(result.status).toBe(SubscriptionStatus.CANCELED);
-      expect(paymentsService.cancelSubscription).toHaveBeenCalledWith('sub_test123');
-    });
-
-    it('should handle Mollie cancellation errors gracefully', async () => {
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
-      (paymentsService.cancelSubscription as jest.Mock).mockRejectedValue(
-        new Error('Mollie API error')
-      );
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
-        ...mockSubscription,
-        status: SubscriptionStatus.CANCELED,
-      });
-
-      const result = await service.cancelSubscription('tenant-123', 'sub-123', true);
-
-      expect(result.status).toBe(SubscriptionStatus.CANCELED);
-      // Should continue with local cancellation even if Mollie fails
-    });
-
-    it('should set cancelAtPeriodEnd for non-immediate cancellation', async () => {
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
-        ...mockSubscription,
-        cancelAtPeriodEnd: true,
-        canceledAt: new Date(),
-        status: SubscriptionStatus.ACTIVE, // Status should remain ACTIVE for non-immediate cancellation
-      });
-
-      const result = await service.cancelSubscription('tenant-123', 'sub-123', false);
-
-      expect(result.cancelAtPeriodEnd).toBe(true);
-      expect(result.status).not.toBe(SubscriptionStatus.CANCELED);
+      expect(result).toHaveLength(3);
+      expect(result[0].price_display).toBe('€0,00/maand');
+      expect(result[1].price_display).toBe('€100,00/maand');
+      expect(result[2].price_display).toBe('€400,00/maand');
+      expect(result[1].is_current).toBe(true);
+      expect(result[1].is_recommended).toBe(true);
     });
   });
 
-  describe('changeSubscriptionPlan', () => {
-    it('should handle plan upgrade with credits', async () => {
-      const subscriptionWithCredits = {
-        ...mockSubscription,
-        creditBalance: 20,
-      };
+  describe('getDetailedUsage', () => {
+    it('should return detailed usage with summary', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      mockLimitsService.getLimitsAndUsage.mockResolvedValue(mockUsage);
 
-      const groeiPlan = {
-        ...mockPlan,
-        id: 'plan-456',
-        name: PlanName.GROEI,
-        priceMonthly: 149,
-      };
+      const result = await service.getDetailedUsage(mockTenantId);
 
-      const proration = {
-        amount: 50,
-        credit: 0,
-        isUpgrade: true,
-        description: 'Upgrade proration',
-        daysRemaining: 15,
-        totalDays: 30,
-      };
-
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(subscriptionWithCredits);
-      (planRepository.findOne as jest.Mock).mockResolvedValue(groeiPlan);
-      (prorationService.calculateProration as jest.Mock).mockReturnValue(proration);
-      (paymentsService.getOrCreateCustomer as jest.Mock).mockResolvedValue({
-        id: 'cst_test123',
-        isNew: false,
+      expect(result.cars_washed).toMatchObject({
+        current: 750,
+        limit: 1500,
+        remaining: 750,
+        percentage: 50,
+        is_approaching_limit: false,
+        is_at_limit: false,
       });
-      (paymentsService.createCheckoutPayment as jest.Mock).mockResolvedValue({
-        id: 'tr_change123',
-        checkoutUrl: 'https://mollie.com/checkout/change',
-        status: 'open',
-      });
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue(subscriptionWithCredits);
-
-      const result = await service.changeSubscriptionPlan(
-        'tenant-123',
-        'sub-123',
-        PlanName.GROEI,
-        'https://example.com/return',
-        BillingInterval.MONTH
-      );
-
-      expect(result.checkoutUrl).toBe('https://mollie.com/checkout/change');
-      expect(paymentsService.createCheckoutPayment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          amount: 30, // 50 - 20 credits
-        })
-      );
+      expect(result.summary.at_limit).toEqual([]);
+      expect(result.summary.approaching_limit).toEqual([]);
     });
 
-    it('should handle plan downgrade with credit generation', async () => {
-      const groeiSubscription = {
-        ...mockSubscription,
-        plan: {
-          ...mockPlan,
-          name: PlanName.GROEI,
-          priceMonthly: 149,
-        },
+    it('should identify items approaching limit', async () => {
+      const highUsage = {
+        cars_washed: { current: 1200, limit: 1500, percentage: 80 },
+        active_users: { current: 9, limit: 10, percentage: 90 },
+        locations: { current: 3, limit: 3, percentage: 100 },
       };
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      mockLimitsService.getLimitsAndUsage.mockResolvedValue(highUsage);
 
-      const proration = {
-        amount: 0,
-        credit: 50,
-        isUpgrade: false,
-        description: 'Downgrade credit',
-        daysRemaining: 15,
-        totalDays: 30,
-      };
+      const result = await service.getDetailedUsage(mockTenantId);
 
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(groeiSubscription);
-      (planRepository.findOne as jest.Mock).mockResolvedValue(mockPlan);
-      (prorationService.calculateProration as jest.Mock).mockReturnValue(proration);
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
-        ...groeiSubscription,
-        creditBalance: 50,
-      });
-
-      const result = await service.changeSubscriptionPlan(
-        'tenant-123',
-        'sub-123',
-        PlanName.STARTER,
-        'https://example.com/return'
-      );
-
-      expect(result.checkoutUrl).toBe(''); // No payment needed for downgrade
-      expect(result.subscription.creditBalance).toBe(50);
+      expect(result.summary.at_limit).toEqual(['locations']);
+      expect(result.summary.approaching_limit).toEqual([
+        'cars_washed',
+        'active_users',
+      ]);
     });
   });
 
-  describe('processRecurringPayment', () => {
-    it('should update subscription period after recurring payment', async () => {
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
-        ...mockSubscription,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  describe('getCurrentLimits', () => {
+    it('should return limits with remaining quota and permissions', async () => {
+      mockSubscriptionRepository.findOne.mockResolvedValue(mockSubscription);
+      mockLimitsService.getLimitsAndUsage.mockResolvedValue(mockUsage);
+      mockLimitsService.canWashCar.mockResolvedValue(true);
+      mockLimitsService.canCreateUser.mockResolvedValue(true);
+      mockLimitsService.canCreateLocation.mockResolvedValue(true);
+
+      const result = await service.getCurrentLimits(mockTenantId);
+
+      expect(result.limits).toEqual({
+        cars_per_month: 1500,
+        active_users: 10,
+        locations: 3,
       });
-
-      await service.processRecurringPayment('sub-123', 'tr_recurring123', 49);
-
-      expect(subscriptionRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: SubscriptionStatus.ACTIVE,
-          currentPeriodStart: expect.any(Date),
-          currentPeriodEnd: expect.any(Date),
-        })
-      );
-    });
-
-    it('should apply credits to recurring payment', async () => {
-      const subscriptionWithCredits = {
-        ...mockSubscription,
-        creditBalance: 20,
-      };
-
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(subscriptionWithCredits);
-      (subscriptionRepository.save as jest.Mock).mockResolvedValue({
-        ...subscriptionWithCredits,
-        creditBalance: 0,
+      expect(result.remaining_quota).toEqual({
+        cars_per_month: 750,
+        active_users: 5,
+        locations: 2,
       });
-
-      await service.processRecurringPayment('sub-123', 'tr_recurring123', 49);
-
-      expect(subscriptionRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          creditBalance: 0, // 20 credits used, 29 paid
-        })
-      );
+      expect(result.can_perform).toEqual({
+        wash_car: true,
+        create_user: true,
+        create_location: true,
+      });
     });
   });
 
-  describe('getCurrentUsage', () => {
-    it('should return usage data for active subscription', async () => {
-      const mockUsage = { cars_washed: 100, active_users: 5, active_locations: 1 };
-      const mockLimits = {
-        cars: { current: 100, limit: 500, percentage: 20 },
-        users: { current: 5, limit: 5, percentage: 100 },
-        locations: { current: 1, limit: 1, percentage: 100 },
-      };
-      const mockWarnings = { warning: true, critical: false, messages: ['User limit reached'] };
+  describe('calculateDaysRemaining', () => {
+    it('should calculate days correctly', () => {
+      const service = new SubscriptionsService(
+        subscriptionRepository,
+        subscriptionPlanRepository,
+        limitsService,
+        null as any,
+        null as any,
+        null as any,
+      );
 
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(mockSubscription);
-      (usageService.getCurrentPeriodUsage as jest.Mock).mockResolvedValue(mockUsage);
-      (limitsService.getAllLimits as jest.Mock).mockResolvedValue(mockLimits);
-      (limitsService.getLimitWarnings as jest.Mock).mockResolvedValue(mockWarnings);
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 15);
 
-      const result = await service.getCurrentUsage('tenant-123');
+      const result = (service as any).calculateDaysRemaining(futureDate);
 
-      expect(result).toEqual({
-        subscription: expect.objectContaining({
-          id: 'sub-123',
-          plan: mockPlan,
-        }),
-        usage: mockUsage,
-        limits: mockLimits,
-        warnings: mockWarnings,
-      });
+      expect(result).toBe(15);
     });
 
-    it('should return empty usage data when no subscription exists', async () => {
-      (subscriptionRepository.findOne as jest.Mock).mockResolvedValue(null);
+    it('should return 0 for past dates', () => {
+      const service = new SubscriptionsService(
+        subscriptionRepository,
+        subscriptionPlanRepository,
+        limitsService,
+        null as any,
+        null as any,
+        null as any,
+      );
 
-      const result = await service.getCurrentUsage('tenant-123');
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 5);
 
-      expect(result).toEqual({
-        usage: {
-          cars_washed: 0,
-          active_users: 0,
-          active_locations: 0,
-        },
-        limits: {
-          cars: { current: 0, limit: null, percentage: 0 },
-          users: { current: 0, limit: null, percentage: 0 },
-          locations: { current: 0, limit: null, percentage: 0 },
-        },
-        warnings: {
-          warning: false,
-          critical: false,
-          messages: [],
-        },
-      });
+      const result = (service as any).calculateDaysRemaining(pastDate);
+
+      expect(result).toBe(0);
     });
   });
 });

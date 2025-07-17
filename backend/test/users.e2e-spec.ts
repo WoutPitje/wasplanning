@@ -29,7 +29,7 @@ describe('Users (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Configure validation pipe to transform query params
     app.useGlobalPipes(
       new ValidationPipe({
@@ -38,13 +38,27 @@ describe('Users (e2e)', () => {
         transform: true,
       }),
     );
-    
+
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(DataSource);
 
     // Clean up any existing test data first
     await cleanupTestData(dataSource);
+
+    // Ensure we have plans - we'll update test tenants to use standard plan for more users
+    const standardPlan = await dataSource.query(
+      `SELECT id FROM subscription_plans WHERE name = 'standard' LIMIT 1`,
+    );
+    if (standardPlan.length === 0) {
+      // Create plans if they don't exist
+      await dataSource.query(`
+        INSERT INTO subscription_plans (id, name, display_name, price_monthly, price_yearly, stripe_price_id, features, max_cars_per_month, max_active_users, max_locations, created_at, updated_at)
+        VALUES 
+          (gen_random_uuid(), 'free', 'Free', 0, 0, '', '{}', 50, 2, 1, NOW(), NOW()),
+          (gen_random_uuid(), 'standard', 'Standard', 10000, 100000, '', '{}', 1500, 10, 3, NOW(), NOW())
+      `);
+    }
 
     // Create unique test data for this suite with timestamp
     testTimestamp = Date.now();
@@ -74,6 +88,49 @@ describe('Users (e2e)', () => {
     );
 
     testTenantId = testGarageTenantId;
+
+    // Create subscriptions with standard plan for more users
+    const standardPlanResult = await dataSource.query(
+      `SELECT id FROM subscription_plans WHERE name = 'standard' LIMIT 1`,
+    );
+    if (standardPlanResult.length > 0) {
+      const standardPlanId = standardPlanResult[0].id;
+      const currentDate = new Date();
+      const nextMonth = new Date(currentDate);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+      // Create subscriptions
+      await dataSource.query(
+        `
+        INSERT INTO subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, created_at, updated_at)
+        VALUES 
+          (gen_random_uuid(), $1, $2, 'active', $3, $4, NOW(), NOW()),
+          (gen_random_uuid(), $5, $2, 'active', $3, $4, NOW(), NOW())
+        `,
+        [
+          superAdminTenantId,
+          standardPlanId,
+          currentDate,
+          nextMonth,
+          testGarageTenantId,
+        ],
+      );
+
+      // Create usage records
+      await dataSource.query(
+        `
+        INSERT INTO usage_records (id, tenant_id, record_type, period_start, period_end, count, created_at, updated_at)
+        VALUES 
+          (gen_random_uuid(), $1, 'cars_washed', $2, $3, 0, NOW(), NOW()),
+          (gen_random_uuid(), $1, 'active_users', $2, $3, 0, NOW(), NOW()),
+          (gen_random_uuid(), $1, 'locations', $2, $3, 0, NOW(), NOW()),
+          (gen_random_uuid(), $4, 'cars_washed', $2, $3, 0, NOW(), NOW()),
+          (gen_random_uuid(), $4, 'active_users', $2, $3, 0, NOW(), NOW()),
+          (gen_random_uuid(), $4, 'locations', $2, $3, 0, NOW(), NOW())
+        `,
+        [superAdminTenantId, currentDate, nextMonth, testGarageTenantId],
+      );
+    }
 
     // Create test users
     const hashedPassword = await bcrypt.hash('testpassword', 12);
@@ -137,7 +194,9 @@ describe('Users (e2e)', () => {
     // Clean up test users
     if (testUserId) {
       // First delete audit logs for this user to avoid foreign key constraint
-      await dataSource.query('DELETE FROM audit_logs WHERE user_id = $1', [testUserId]);
+      await dataSource.query('DELETE FROM audit_logs WHERE user_id = $1', [
+        testUserId,
+      ]);
       await dataSource.query('DELETE FROM users WHERE id = $1', [testUserId]);
       testUserId = null;
     }
@@ -432,20 +491,20 @@ describe('Users (e2e)', () => {
       const response = await request(app.getHttpServer())
         .patch(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
-        .send({ 
-          first_name: 'Updated' // Only send valid field
+        .send({
+          first_name: 'Updated', // Only send valid field
         })
         .expect(200);
 
       // Check that first_name was updated
       expect(response.body.first_name).toBe('Updated');
-      
+
       // Now test that email is rejected if sent alone
       await request(app.getHttpServer())
         .patch(`/users/${testUserId}`)
         .set('Authorization', `Bearer ${garageAdminToken}`)
-        .send({ 
-          email: 'newemail@test.nl' // Only forbidden field
+        .send({
+          email: 'newemail@test.nl', // Only forbidden field
         })
         .expect(400); // Should fail validation since no valid fields
     });

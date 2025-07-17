@@ -1,232 +1,182 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
-import { UsageRecord, MetricType } from '../entities/usage-record.entity';
+import { Repository } from 'typeorm';
+import { UsageRecord, UsageType } from '../entities/usage-record.entity';
 import { Subscription } from '../entities/subscription.entity';
-import { RecordUsageDto } from '../dto/record-usage.dto';
-import { AuditService } from '../../audit/audit.service';
 
 @Injectable()
 export class UsageService {
-  private readonly logger = new Logger(UsageService.name);
-
   constructor(
     @InjectRepository(UsageRecord)
-    private usageRepository: Repository<UsageRecord>,
+    private usageRecordRepository: Repository<UsageRecord>,
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
-    private auditService: AuditService,
   ) {}
 
-  async recordUsage(
-    subscriptionId: string,
-    dto: RecordUsageDto,
-  ): Promise<UsageRecord> {
-    this.logger.log(`Recording usage for subscription ${subscriptionId}: ${dto.metricType} = ${dto.quantity}`);
+  /**
+   * Increment the car count for a tenant
+   * Uses database transaction for atomic increments
+   */
+  async incrementCarCount(tenantId: string): Promise<void> {
+    const currentPeriod = await this.getCurrentPeriod(tenantId);
 
-    const usage = this.usageRepository.create({
-      subscriptionId,
-      metricType: dto.metricType,
-      quantity: dto.quantity,
-      metadata: dto.metadata || {},
-    });
-
-    const savedUsage = await this.usageRepository.save(usage);
-
-    // Get subscription to get tenant ID for audit log
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { id: subscriptionId },
-      relations: ['tenant'],
-    });
-
-    // Audit log usage recording (only for significant events like car washes)
-    if (dto.metricType === MetricType.CARS_WASHED) {
-      await this.auditService.logAction({
-        action: 'USAGE_RECORDED',
-        resource_type: 'UsageRecord',
-        resource_id: savedUsage.id,
-        details: {
-          metricType: dto.metricType,
-          quantity: dto.quantity,
-          subscriptionId,
-          metadata: dto.metadata,
-        },
-        tenant_id: subscription?.tenantId,
-      });
-    }
-
-    return savedUsage;
+    // Use raw query for atomic increment
+    await this.usageRecordRepository.query(
+      `
+      INSERT INTO usage_records (tenant_id, record_type, period_start, period_end, count)
+      VALUES ($1, $2, $3, $4, 1)
+      ON CONFLICT (tenant_id, record_type, period_start)
+      DO UPDATE SET count = usage_records.count + 1, updated_at = NOW()
+      `,
+      [tenantId, UsageType.CARS_WASHED, currentPeriod.start, currentPeriod.end],
+    );
   }
 
-  async getCurrentPeriodUsage(
-    subscriptionId: string,
-    metricType?: MetricType,
-  ): Promise<{ [key: string]: number }> {
+  /**
+   * Track an active user for the current month
+   * For simplicity, we'll track this separately with a different table later
+   * For now, we'll increment a counter (not ideal for unique users)
+   */
+  async trackActiveUser(tenantId: string, userId: string): Promise<void> {
+    // TODO: Implement proper unique user tracking with a separate table
+    // For MVP, we'll just track login count
+    const currentPeriod = await this.getCurrentPeriod(tenantId);
+
+    // Check if user was already tracked this month
+    const tracked = await this.usageRecordRepository
+      .query(
+        `
+      SELECT 1 FROM user_activity_tracking 
+      WHERE tenant_id = $1 AND user_id = $2 AND period_start = $3
+      LIMIT 1
+      `,
+        [tenantId, userId, currentPeriod.start],
+      )
+      .catch(() => []); // Table doesn't exist yet
+
+    if (tracked.length === 0) {
+      // Update the count
+      await this.usageRecordRepository.query(
+        `
+        INSERT INTO usage_records (tenant_id, record_type, period_start, period_end, count)
+        VALUES ($1, $2, $3, $4, 1)
+        ON CONFLICT (tenant_id, record_type, period_start)
+        DO UPDATE SET count = usage_records.count + 1, updated_at = NOW()
+        `,
+        [
+          tenantId,
+          UsageType.ACTIVE_USERS,
+          currentPeriod.start,
+          currentPeriod.end,
+        ],
+      );
+    }
+  }
+
+  /**
+   * Get monthly usage for a specific type
+   */
+  async getMonthlyUsage(tenantId: string, type: UsageType): Promise<number> {
+    const currentPeriod = await this.getCurrentPeriod(tenantId);
+
+    const record = await this.usageRecordRepository.findOne({
+      where: {
+        tenant_id: tenantId,
+        record_type: type,
+        period_start: currentPeriod.start,
+      },
+    });
+
+    return record?.count || 0;
+  }
+
+  /**
+   * Initialize monthly records for a tenant
+   * Called when tenant is created or at start of new month
+   */
+  async initializeMonthlyRecords(tenantId: string): Promise<void> {
+    const currentPeriod = await this.getCurrentPeriod(tenantId);
+
+    // Create records for both usage types
+    for (const type of Object.values(UsageType)) {
+      const existing = await this.usageRecordRepository.findOne({
+        where: {
+          tenant_id: tenantId,
+          record_type: type,
+          period_start: currentPeriod.start,
+        },
+      });
+
+      if (!existing) {
+        await this.usageRecordRepository.save({
+          tenant_id: tenantId,
+          record_type: type,
+          period_start: currentPeriod.start,
+          period_end: currentPeriod.end,
+          count: 0,
+        });
+      }
+    }
+  }
+
+  /**
+   * Get current billing period for a tenant
+   */
+  private async getCurrentPeriod(
+    tenantId: string,
+  ): Promise<{ start: Date; end: Date }> {
     const subscription = await this.subscriptionRepository.findOne({
-      where: { id: subscriptionId },
+      where: { tenant_id: tenantId },
     });
 
     if (!subscription) {
-      throw new NotFoundException(`Subscription with ID ${subscriptionId} not found`);
+      // Default to calendar month if no subscription
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { start, end };
     }
 
-    const whereClause: any = {
-      subscriptionId,
-      recordedAt: Between(subscription.currentPeriodStart, subscription.currentPeriodEnd),
+    return {
+      start: new Date(subscription.current_period_start),
+      end: new Date(subscription.current_period_end),
     };
-
-    if (metricType) {
-      whereClause.metricType = metricType;
-    }
-
-    const usageRecords = await this.usageRepository.find({
-      where: whereClause,
-    });
-
-    // Aggregate usage by metric type
-    const usage: { [key: string]: number } = {};
-    for (const record of usageRecords) {
-      const metric = record.metricType;
-      usage[metric] = (usage[metric] || 0) + record.quantity;
-    }
-
-    return usage;
   }
 
-  async getUsageHistory(
-    subscriptionId: string,
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<UsageRecord[]> {
-    const whereClause: any = { subscriptionId };
+  /**
+   * Reset usage for a new billing period
+   */
+  async resetMonthlyUsage(tenantId: string): Promise<void> {
+    const currentPeriod = await this.getCurrentPeriod(tenantId);
 
-    if (startDate && endDate) {
-      whereClause.recordedAt = Between(startDate, endDate);
-    } else if (startDate) {
-      whereClause.recordedAt = { $gte: startDate };
-    } else if (endDate) {
-      whereClause.recordedAt = { $lte: endDate };
-    }
-
-    return await this.usageRepository.find({
-      where: whereClause,
-      order: { recordedAt: 'DESC' },
-    });
+    // Create new records for the new period
+    await this.initializeMonthlyRecords(tenantId);
   }
 
-  async getUsageSummary(
-    subscriptionId: string,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<{ [key: string]: number }> {
-    const usageRecords = await this.usageRepository.find({
-      where: {
-        subscriptionId,
-        recordedAt: Between(startDate, endDate),
-      },
-    });
+  /**
+   * Get usage statistics for a tenant
+   */
+  async getUsageStats(tenantId: string): Promise<{
+    cars_washed: number;
+    active_users: number;
+    period_start: Date;
+    period_end: Date;
+  }> {
+    const currentPeriod = await this.getCurrentPeriod(tenantId);
+    const carsWashed = await this.getMonthlyUsage(
+      tenantId,
+      UsageType.CARS_WASHED,
+    );
+    const activeUsers = await this.getMonthlyUsage(
+      tenantId,
+      UsageType.ACTIVE_USERS,
+    );
 
-    const summary: { [key: string]: number } = {};
-    for (const record of usageRecords) {
-      const metric = record.metricType;
-      summary[metric] = (summary[metric] || 0) + record.quantity;
-    }
-
-    return summary;
-  }
-
-  async getDailyUsage(
-    subscriptionId: string,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<{ date: string; [key: string]: any }[]> {
-    // This would typically use a more sophisticated query
-    // For now, we'll do basic aggregation
-    const usageRecords = await this.usageRepository.find({
-      where: {
-        subscriptionId,
-        recordedAt: Between(startDate, endDate),
-      },
-      order: { recordedAt: 'ASC' },
-    });
-
-    const dailyUsage: { [date: string]: { [metric: string]: number } } = {};
-
-    for (const record of usageRecords) {
-      const date = record.recordedAt.toISOString().split('T')[0];
-      if (!dailyUsage[date]) {
-        dailyUsage[date] = {};
-      }
-      const metric = record.metricType;
-      dailyUsage[date][metric] = (dailyUsage[date][metric] || 0) + record.quantity;
-    }
-
-    return Object.entries(dailyUsage).map(([date, metrics]) => ({
-      date,
-      ...metrics,
-    }));
-  }
-
-  // Helper methods for specific metrics
-  async recordCarWash(subscriptionId: string, metadata?: Record<string, any>): Promise<UsageRecord> {
-    return this.recordUsage(subscriptionId, {
-      metricType: MetricType.CARS_WASHED,
-      quantity: 1,
-      metadata,
-    });
-  }
-
-  async recordActiveUser(subscriptionId: string, userId: string): Promise<UsageRecord> {
-    // Check if user was already recorded today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const existingRecord = await this.usageRepository.findOne({
-      where: {
-        subscriptionId,
-        metricType: MetricType.ACTIVE_USERS,
-        recordedAt: Between(today, tomorrow),
-        metadata: { userId } as any,
-      },
-    });
-
-    if (existingRecord) {
-      return existingRecord;
-    }
-
-    return this.recordUsage(subscriptionId, {
-      metricType: MetricType.ACTIVE_USERS,
-      quantity: 1,
-      metadata: { userId },
-    });
-  }
-
-  async recordActiveLocation(subscriptionId: string, locationId: string): Promise<UsageRecord> {
-    // Check if location was already recorded today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const existingRecord = await this.usageRepository.findOne({
-      where: {
-        subscriptionId,
-        metricType: MetricType.ACTIVE_LOCATIONS,
-        recordedAt: Between(today, tomorrow),
-        metadata: { locationId } as any,
-      },
-    });
-
-    if (existingRecord) {
-      return existingRecord;
-    }
-
-    return this.recordUsage(subscriptionId, {
-      metricType: MetricType.ACTIVE_LOCATIONS,
-      quantity: 1,
-      metadata: { locationId },
-    });
+    return {
+      cars_washed: carsWashed,
+      active_users: activeUsers,
+      period_start: currentPeriod.start,
+      period_end: currentPeriod.end,
+    };
   }
 }

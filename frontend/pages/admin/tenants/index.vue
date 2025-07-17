@@ -56,6 +56,7 @@
               <TableHead>{{ t('admin.tenants.table.name') }}</TableHead>
               <TableHead>{{ t('admin.tenants.table.systemName') }}</TableHead>
               <TableHead>{{ t('admin.tenants.table.status') }}</TableHead>
+              <TableHead>{{ t('admin.tenants.table.subscription') }}</TableHead>
               <TableHead>{{ t('admin.tenants.table.users') }}</TableHead>
               <TableHead>{{ t('admin.tenants.table.createdAt') }}</TableHead>
               <TableHead class="text-right">{{ t('admin.tenants.table.actions') }}</TableHead>
@@ -69,7 +70,7 @@
                     <img
                       v-if="tenant.logo_url"
                       :src="tenant.logo_url"
-                      :alt="`${tenant.display_name} logo`"
+                      :alt="`${tenant.display_name || tenant.name} logo`"
                       class="h-8 w-8 rounded-full bg-gray-300"
                     />
                     <div
@@ -77,11 +78,11 @@
                       class="h-8 w-8 rounded-full bg-muted flex items-center justify-center"
                     >
                       <span class="text-xs font-medium text-muted-foreground">
-                        {{ tenant.display_name.charAt(0).toUpperCase() }}
+                        {{ tenant.display_name ? tenant.display_name.charAt(0).toUpperCase() : tenant.name ? tenant.name.charAt(0).toUpperCase() : 'T' }}
                       </span>
                     </div>
                   </div>
-                  <span class="ml-2">{{ tenant.display_name }}</span>
+                  <span class="ml-2">{{ tenant.display_name || tenant.name }}</span>
                 </div>
               </TableCell>
               <TableCell>{{ tenant.name }}</TableCell>
@@ -89,6 +90,33 @@
                 <Badge :variant="tenant.is_active ? 'success' : 'destructive'">
                   {{ tenant.is_active ? t('common.active') : t('common.inactive') }}
                 </Badge>
+              </TableCell>
+              <TableCell>
+                <div v-if="tenant.subscription" class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <Badge :variant="getSubscriptionBadgeVariant(tenant.subscription.status)">
+                      {{ tenant.subscription.plan_display_name }}
+                    </Badge>
+                  </div>
+                  <div class="text-xs text-muted-foreground">
+                    <span v-if="tenant.subscription.status === 'CANCELED' || tenant.subscription.status === 'canceled'">
+                      {{ t('subscription.status.canceled') }}
+                    </span>
+                    <span v-else-if="tenant.subscription.status === 'EXPIRED' || tenant.subscription.status === 'expired'">
+                      {{ t('subscription.status.expired') }}
+                    </span>
+                    <span v-else-if="tenant.subscription.status === 'PAST_DUE' || tenant.subscription.status === 'past_due'">
+                      {{ t('subscription.status.past_due') }}
+                    </span>
+                    <span v-else-if="tenant.subscription.cancel_at_period_end">
+                      {{ t('admin.tenants.table.cancelsAt') }}: {{ formatDate(tenant.subscription.cancel_at || tenant.subscription.current_period_end) }}
+                    </span>
+                    <span v-else>
+                      {{ t('admin.tenants.table.renews') }}: {{ formatDate(tenant.subscription.current_period_end) }}
+                    </span>
+                  </div>
+                </div>
+                <span v-else class="text-muted-foreground">-</span>
               </TableCell>
               <TableCell>{{ tenant?.user_count || 0 }}</TableCell>
               <TableCell>{{ formatDate(tenant.created_at) }}</TableCell>
@@ -178,6 +206,19 @@ const loadTenants = async () => {
 
 const formatDate = (dateString: string) => {
   return format(new Date(dateString), 'dd MMM yyyy', { locale: nl })
+}
+
+const getSubscriptionBadgeVariant = (status: string) => {
+  const upperStatus = status.toUpperCase()
+  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    'ACTIVE': 'default',
+    'PAST_DUE': 'destructive',
+    'CANCELED': 'secondary',
+    'INCOMPLETE': 'outline',
+    'TRIALING': 'outline',
+    'EXPIRED': 'destructive'
+  }
+  return variants[upperStatus] || 'default'
 }
 
 // Load tenants on mount

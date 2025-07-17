@@ -10,8 +10,9 @@ import { UsersModule } from './users/users.module';
 import { StorageModule } from './storage/storage.module';
 import { AuditModule } from './audit/audit.module';
 import { EmailModule } from './email/email.module';
-import { PaymentsModule } from './payments/payments.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { SettingsModule } from './settings/settings.module';
+import { LocationsModule } from './locations/locations.module';
 
 import databaseConfig from './config/database.config';
 
@@ -73,8 +74,9 @@ import databaseConfig from './config/database.config';
     UsersModule,
     AuditModule,
     EmailModule,
-    PaymentsModule,
     SubscriptionsModule,
+    SettingsModule,
+    LocationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,16 +1,19 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { Subscription } from './subscription.entity';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 
-export enum BillingType {
-  SUBSCRIPTION = 'subscription',
-  USAGE_BASED = 'usage_based',
-  HYBRID = 'hybrid',
-}
-
-export enum PlanName {
-  STARTER = 'starter',
-  GROEI = 'groei',
-  ENTERPRISE = 'enterprise',
+export interface PlanFeatures {
+  api_access: boolean;
+  advanced_reporting: boolean;
+  custom_branding: boolean;
+  priority_support: boolean;
+  export_data: boolean;
+  multi_location: boolean;
 }
 
 @Entity('subscription_plans')
@@ -18,59 +21,34 @@ export class SubscriptionPlan {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({
-    type: 'enum',
-    enum: PlanName,
-    unique: true,
-  })
-  name: PlanName;
+  @Column({ unique: true })
+  @Index()
+  name: string; // 'free', 'standard', 'enterprise'
 
-  @Column({ name: 'display_name', length: 100 })
-  displayName: string;
+  @Column()
+  display_name: string; // 'Gratis', 'Standaard', 'Enterprise'
 
-  @Column({ name: 'price_monthly', type: 'decimal', precision: 10, scale: 2 })
-  priceMonthly: number;
+  @Column('int')
+  price_cents: number; // 0, 10000, 40000
 
-  @Column({ name: 'price_yearly', type: 'decimal', precision: 10, scale: 2, nullable: true })
-  priceYearly: number;
+  @Column({ nullable: true })
+  stripe_price_id: string; // null for free tier
 
-  @Column({
-    name: 'billing_type',
-    type: 'enum',
-    enum: BillingType,
-  })
-  billingType: BillingType;
+  @Column('int', { nullable: true })
+  max_cars_per_month: number; // null = unlimited
 
-  // Limits (NULL = unlimited)
-  @Column({ name: 'max_locations', type: 'integer', nullable: true })
-  maxLocations: number;
+  @Column('int', { nullable: true })
+  max_active_users: number;
 
-  @Column({ name: 'max_cars_per_month', type: 'integer', nullable: true })
-  maxCarsPerMonth: number;
+  @Column('int', { nullable: true })
+  max_locations: number;
 
-  @Column({ name: 'max_users', type: 'integer', nullable: true })
-  maxUsers: number;
+  @Column('jsonb')
+  features: PlanFeatures;
 
-  // Features
-  @Column({ type: 'jsonb', default: {} })
-  features: Record<string, boolean>;
+  @CreateDateColumn()
+  created_at: Date;
 
-  // Overage pricing (for hybrid model)
-  @Column({ name: 'overage_price_per_car', type: 'decimal', precision: 10, scale: 2, nullable: true })
-  overagePricePerCar: number;
-
-  @Column({ name: 'overage_price_per_location', type: 'decimal', precision: 10, scale: 2, nullable: true })
-  overagePricePerLocation: number;
-
-  @Column({ name: 'is_active', default: true })
-  isActive: boolean;
-
-  @OneToMany(() => Subscription, (subscription) => subscription.plan)
-  subscriptions: Subscription[];
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  @UpdateDateColumn()
+  updated_at: Date;
 }

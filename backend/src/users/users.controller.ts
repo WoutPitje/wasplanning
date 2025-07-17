@@ -21,6 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { AuditService } from '../audit/audit.service';
+import { LimitsService } from '../subscriptions/services/limits.service';
+import { EmailService } from '../email/email.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -31,6 +33,7 @@ import { TenantGuard } from '../auth/guards/tenant.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { NoImpersonation } from '../auth/decorators/no-impersonation.decorator';
 import { UserRole } from '../auth/entities/user.entity';
+import { LimitType } from '../subscriptions/services/limits.service';
 
 @ApiTags('Users')
 @Controller('users')
@@ -40,6 +43,8 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly auditService: AuditService,
+    private readonly limitsService: LimitsService,
+    private readonly emailService: EmailService,
   ) {}
 
   @Post()
@@ -77,7 +82,68 @@ export class UsersController {
       user_agent: req.headers['user-agent'],
     });
 
-    return user;
+    // Get quota information
+    const limitsInfo = await this.limitsService.getLimitsAndUsage(
+      user.tenant_id,
+    );
+
+    // Check if approaching limit (80% or more)
+    if (
+      await this.limitsService.isApproachingLimit(
+        user.tenant_id,
+        LimitType.ACTIVE_USERS,
+      )
+    ) {
+      // Send warning email to tenant admin
+      try {
+        const tenantAdmins = await this.usersService.findTenantAdmins(
+          user.tenant_id,
+        );
+        for (const admin of tenantAdmins) {
+          await this.emailService.sendLimitWarningEmail(admin.email, {
+            firstName: admin.first_name || 'Beheerder',
+            limitType: 'gebruikers',
+            currentUsage: limitsInfo.active_users.current,
+            limit: limitsInfo.active_users.limit,
+            percentage: limitsInfo.active_users.percentage,
+          });
+        }
+
+        // Log warning email sent
+        await this.auditService.logAction({
+          tenant_id: user.tenant_id,
+          user_id: req.user.id,
+          action: 'limit.warning_sent',
+          resource_type: 'subscription',
+          resource_id: null,
+          details: {
+            type: 'active_users',
+            current_usage: limitsInfo.active_users.current,
+            limit: limitsInfo.active_users.limit,
+            percentage: limitsInfo.active_users.percentage,
+            emails_sent_to: tenantAdmins.map((a) => a.email),
+          },
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.headers['user-agent'],
+        });
+      } catch (error) {
+        console.error('Failed to send limit warning email:', error);
+      }
+    }
+
+    return {
+      ...user,
+      quota: {
+        active_users: {
+          current: limitsInfo.active_users.current,
+          limit: limitsInfo.active_users.limit,
+          remaining: limitsInfo.active_users.limit
+            ? limitsInfo.active_users.limit - limitsInfo.active_users.current
+            : null,
+          percentage: limitsInfo.active_users.percentage,
+        },
+      },
+    };
   }
 
   @Get()
@@ -164,7 +230,7 @@ export class UsersController {
   ) {
     // Get user data before reset for logging
     const user = await this.usersService.findOne(id, req.user);
-    
+
     const result = await this.usersService.resetPassword(
       id,
       resetPasswordDto.new_password,
@@ -206,7 +272,7 @@ export class UsersController {
   async remove(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     // Get user data before deactivation for logging
     const user = await this.usersService.findOne(id, req.user);
-    
+
     const result = await this.usersService.remove(id, req.user);
 
     // Log user deactivation

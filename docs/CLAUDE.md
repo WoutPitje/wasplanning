@@ -235,7 +235,9 @@ All filter and search inputs must sync with URL query parameters for:
 6. Don't suggest alternative frameworks or major architecture changes
 
 ## Pricing Context
-- Target: €49-99/month per garage location
-- No setup fees, 30-day free trial
+- Free tier for small garages
+- €100/month for standard features (up to 3 locations)
+- €400/month for enterprise (unlimited)
+- No setup fees, start with free plan
 - Focus on garages with 5+ washers and pickup/delivery service
 - ROI through reduced manual coordination time

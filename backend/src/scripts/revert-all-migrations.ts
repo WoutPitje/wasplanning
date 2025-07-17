@@ -25,7 +25,9 @@ async function revertAllMigrations() {
 
     // Get all executed migrations
     const executedMigrations = await dataSource.showMigrations();
-    console.log(`Found ${executedMigrations ? (executedMigrations as any).length : 0} executed migrations`);
+    console.log(
+      `Found ${executedMigrations ? (executedMigrations as any).length : 0} executed migrations`,
+    );
 
     // Keep reverting until no more migrations
     let hasMoreMigrations = true;

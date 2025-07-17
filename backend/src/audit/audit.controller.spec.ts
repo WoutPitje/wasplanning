@@ -157,7 +157,7 @@ describe('AuditController', () => {
       // The ParseUUIDPipe would throw an error for invalid UUIDs
       // This is handled by NestJS framework, but we can test the service call
       const validUuid = '123e4567-e89b-12d3-a456-426614174000';
-      
+
       mockAuditService.getUserActivity.mockResolvedValue([]);
 
       await controller.getUserActivity(validUuid, mockRequest);
@@ -177,10 +177,16 @@ describe('AuditController', () => {
         end_date: '2024-12-31',
       };
 
-      const mockCsvContent = Buffer.from('Date,Time,User,Action\n2024-01-01,10:00:00,test@example.com,user.created');
+      const mockCsvContent = Buffer.from(
+        'Date,Time,User,Action\n2024-01-01,10:00:00,test@example.com,user.created',
+      );
       mockAuditService.exportAuditLogsAsCsv.mockResolvedValue(mockCsvContent);
 
-      const result = await controller.exportAuditLogs(query, mockRequest, mockResponse);
+      const result = await controller.exportAuditLogs(
+        query,
+        mockRequest,
+        mockResponse,
+      );
 
       expect(result).toBeInstanceOf(StreamableFile);
       expect(mockAuditService.exportAuditLogsAsCsv).toHaveBeenCalledWith(
@@ -189,7 +195,9 @@ describe('AuditController', () => {
       );
       expect(mockResponse.set).toHaveBeenCalledWith({
         'Content-Type': 'text/csv',
-        'Content-Disposition': expect.stringContaining('attachment; filename="audit-logs-'),
+        'Content-Disposition': expect.stringContaining(
+          'attachment; filename="audit-logs-',
+        ),
       });
     });
 

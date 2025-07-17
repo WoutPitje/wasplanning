@@ -94,13 +94,16 @@ export class AuditController {
     @Response({ passthrough: true }) res: any,
   ): Promise<StreamableFile> {
     const tenantId = req.user.tenant?.id || null;
-    const csvBuffer = await this.auditService.exportAuditLogsAsCsv(query, tenantId);
-    
+    const csvBuffer = await this.auditService.exportAuditLogsAsCsv(
+      query,
+      tenantId,
+    );
+
     res.set({
       'Content-Type': 'text/csv',
       'Content-Disposition': `attachment; filename="audit-logs-${new Date().toISOString().split('T')[0]}.csv"`,
     });
-    
+
     return new StreamableFile(csvBuffer);
   }
 }

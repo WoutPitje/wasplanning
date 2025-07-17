@@ -35,6 +35,20 @@ describe('Admin (e2e)', () => {
     const adminTenantId = 'a1111111-1111-1111-1111-111111111111';
     const adminUserId = 'a2222222-2222-2222-2222-222222222222';
 
+    // Ensure we have subscription plans
+    const plans = await dataSource.query(
+      `SELECT * FROM subscription_plans WHERE name IN ('free', 'standard') ORDER BY name`,
+    );
+    if (plans.length < 2) {
+      await dataSource.query(`
+        INSERT INTO subscription_plans (id, name, display_name, price_monthly, price_yearly, stripe_price_id, features, max_cars_per_month, max_active_users, max_locations, created_at, updated_at)
+        VALUES 
+          (gen_random_uuid(), 'free', 'Free', 0, 0, '', '{}', 50, 2, 1, NOW(), NOW()),
+          (gen_random_uuid(), 'standard', 'Standard', 10000, 100000, '', '{}', 1500, 10, 3, NOW(), NOW())
+        ON CONFLICT (name) DO NOTHING
+      `);
+    }
+
     // Create super admin tenant and user
     await dataSource.query(
       `
@@ -80,6 +94,19 @@ describe('Admin (e2e)', () => {
   afterEach(async () => {
     // Clean up test tenants and their users
     if (tenantId) {
+      await dataSource.query('DELETE FROM audit_logs WHERE tenant_id = $1', [
+        tenantId,
+      ]);
+      await dataSource.query('DELETE FROM usage_records WHERE tenant_id = $1', [
+        tenantId,
+      ]);
+      await dataSource.query(
+        'DELETE FROM payment_methods WHERE tenant_id = $1',
+        [tenantId],
+      );
+      await dataSource.query('DELETE FROM subscriptions WHERE tenant_id = $1', [
+        tenantId,
+      ]);
       await dataSource.query('DELETE FROM users WHERE tenant_id = $1', [
         tenantId,
       ]);

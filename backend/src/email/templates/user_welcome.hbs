@@ -11,6 +11,7 @@
             margin: 0;
             padding: 0;
             background-color: #f4f4f4;
+            color: #333;
         }
         .container {
             max-width: 600px;
@@ -22,34 +23,34 @@
         }
         .header {
             text-align: center;
-            padding: 20px 0;
-            border-bottom: 1px solid #eee;
+            padding: 20px;
+            background-color: #1E2C48;
+            color: white;
         }
         .content {
             padding: 20px 0;
         }
         .footer {
             text-align: center;
-            padding: 20px 0;
-            border-top: 1px solid #eee;
-            font-size: 12px;
+            padding: 20px;
             color: #666;
+            font-size: 14px;
         }
         .credentials {
             background-color: #f8f9fa;
             padding: 15px;
             border-radius: 5px;
             margin: 20px 0;
-            border-left: 4px solid #007bff;
+            border-left: 4px solid #1E2C48;
         }
         .button {
             display: inline-block;
             padding: 10px 20px;
-            background-color: #007bff;
+            background-color: #1E2C48;
             color: white;
             text-decoration: none;
             border-radius: 5px;
-            margin: 10px 0;
+            margin: 20px 0;
         }
         .warning {
             background-color: #fff3cd;
@@ -63,6 +64,7 @@
 <body>
     <div class="container">
         <div class="header">
+            <img src="{{frontendUrl}}/wasplanning-logo.png" alt="Wasplanning Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;">
             <h1>Welkom bij het Wasplanning Systeem</h1>
             <h2>{{tenantName}}</h2>
         </div>
@@ -95,8 +97,7 @@
         </div>
         
         <div class="footer">
-            <p>Dit is een automatisch gegenereerd bericht. Reageer niet op deze email.</p>
-            <p>&copy; 2024 Wasplanning Systeem. Alle rechten voorbehouden.</p>
+            <p>Dit is een automatisch gegenereerd bericht van het Wasplanning Systeem.</p>
         </div>
     </div>
 </body>

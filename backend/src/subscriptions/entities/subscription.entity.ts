@@ -1,113 +1,92 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  OneToOne,
+  JoinColumn,
+  Index,
+  Unique,
+} from 'typeorm';
 import { Tenant } from '../../auth/entities/tenant.entity';
 import { SubscriptionPlan } from './subscription-plan.entity';
-import { PaymentMethod } from '../../payments/entities/payment-method.entity';
-import { UsageRecord } from './usage-record.entity';
 
 export enum SubscriptionStatus {
-  TRIALING = 'trialing',
   ACTIVE = 'active',
-  PAST_DUE = 'past_due',
   CANCELED = 'canceled',
+  PAST_DUE = 'past_due',
   UNPAID = 'unpaid',
   INCOMPLETE = 'incomplete',
 }
 
-export enum BillingInterval {
-  MONTH = 'month',
-  YEAR = 'year',
-}
-
 @Entity('subscriptions')
+@Unique(['tenant_id'])
 export class Subscription {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Tenant, { nullable: false })
+  @Column('uuid')
+  @Index()
+  tenant_id: string;
+
+  @OneToOne(() => Tenant, (tenant) => tenant.subscription)
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
-  @Column({ name: 'tenant_id' })
-  tenantId: string;
+  @Column('uuid')
+  plan_id: string;
 
-  @ManyToOne(() => SubscriptionPlan, (plan) => plan.subscriptions, { nullable: false })
+  @ManyToOne(() => SubscriptionPlan, { eager: true })
   @JoinColumn({ name: 'plan_id' })
   plan: SubscriptionPlan;
 
-  @Column({ name: 'plan_id' })
-  planId: string;
+  @Column({ nullable: true, unique: true })
+  @Index()
+  stripe_subscription_id: string;
 
-  @ManyToOne(() => PaymentMethod, { nullable: true })
-  @JoinColumn({ name: 'payment_method_id' })
-  paymentMethod: PaymentMethod;
-
-  @Column({ name: 'payment_method_id', nullable: true })
-  paymentMethodId: string;
+  @Column({ nullable: true })
+  @Index()
+  stripe_customer_id: string;
 
   @Column({
     type: 'enum',
     enum: SubscriptionStatus,
+    default: SubscriptionStatus.ACTIVE,
   })
   status: SubscriptionStatus;
 
-  // Billing cycle
-  @Column({ name: 'current_period_start', type: 'timestamp' })
-  currentPeriodStart: Date;
+  @Column('timestamp')
+  current_period_start: Date;
 
-  @Column({ name: 'current_period_end', type: 'timestamp' })
-  currentPeriodEnd: Date;
+  @Column('timestamp')
+  current_period_end: Date;
 
-  @Column({
-    name: 'billing_interval',
-    type: 'enum',
-    enum: BillingInterval,
-    default: BillingInterval.MONTH,
-  })
-  billingInterval: BillingInterval;
+  @Column({ default: false })
+  cancel_at_period_end: boolean;
 
-  // Provider reference
-  @Column({ length: 50, nullable: true })
-  provider: string;
+  @Column('timestamp', { nullable: true })
+  canceled_at: Date;
 
-  @Column({ name: 'provider_subscription_id', length: 255, nullable: true })
-  providerSubscriptionId: string;
+  @Column('timestamp', { nullable: true })
+  cancel_at: Date;
 
-  // Trial
-  @Column({ name: 'trial_end', type: 'timestamp', nullable: true })
-  trialEnd: Date;
+  @Column({ nullable: true })
+  stripe_subscription_item_id: string;
 
-  // Cancellation
-  @Column({ name: 'canceled_at', type: 'timestamp', nullable: true })
-  canceledAt: Date;
+  @Column({ nullable: true })
+  payment_failed_at: Date;
 
-  @Column({ name: 'cancel_at_period_end', default: false })
-  cancelAtPeriodEnd: boolean;
+  @Column({ default: 0 })
+  payment_failure_count: number;
 
-  // Proration and credits
-  @Column({ name: 'credit_balance', type: 'decimal', precision: 10, scale: 2, default: 0 })
-  creditBalance: number;
+  @Column({ nullable: true })
+  grace_period_end: Date;
 
-  @Column({ name: 'next_payment_date', type: 'timestamp', nullable: true })
-  nextPaymentDate: Date;
+  @CreateDateColumn()
+  created_at: Date;
 
-  @Column({ name: 'mollie_customer_id', length: 255, nullable: true })
-  mollieCustomerId: string;
-
-  @Column({ name: 'mollie_mandate_id', length: 255, nullable: true })
-  mollieMandateId: string;
-
-  @Column({ name: 'mollie_subscription_id', length: 255, nullable: true })
-  mollieSubscriptionId: string;
-
-  @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
-
-  @OneToMany(() => UsageRecord, (usage) => usage.subscription)
-  usageRecords: UsageRecord[];
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  @UpdateDateColumn()
+  updated_at: Date;
 }

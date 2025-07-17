@@ -31,7 +31,7 @@ export class AuditLog {
   @Column({ length: 50 })
   resource_type: string;
 
-  @Column('uuid', { nullable: true })
+  @Column({ nullable: true })
   resource_id: string;
 
   @Column({ type: 'jsonb', nullable: true })

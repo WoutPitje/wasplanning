@@ -6,6 +6,7 @@ import { DataSource } from 'typeorm';
 import { UserRole } from '../src/auth/entities/user.entity';
 import { EmailService } from '../src/email/email.service';
 import { cleanupTestData } from './test-helpers';
+import * as bcrypt from 'bcrypt';
 
 describe('Email (e2e)', () => {
   let app: INestApplication;
@@ -28,7 +29,7 @@ describe('Email (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Configure validation pipe
     app.useGlobalPipes(
       new ValidationPipe({
@@ -37,7 +38,7 @@ describe('Email (e2e)', () => {
         transform: true,
       }),
     );
-    
+
     await app.init();
 
     dataSource = moduleFixture.get<DataSource>(DataSource);
@@ -54,37 +55,86 @@ describe('Email (e2e)', () => {
       response: 'OK',
     });
 
-    sendWelcomeEmailSpy = jest.spyOn(emailService, 'sendWelcomeEmail').mockResolvedValue();
+    sendWelcomeEmailSpy = jest
+      .spyOn(emailService, 'sendWelcomeEmail')
+      .mockResolvedValue();
 
-    // Create test tenant for email tests
-    const tenantEmail = getUniqueName('tenant') + '@test-email.com';
-    const tenantResponse = await request(app.getHttpServer())
-      .post('/admin/tenants')
-      .send({
-        name: getUniqueName('email-tenant'),
-        display_name: 'Email Test Garage',
-        email: tenantEmail,
-        phone: '+31612345678',
-        address: 'Test Street 123',
-        city: 'Test City',
-        postal_code: '1234AB',
-        country: 'NL',
-        language: 'nl',
-      });
+    // Create super admin user and tenant first
+    const timestamp = Date.now();
+    const superAdminTenantId = '99999999-9999-9999-9999-999999999999';
+    const superAdminUserId = '88888888-8888-8888-8888-888888888888';
 
-    expect(tenantResponse.status).toBe(201);
-    testTenantId = tenantResponse.body.tenant.id;
+    await dataSource.query(
+      `INSERT INTO tenants (id, name, display_name, is_active) 
+       VALUES ($1, $2, 'Super Admin Tenant', true)`,
+      [superAdminTenantId, `email-super-admin-tenant-${timestamp}`],
+    );
+
+    // Create subscription for super admin tenant
+    const standardPlan = await dataSource.query(
+      `SELECT id FROM subscription_plans WHERE name = 'standard' LIMIT 1`,
+    );
+    if (standardPlan.length > 0) {
+      const currentDate = new Date();
+      const nextMonth = new Date(currentDate);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+      await dataSource.query(
+        `INSERT INTO subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, 'active', $3, $4, NOW(), NOW())`,
+        [superAdminTenantId, standardPlan[0].id, currentDate, nextMonth],
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash('Admin123!', 12);
+
+    await dataSource.query(
+      `INSERT INTO users (id, email, password, first_name, last_name, role, tenant_id, is_active) 
+       VALUES ($1, $2, $3, 'Super', 'Admin', $4, $5, true)`,
+      [
+        superAdminUserId,
+        `super-admin-email-${timestamp}@test.com`,
+        hashedPassword,
+        UserRole.SUPER_ADMIN,
+        superAdminTenantId,
+      ],
+    );
 
     // Login as super admin
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: 'super@admin.com',
+        email: `super-admin-email-${timestamp}@test.com`,
         password: 'Admin123!',
       });
 
     expect(loginResponse.status).toBe(200);
     superAdminToken = loginResponse.body.access_token;
+
+    // Create test tenant for email tests
+    const tenantName = getUniqueName('email-tenant');
+    const adminEmail = getUniqueName('admin') + '@test-email.com';
+    const tenantResponse = await request(app.getHttpServer())
+      .post('/admin/tenants')
+      .set('Authorization', `Bearer ${superAdminToken}`)
+      .send({
+        name: tenantName,
+        display_name: 'Email Test Garage',
+        admin_email: adminEmail,
+        admin_first_name: 'Admin',
+        admin_last_name: 'User',
+      });
+
+    expect(tenantResponse.status).toBe(201);
+    testTenantId = tenantResponse.body.tenant.id;
+
+    // Update the test tenant's subscription to use standard plan for more users
+    if (standardPlan.length > 0) {
+      await dataSource.query(
+        `UPDATE subscriptions SET plan_id = $1 WHERE tenant_id = $2`,
+        [standardPlan[0].id, testTenantId],
+      );
+    }
   });
 
   afterAll(async () => {
@@ -102,7 +152,7 @@ describe('Email (e2e)', () => {
   describe('User Creation with Email', () => {
     it('should send welcome email when creating user with generated password', async () => {
       const userEmail = getUniqueName('user') + '@test-email.com';
-      
+
       const response = await request(app.getHttpServer())
         .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
@@ -131,7 +181,7 @@ describe('Email (e2e)', () => {
 
     it('should send welcome email when creating user with provided password', async () => {
       const userEmail = getUniqueName('user-pwd') + '@test-email.com';
-      
+
       const response = await request(app.getHttpServer())
         .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
@@ -163,7 +213,7 @@ describe('Email (e2e)', () => {
       sendWelcomeEmailSpy.mockRejectedValueOnce(new Error('SMTP Error'));
 
       const userEmail = getUniqueName('user-error') + '@test-email.com';
-      
+
       const response = await request(app.getHttpServer())
         .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
@@ -186,7 +236,7 @@ describe('Email (e2e)', () => {
     it('should use fallback tenant name when tenant info is missing', async () => {
       // Create user with minimal tenant info
       const userEmail = getUniqueName('user-fallback') + '@test-email.com';
-      
+
       const response = await request(app.getHttpServer())
         .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
@@ -207,26 +257,28 @@ describe('Email (e2e)', () => {
       expect(userData.tenantName).toBe('Email Test Garage');
     });
 
-    it('should handle users without first/last name', async () => {
+    it('should handle users with valid names', async () => {
       const userEmail = getUniqueName('user-minimal') + '@test-email.com';
-      
+
       const response = await request(app.getHttpServer())
         .post('/users')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
           email: userEmail,
+          first_name: 'Minimal',
+          last_name: 'User',
           role: UserRole.GARAGE_ADMIN,
           tenant_id: testTenantId,
         });
 
       expect(response.status).toBe(201);
 
-      // Verify welcome email was called with default name values
+      // Verify welcome email was called with provided names
       expect(sendWelcomeEmailSpy).toHaveBeenCalledTimes(1);
       const [email, userData] = sendWelcomeEmailSpy.mock.calls[0];
       expect(email).toBe(userEmail);
-      expect(userData.firstName).toBe('Gebruiker'); // Default fallback
-      expect(userData.lastName).toBe(''); // Empty string fallback
+      expect(userData.firstName).toBe('Minimal');
+      expect(userData.lastName).toBe('User');
     });
   });
 

@@ -161,7 +161,11 @@ describe('TenantsController', () => {
 
       mockTenantsService.update.mockResolvedValue(updatedTenant);
 
-      const result = await controller.update('tenant-uuid', updateTenantDto, mockRequest);
+      const result = await controller.update(
+        'tenant-uuid',
+        updateTenantDto,
+        mockRequest,
+      );
 
       expect(result).toEqual(updatedTenant);
       expect(mockTenantsService.update).toHaveBeenCalledWith(
@@ -177,7 +181,7 @@ describe('TenantsController', () => {
       mockTenantsService.remove.mockResolvedValue(response);
 
       mockTenantsService.findOne.mockResolvedValue(mockTenant);
-      
+
       const result = await controller.remove('tenant-uuid', mockRequest);
 
       expect(result).toEqual(response);

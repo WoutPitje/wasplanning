@@ -45,7 +45,7 @@ describe('AuditService', () => {
 
     service = module.get<AuditService>(AuditService);
     repository = module.get<Repository<AuditLog>>(getRepositoryToken(AuditLog));
-    
+
     // Reset mocks
     jest.clearAllMocks();
     mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
@@ -275,10 +275,12 @@ describe('AuditService', () => {
 
       expect(result).toBeInstanceOf(Buffer);
       const csv = result.toString('utf-8');
-      
+
       // Check CSV headers
-      expect(csv).toContain('Date,Time,User,Action,Resource Type,Resource ID,IP Address,Details');
-      
+      expect(csv).toContain(
+        'Date,Time,User,Action,Resource Type,Resource ID,IP Address,Details',
+      );
+
       // Check data rows
       expect(csv).toContain('test@example.com');
       expect(csv).toContain('user.created');

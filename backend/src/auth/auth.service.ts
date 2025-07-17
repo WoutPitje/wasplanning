@@ -89,13 +89,15 @@ export class AuthService {
       id: user.id,
       email: user.email,
       role: user.role,
-      tenant: user.tenant ? {
-        id: user.tenant.id,
-        name: user.tenant.name,
-        display_name: user.tenant.display_name,
-        language: user.tenant.language,
-        logo_url: logoUrl,
-      } : null,
+      tenant: user.tenant
+        ? {
+            id: user.tenant.id,
+            name: user.tenant.name,
+            display_name: user.tenant.display_name,
+            language: user.tenant.language,
+            logo_url: logoUrl,
+          }
+        : null,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -112,13 +114,15 @@ export class AuthService {
         role: user.role,
         first_name: user.first_name,
         last_name: user.last_name,
-        tenant: user.tenant ? {
-          id: user.tenant.id,
-          name: user.tenant.name,
-          display_name: user.tenant.display_name,
-          language: user.tenant.language,
-          logo_url: logoUrl,
-        } : null,
+        tenant: user.tenant
+          ? {
+              id: user.tenant.id,
+              name: user.tenant.name,
+              display_name: user.tenant.display_name,
+              language: user.tenant.language,
+              logo_url: logoUrl,
+            }
+          : null,
       },
     };
   }
@@ -149,12 +153,14 @@ export class AuthService {
           id: user.id,
           email: user.email,
           role: user.role,
-          tenant: user.tenant ? {
-            id: user.tenant.id,
-            name: user.tenant.name,
-            display_name: user.tenant.display_name,
-            language: user.tenant.language,
-          } : null,
+          tenant: user.tenant
+            ? {
+                id: user.tenant.id,
+                name: user.tenant.name,
+                display_name: user.tenant.display_name,
+                language: user.tenant.language,
+              }
+            : null,
           impersonator_id: payload.impersonator_id,
           is_impersonating: true,
         };
@@ -173,12 +179,14 @@ export class AuthService {
             role: user.role,
             first_name: user.first_name,
             last_name: user.last_name,
-            tenant: user.tenant ? {
-              id: user.tenant.id,
-              name: user.tenant.name,
-              display_name: user.tenant.display_name,
-              language: user.tenant.language,
-            } : null,
+            tenant: user.tenant
+              ? {
+                  id: user.tenant.id,
+                  name: user.tenant.name,
+                  display_name: user.tenant.display_name,
+                  language: user.tenant.language,
+                }
+              : null,
           },
           impersonation: {
             is_impersonating: true,
@@ -267,13 +275,15 @@ export class AuthService {
       id: targetUser.id,
       email: targetUser.email,
       role: targetUser.role,
-      tenant: targetUser.tenant ? {
-        id: targetUser.tenant.id,
-        name: targetUser.tenant.name,
-        display_name: targetUser.tenant.display_name,
-        language: targetUser.tenant.language,
-        logo_url: logoUrl,
-      } : null,
+      tenant: targetUser.tenant
+        ? {
+            id: targetUser.tenant.id,
+            name: targetUser.tenant.name,
+            display_name: targetUser.tenant.display_name,
+            language: targetUser.tenant.language,
+            logo_url: logoUrl,
+          }
+        : null,
       impersonator_id: impersonator.id,
       is_impersonating: true,
     };
@@ -293,13 +303,15 @@ export class AuthService {
         role: targetUser.role,
         first_name: targetUser.first_name,
         last_name: targetUser.last_name,
-        tenant: targetUser.tenant ? {
-          id: targetUser.tenant.id,
-          name: targetUser.tenant.name,
-          display_name: targetUser.tenant.display_name,
-          language: targetUser.tenant.language,
-          logo_url: logoUrl,
-        } : null,
+        tenant: targetUser.tenant
+          ? {
+              id: targetUser.tenant.id,
+              name: targetUser.tenant.name,
+              display_name: targetUser.tenant.display_name,
+              language: targetUser.tenant.language,
+              logo_url: logoUrl,
+            }
+          : null,
       },
       impersonation: {
         is_impersonating: true,

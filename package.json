@@ -5,9 +5,11 @@
   "main": "index.js",
   "scripts": {
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "start": "npm run services:start && npm run dev:tunnel",
+    "start": "npm run services:start && npm run dev:stripe",
     "start:no-tunnel": "npm run services:start && npm run dev",
+    "start:tunnel": "npm run services:start && npm run dev:tunnel",
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "dev:stripe": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\" \"npm run stripe:listen\"",
     "dev:tunnel": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\" \"npm run tunnel\"",
     "tunnel": "node scripts/setup-tunnel.js",
     "tunnel:simple": "lt --port 3001 --subdomain wasplanning-webhook",
@@ -46,7 +48,8 @@
     "dev:redis": "docker-compose up -d redis",
     "dev:minio": "docker-compose up -d minio",
     "typecheck": "cd backend && npm run typecheck && cd ../frontend && npm run typecheck",
-    "preinstall": "npm --version >/dev/null 2>&1 || (echo 'Error: npm is required' && exit 1)"
+    "preinstall": "npm --version >/dev/null 2>&1 || (echo 'Error: npm is required' && exit 1)",
+    "stripe:listen": "node scripts/stripe-webhook-setup.js"
   },
   "repository": {
     "type": "git",

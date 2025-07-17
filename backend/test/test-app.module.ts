@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bull';
 import { AuthModule } from '../src/auth/auth.module';
 import { AdminModule } from '../src/admin/admin.module';
 import { UsersModule } from '../src/users/users.module';
 import { StorageModule } from '../src/storage/storage.module';
 import { AuditModule } from '../src/audit/audit.module';
 import { EmailModule } from '../src/email/email.module';
+import { SubscriptionsModule } from '../src/subscriptions/subscriptions.module';
+import { LocationsModule } from '../src/locations/locations.module';
 import { AppController } from '../src/app.controller';
 import { AppService } from '../src/app.service';
 
@@ -29,12 +32,22 @@ import { AppService } from '../src/app.service';
       dropSchema: false, // Don't drop schema - we handle this in setup
       logging: false,
     }),
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD,
+      },
+      prefix: 'wasplanning-test',
+    }),
     StorageModule,
     AuthModule,
     AdminModule,
     UsersModule,
     AuditModule,
     EmailModule,
+    SubscriptionsModule,
+    LocationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

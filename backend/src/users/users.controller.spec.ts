@@ -4,6 +4,8 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UserRole } from '../auth/entities/user.entity';
 import { AuditService } from '../audit/audit.service';
+import { LimitsService } from '../subscriptions/services/limits.service';
+import { EmailService } from '../email/email.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -51,6 +53,24 @@ describe('UsersController', () => {
             logAction: jest.fn(),
           },
         },
+        {
+          provide: LimitsService,
+          useValue: {
+            canCreateUser: jest.fn().mockResolvedValue(true),
+            getLimitsAndUsage: jest.fn().mockResolvedValue({
+              cars_washed: { current: 100, limit: 1500, percentage: 7 },
+              active_users: { current: 5, limit: 10, percentage: 50 },
+              locations: { current: 1, limit: 3, percentage: 33 },
+            }),
+            isApproachingLimit: jest.fn().mockResolvedValue(false),
+          },
+        },
+        {
+          provide: EmailService,
+          useValue: {
+            sendEmail: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -77,7 +97,17 @@ describe('UsersController', () => {
 
       const result = await controller.create(createUserDto, mockRequest);
 
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual({
+        ...expectedResult,
+        quota: {
+          active_users: {
+            current: 5,
+            limit: 10,
+            percentage: 50,
+            remaining: 5,
+          },
+        },
+      });
       expect(mockUsersService.create).toHaveBeenCalledWith(createUserDto);
     });
 
@@ -101,7 +131,17 @@ describe('UsersController', () => {
 
       const result = await controller.create(crossTenantDto, superAdminRequest);
 
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual({
+        ...expectedResult,
+        quota: {
+          active_users: {
+            current: 5,
+            limit: 10,
+            percentage: 50,
+            remaining: 5,
+          },
+        },
+      });
       expect(mockUsersService.create).toHaveBeenCalledWith(crossTenantDto);
     });
   });

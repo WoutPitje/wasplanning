@@ -5,6 +5,7 @@ export default {
     error: 'Error',
     retry: 'Retry',
     save: 'Save',
+    saving: 'Saving...',
     cancel: 'Cancel',
     delete: 'Delete',
     edit: 'Edit',
@@ -23,7 +24,8 @@ export default {
     previous: 'Previous',
     next: 'Next',
     month: 'month',
-    hours: 'hours'
+    hours: 'hours',
+    keepSubscription: 'Keep subscription'
   },
   
   // App
@@ -94,7 +96,12 @@ export default {
         activeUsers: 'Active users',
         statsLoading: 'Loading statistics...',
         usersByRole: 'Users by role',
-        lastUpdated: 'Last updated'
+        lastUpdated: 'Last updated',
+        subscription: 'Subscription',
+        plan: 'Plan',
+        subscriptionStatus: 'Status',
+        expiresOn: 'Expires on',
+        usage: 'Usage'
       },
       
       // Edit
@@ -190,9 +197,13 @@ export default {
         name: 'Name',
         systemName: 'System Name',
         status: 'Status',
+        subscription: 'Subscription',
         users: 'Users',
         createdAt: 'Created',
-        actions: 'Actions'
+        actions: 'Actions',
+        expires: 'Expires',
+        renews: 'Renews',
+        cancelsAt: 'Cancels on'
       }
     },
     
@@ -274,7 +285,18 @@ export default {
       title: 'Garage Settings',
       subtitle: 'Manage your garage configuration',
       generalSettings: 'General Settings',
-      placeholder: 'Garage settings will appear here...'
+      placeholder: 'Garage settings will appear here...',
+      tenantSettings: 'Garage Information',
+      logo: 'Logo',
+      uploadLogo: 'Upload Logo',
+      logoRequirements: 'JPEG, PNG, GIF or WebP. Max 2MB.',
+      customBrandingNotAvailable: 'Custom branding is not available in your current plan.',
+      upgradePlan: 'Upgrade Plan',
+      tenantName: 'Garage Name',
+      subscriptionPlan: 'Subscription Plan',
+      fileTooLarge: 'File size exceeds 2MB limit',
+      logoUploaded: 'Logo uploaded successfully',
+      logoUploadFailed: 'Failed to upload logo'
     },
     users: {
       title: 'User Management',
@@ -347,6 +369,7 @@ export default {
     logout: 'Logout',
     tenants: 'Tenants',
     users: 'Users',
+    locations: 'Locations',
     auditLogs: 'Audit Logs',
     queue: 'Queue',
     planning: 'Planning',
@@ -354,7 +377,8 @@ export default {
     history: 'History',
     newRequests: 'New Requests',
     myRequests: 'My Requests',
-    routes: 'Routes'
+    routes: 'Routes',
+    subscription: 'Subscription'
   },
   
   // Users
@@ -490,6 +514,123 @@ export default {
       loadFailed: 'Failed to load users',
       passwordMismatch: 'Passwords do not match'
     }
+  },
+  
+  // Locations
+  locations: {
+    title: 'Locations',
+    subtitle: 'Manage locations within your garage',
+    addNew: 'New Location',
+    noLocations: 'No locations',
+    noLocationsDescription: 'Start by adding a new location.',
+    search: 'Search locations',
+    searchPlaceholder: 'Search by name or address...',
+    
+    // Table
+    table: {
+      name: 'Name',
+      address: 'Address',
+      status: 'Status',
+      users: 'Users',
+      actions: 'Actions',
+      createdAt: 'Created'
+    },
+    
+    // Status
+    status: {
+      active: 'Active',
+      inactive: 'Inactive'
+    },
+    
+    // Details
+    details: {
+      title: 'Location Details',
+      subtitle: 'View location information and assigned users',
+      locationInfo: 'Location Information',
+      assignedUsers: 'Assigned Users',
+      noUsers: 'No users assigned to this location',
+      manageUsers: 'Manage Users',
+      createdAt: 'Created on',
+      updatedAt: 'Updated on'
+    },
+    
+    // Form
+    form: {
+      createTitle: 'Create New Location',
+      createDescription: 'Add a new location to your garage',
+      editTitle: 'Edit Location',
+      editDescription: 'Update location information',
+      locationInfo: 'Location Information',
+      locationInfoDescription: 'Basic information about the location',
+      name: 'Name',
+      namePlaceholder: 'e.g. Main Branch',
+      nameDescription: 'A unique name for this location',
+      address: 'Address',
+      addressPlaceholder: 'e.g. Main Street 123, 1234 AB Amsterdam',
+      addressDescription: 'The address of this location',
+      submit: 'Create Location',
+      update: 'Save Changes'
+    },
+    
+    // Actions
+    actions: {
+      view: 'View',
+      edit: 'Edit',
+      deactivate: 'Deactivate',
+      activate: 'Activate',
+      assignUsers: 'Assign Users',
+      viewDetails: 'View Details',
+      manageUsers: 'Manage Users'
+    },
+    
+    // Users Dialog
+    usersDialog: {
+      title: 'Assign Users',
+      description: 'Select users to assign to this location',
+      searchUsers: 'Search users...',
+      currentlyAssigned: 'Currently assigned',
+      availableUsers: 'Available users',
+      save: 'Save',
+      cancel: 'Cancel',
+      saving: 'Saving...'
+    },
+    
+    // User Assignment
+    userAssignment: {
+      title: 'Assign Users',
+      description: 'Select users to assign to {location}',
+      searchPlaceholder: 'Search users...',
+      noUsersFound: 'No users found',
+      selectedCount: '{count} user(s) selected',
+      assignButton: 'Assign'
+    },
+    
+    // Limits
+    limitReached: 'Location Limit Reached',
+    limitReachedDescription: 'You have reached the maximum number of locations for your subscription.',
+    limitWarning: 'Location Limit Warning',
+    limitWarningDescription: 'You have used {current} of {limit} locations.',
+    upgradeSubscription: 'Upgrade Subscription',
+    
+    // Success messages
+    success: {
+      created: 'Location successfully created',
+      updated: 'Location successfully updated',
+      deleted: 'Location successfully deleted',
+      usersAssigned: 'Users successfully assigned'
+    },
+    
+    // Error messages
+    errors: {
+      loadFailed: 'Failed to load locations',
+      createFailed: 'Failed to create location',
+      updateFailed: 'Failed to update location',
+      deleteFailed: 'Failed to delete location',
+      assignUsersFailed: 'Failed to assign users'
+    },
+    
+    // Confirm
+    confirmDelete: 'Are you sure you want to deactivate this location?'
   },
   
   // Header
@@ -1105,151 +1246,204 @@ export default {
       }
     }
   },
-
+  
   // Subscription Management
   subscription: {
-    title: 'Subscription Management',
-    description: 'Manage your subscription, view usage and change your plan',
-    seoTitle: 'Subscription - Wasplanning',
-    seoDescription: 'Manage your Wasplanning subscription and view your usage.',
+    title: 'Subscription',
+    subtitle: 'Manage your subscription and billing',
+    perMonth: 'per month',
+    unlimited: 'Unlimited',
+    current: 'Current',
+    currentPlan: 'Current Plan',
+    currentPlanDescription: 'Your current subscription and status',
+    availablePlans: 'Available Plans',
+    billingPeriod: 'Billing Period',
+    changeTo: 'Change to',
+    changePlanDescription: 'Compare plans and manage your subscription',
+    viewPlans: 'View all plans',
+    downgrade: 'Downgrade',
+    cars: 'cars',
+    users: 'users',
+    locations: 'locations',
+    invoicesDescription: 'Download invoices and view payment history',
+    viewInvoices: 'View invoices',
+    vehicles: 'vehicles',
+    appointmentsPerMonth: 'appointments per month',
     
-    viewPlans: 'View Available Plans',
-    cancelSubscription: 'Cancel Subscription',
-    reactivate: 'Reactivate Subscription',
-    payNow: 'Pay Now',
-    
-    noSubscription: {
-      title: 'No Active Subscription',
-      description: 'You currently have no active subscription. Choose a plan to start using Wasplanning.',
-      trialInfo: 'All new subscriptions start with a 30-day free trial.'
-    },
-    
-    current: {
-      title: 'Current Subscription',
-      description: 'Your current subscription information and status',
-      badge: 'Current plan'
-    },
-    
-    billing: {
-      month: 'Monthly',
-      year: 'Yearly',
-      monthly: 'Monthly',
-      yearly: 'Yearly',
-      interval: 'Billing Period',
-      savePercent: '2 months free',
-      yearlyTotal: '{price} per year'
+    plans: {
+      free: 'Free',
+      standard: 'Standard',
+      enterprise: 'Enterprise'
     },
     
     status: {
-      title: 'Status',
-      trialing: 'Trial period',
+      ACTIVE: 'Active',
+      PAST_DUE: 'Past due',
+      CANCELED: 'Canceled',
+      INCOMPLETE: 'Incomplete',
+      TRIALING: 'Trial',
+      EXPIRED: 'Expired',
+      // Lowercase versions for backend compatibility
       active: 'Active',
-      past_due: 'Payment overdue',
+      past_due: 'Past due',
       canceled: 'Canceled',
-      unpaid: 'Unpaid',
-      incomplete: 'Awaiting payment'
+      incomplete: 'Incomplete',
+      trialing: 'Trial',
+      expired: 'Expired'
     },
     
-    renewsOn: 'Renews on',
-    
-    trial: {
-      title: 'Trial Period',
-      endsOn: 'Trial ends on'
-    },
-
-    credit: {
-      title: 'Credit Balance',
-      description: 'Available for future payments',
-      viewHistory: 'View History',
-      breakdown: 'Credit Overview',
-      current: 'Current balance',
-      currentBalance: 'Current Balance',
-      willBeUsed: 'Will be used',
-      remaining: 'Remaining',
-      earned: 'Earned',
-      used: 'Used',
-      history: {
-        title: 'Credit History',
-        description: 'Overview of your credit transactions'
-      },
-      loadingHistory: 'Loading history...',
-      noHistory: 'No credit transactions found'
+    gracePeriod: {
+      title: 'Payment failed',
+      description: 'Your payment failed. Update your payment method before {date} to maintain access.'
     },
     
-    cancellation: {
-      title: 'Subscription Canceled',
-      message: 'Your subscription is canceled and ends on {date}. You can still reactivate it.'
+    pendingCancellation: {
+      title: 'Scheduled downgrade to free plan',
+      description: 'Your subscription will be downgraded to the free plan on {date}. You can upgrade again at any time.',
+      cancelDowngrade: 'Keep current plan'
+    },
+    
+    payment: {
+      authenticationRequired: 'Payment authentication required. Please check your bank app or SMS for confirmation.',
+      paymentMethodRequired: 'Please add a payment method to complete your subscription upgrade.'
     },
     
     usage: {
-      title: 'Usage Overview',
-      description: 'Your current usage for this billing period',
-      cars: 'Cars washed',
-      users: 'Active users',
-      locations: 'Active locations',
+      title: 'Usage',
+      description: 'Your current usage against limits',
+      overview: 'Usage Overview',
+      period: 'Period',
+      users: 'Users',
+      vehicles: 'Vehicles',
+      appointments: 'Appointments this month',
+      cars_washed: 'Cars washed',
+      active_users: 'Active users',
+      locations: 'Locations',
       limitExceeded: 'Limit exceeded',
-      approachingLimit: 'Approaching limit'
+      limitExceededDescription: 'You have exceeded one or more limits of your subscription. Consider upgrading to a higher plan.',
+      highUsage: 'High usage',
+      highUsageDescription: 'You are approaching your subscription limits. Monitor your usage or consider upgrading.'
+    },
+    
+    features: {
+      priority_support: 'Priority support',
+      api_access: 'API access',
+      custom_reports: 'Custom reports',
+      multi_location: 'Multi-location support',
+      advanced_analytics: 'Advanced analytics',
+      export_data: 'Export data',
+      custom_branding: 'Custom branding',
+      advanced_reporting: 'Advanced reporting'
+    },
+    
+    paymentMethods: {
+      title: 'Payment Methods',
+      description: 'Manage your payment methods',
+      add: 'Add payment method',
+      addTitle: 'Add new payment method',
+      addDescription: 'Add a credit card or payment method to your account',
+      addButton: 'Add',
+      card: 'Card',
+      expires: 'Expires',
+      default: 'Default',
+      setDefault: 'Set as default',
+      confirmDelete: 'Are you sure you want to delete this payment method?',
+      empty: 'No payment methods found',
+      setupError: 'Could not start payment session',
+      addError: 'Could not add payment method'
+    },
+    
+    paymentMethodRequired: {
+      title: 'Payment Method Required',
+      description: 'A valid payment method is required to upgrade to a paid plan. Please add a payment method to continue.',
+      addButton: 'Add Payment Method'
     },
     
     changePlan: {
       title: 'Change Plan',
-      description: 'Upgrade or downgrade to a different plan',
-      calculatingCosts: 'Calculating costs...',
-      paymentRequired: 'Payment required',
-      noPayment: 'No payment required',
-      confirm: {
-        title: 'Confirm Plan Change',
-        description: 'Are you sure you want to switch to this plan?',
-        effective: 'The change takes effect immediately and will be prorated.',
-        button: 'Change Plan'
-      }
+      description: 'Confirm your plan change',
+      from: 'From',
+      to: 'To',
+      confirm: 'Confirm change',
+      upgradeInfo: 'You will be charged immediately for the price difference.',
+      downgradeInfo: 'The change will take effect at the end of your current billing period.',
+      downgradeToFreeInfo: 'Your subscription will be downgraded to the free plan at the end of your current billing period. You will continue to have access to your current plan features until then.'
     },
     
     cancel: {
       title: 'Cancel Subscription',
-      description: 'Are you sure you want to cancel your subscription?',
-      warning: 'Your subscription remains active until {date}. After that, you lose access to all features.',
-      immediately: 'Cancel immediately',
-      immediatelyWarning: 'You will lose access to all features immediately.',
-      confirm: 'Yes, Cancel'
+      description: 'Cancel your subscription at the end of the billing period',
+      button: 'Cancel subscription',
+      dialogTitle: 'Cancel Subscription',
+      dialogDescription: 'Are you sure you want to cancel your subscription? Your account will be downgraded to the free plan at the end of your current billing period.',
+      warning: 'Warning',
+      warningDescription: 'This will downgrade your account to the free plan.',
+      consequences: 'What happens next',
+      consequence1: 'Current plan continues until the end of the billing period',
+      consequence2: 'Automatic downgrade to free plan after billing period ends',
+      consequence3: 'You can upgrade again at any time',
+      confirmButton: 'Yes, downgrade to free plan'
     },
     
-    selectPlan: {
+    errors: {
+      forbidden: 'You do not have access to this page. Only garage administrators can manage subscriptions.'
+    },
+    
+    // New translations for upgrade page
+    upgrade: {
       title: 'Choose Your Plan',
-      description: 'Select the plan that best fits your garage',
-      button: 'Select This Plan'
+      subtitle: 'Select the plan that best fits your garage needs',
+      button: 'Upgrade',
+      importantInfo: 'Important Information',
+      upgradeInfo: 'When Upgrading',
+      upgradePoint1: 'Changes take effect immediately',
+      upgradePoint2: 'Prorated charge for the current month',
+      upgradePoint3: 'New limits apply instantly',
+      downgradeInfo: 'When Downgrading',
+      downgradePoint1: 'Changes at end of billing period',
+      downgradePoint2: 'Keep current features until then',
+      downgradePoint3: 'Ensure usage fits new limits',
+      carsPerMonth: '{count} cars per month',
+      activeUsers: '{count} active users',
+      locations: '{count} locations',
+      saveWithAnnual: 'Save {amount} with annual billing'
     },
     
-    purchase: {
-      title: 'Confirm Your Choice',
-      description: 'You are about to subscribe',
-      redirectNotice: 'You will be redirected to our secure payment environment to complete the payment.',
-      button: 'Go to Payment'
-    },
-    
-    paymentHistory: {
-      title: 'Payment History',
-      description: 'Overview of all your payments and transactions',
-      viewHistory: 'View Payment History',
-      allTransactions: 'All transactions for your subscription',
-      loading: 'Loading payment history...',
-      noHistory: 'No payment history found',
-      date: 'Date',
-      descriptionColumn: 'Description',
-      type: 'Type',
-      status: 'Status',
-      amount: 'Amount',
-      types: {
-        payment: 'Payment',
-        refund: 'Refund',
-        subscription: 'Subscription'
+    // New translations for invoices page
+    invoices: {
+      title: 'Billing History',
+      subtitle: 'View and download your past invoices',
+      summary: 'Billing Summary',
+      totalPaid: 'Total Paid',
+      averageMonthly: 'Average Monthly',
+      totalInvoices: 'Total Invoices',
+      history: 'Invoice History',
+      allYears: 'All years',
+      invoice: 'Invoice',
+      download: 'Download PDF',
+      view: 'View Online',
+      downloadNotAvailable: 'Download not available',
+      viewNotAvailable: 'View not available',
+      empty: {
+        title: 'No invoices yet',
+        description: 'Your invoices will appear here once you upgrade to a paid plan'
       },
-      statuses: {
-        pending: 'Pending',
-        completed: 'Completed',
-        failed: 'Failed',
-        canceled: 'Canceled'
+      status: {
+        paid: 'Paid',
+        open: 'Open',
+        void: 'Void',
+        uncollectible: 'Uncollectible',
+        draft: 'Draft'
       }
-    }
+    },
+    
+    // Additional translations
+    recommended: 'Recommended',
+    month: 'month',
+    scheduledCancel: 'Canceling soon',
+    quickUsage: 'Quick Usage',
+    daysRemaining: '{days} days remaining',
+    keepPlan: 'Keep current plan',
+    viewDetails: 'View details'
   }
 }

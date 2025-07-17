@@ -7,6 +7,7 @@ import { Tenant } from '../auth/entities/tenant.entity';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { EmailModule } from '../email/email.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { EmailModule } from '../email/email.module';
     AuthModule, // For AuthService (password hashing)
     AuditModule,
     EmailModule, // For EmailService (sending welcome emails)
+    SubscriptionsModule, // For LimitsService
   ],
   controllers: [UsersController],
   providers: [UsersService],

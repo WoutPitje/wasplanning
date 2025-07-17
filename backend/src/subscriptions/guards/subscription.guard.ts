@@ -3,59 +3,97 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
-  SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { SubscriptionsService } from '../subscriptions.service';
-import { MetricType } from '../entities/usage-record.entity';
+import { LimitsService, LimitType } from '../services/limits.service';
 
-export const REQUIRE_FEATURE_KEY = 'requireFeature';
-export const REQUIRE_LIMIT_KEY = 'requireLimit';
-
-export const RequireFeature = (feature: string) => SetMetadata(REQUIRE_FEATURE_KEY, feature);
-export const RequireLimit = (metricType: MetricType) => SetMetadata(REQUIRE_LIMIT_KEY, metricType);
+export const CheckLimit = (limitType: LimitType) =>
+  Reflect.metadata('limitType', limitType);
 
 @Injectable()
 export class SubscriptionGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private subscriptionsService: SubscriptionsService,
+    private limitsService: LimitsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const limitType = this.reflector.get<LimitType>(
+      'limitType',
+      context.getHandler(),
+    );
+
+    if (!limitType) {
+      return true; // No limit check required
+    }
+
     const request = context.switchToHttp().getRequest();
-    const user = request.user;
+    const tenantId = request.user?.tenant?.id || request.tenantId;
 
-    if (!user || !user.tenant) {
-      throw new ForbiddenException('User or tenant not found');
+    if (!tenantId) {
+      throw new ForbiddenException('Tenant ID not found in request');
     }
 
-    const tenantId = user.tenant.id;
+    let allowed = false;
+    let limitInfo: any;
 
-    // Check required feature
-    const requiredFeature = this.reflector.getAllAndOverride<string>(REQUIRE_FEATURE_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    switch (limitType) {
+      case LimitType.CARS_WASHED:
+        allowed = await this.limitsService.canWashCar(tenantId);
+        if (!allowed) {
+          limitInfo = await this.limitsService.getLimitsAndUsage(tenantId);
+          throw new ForbiddenException({
+            error: 'SUBSCRIPTION_LIMIT_EXCEEDED',
+            message:
+              "Je hebt het maximale aantal auto's voor deze maand bereikt",
+            details: {
+              type: 'cars_washed',
+              current: limitInfo.cars_washed.current,
+              limit: limitInfo.cars_washed.limit,
+              percentage: limitInfo.cars_washed.percentage,
+            },
+            upgradeUrl: '/garage-admin/subscription',
+          });
+        }
+        break;
 
-    if (requiredFeature) {
-      const hasFeature = await this.subscriptionsService.hasFeature(tenantId, requiredFeature);
-      if (!hasFeature) {
-        throw new ForbiddenException(`Feature '${requiredFeature}' not available with current subscription plan`);
-      }
-    }
+      case LimitType.ACTIVE_USERS:
+        allowed = await this.limitsService.canCreateUser(tenantId);
+        if (!allowed) {
+          limitInfo = await this.limitsService.getLimitsAndUsage(tenantId);
+          throw new ForbiddenException({
+            error: 'SUBSCRIPTION_LIMIT_EXCEEDED',
+            message:
+              'Je hebt het maximale aantal gebruikers voor je abonnement bereikt',
+            details: {
+              type: 'active_users',
+              current: limitInfo.active_users.current,
+              limit: limitInfo.active_users.limit,
+              percentage: limitInfo.active_users.percentage,
+            },
+            upgradeUrl: '/garage-admin/subscription',
+          });
+        }
+        break;
 
-    // Check required limit
-    const requiredLimit = this.reflector.getAllAndOverride<MetricType>(REQUIRE_LIMIT_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (requiredLimit) {
-      const canUse = await this.subscriptionsService.checkLimit(tenantId, requiredLimit);
-      if (!canUse) {
-        throw new ForbiddenException(`Usage limit exceeded for '${requiredLimit}'. Please upgrade your subscription plan.`);
-      }
+      case LimitType.LOCATIONS:
+        allowed = await this.limitsService.canCreateLocation(tenantId);
+        if (!allowed) {
+          limitInfo = await this.limitsService.getLimitsAndUsage(tenantId);
+          throw new ForbiddenException({
+            error: 'SUBSCRIPTION_LIMIT_EXCEEDED',
+            message:
+              'Je hebt het maximale aantal locaties voor je abonnement bereikt',
+            details: {
+              type: 'locations',
+              current: limitInfo.locations.current,
+              limit: limitInfo.locations.limit,
+              percentage: limitInfo.locations.percentage,
+            },
+            upgradeUrl: '/garage-admin/subscription',
+          });
+        }
+        break;
     }
 
     return true;

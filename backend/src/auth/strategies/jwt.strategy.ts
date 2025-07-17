@@ -58,7 +58,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       // Check if impersonator's tenant is active (unless they're super admin)
       if (impersonator.role !== UserRole.SUPER_ADMIN) {
         if (!impersonator.tenant) {
-          throw new UnauthorizedException('Impersonator must belong to a tenant');
+          throw new UnauthorizedException(
+            'Impersonator must belong to a tenant',
+          );
         }
         if (!impersonator.tenant.is_active) {
           throw new UnauthorizedException('Impersonator tenant is inactive');
@@ -68,10 +70,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       // Check if impersonated user's tenant is active (unless they're super admin)
       if (impersonatedUser.role !== UserRole.SUPER_ADMIN) {
         if (!impersonatedUser.tenant) {
-          throw new UnauthorizedException('Impersonated user must belong to a tenant');
+          throw new UnauthorizedException(
+            'Impersonated user must belong to a tenant',
+          );
         }
         if (!impersonatedUser.tenant.is_active) {
-          throw new UnauthorizedException('Impersonated user tenant is inactive');
+          throw new UnauthorizedException(
+            'Impersonated user tenant is inactive',
+          );
         }
       }
 
@@ -82,12 +88,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         role: impersonatedUser.role,
         first_name: impersonatedUser.first_name,
         last_name: impersonatedUser.last_name,
-        tenant: impersonatedUser.tenant ? {
-          id: impersonatedUser.tenant.id,
-          name: impersonatedUser.tenant.name,
-          display_name: impersonatedUser.tenant.display_name,
-          language: impersonatedUser.tenant.language,
-        } : null,
+        tenant: impersonatedUser.tenant
+          ? {
+              id: impersonatedUser.tenant.id,
+              name: impersonatedUser.tenant.name,
+              display_name: impersonatedUser.tenant.display_name,
+              language: impersonatedUser.tenant.language,
+            }
+          : null,
         impersonation: {
           is_impersonating: true,
           impersonator_id: payload.impersonator_id,
@@ -123,12 +131,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       role: user.role,
       first_name: user.first_name,
       last_name: user.last_name,
-      tenant: user.tenant ? {
-        id: user.tenant.id,
-        name: user.tenant.name,
-        display_name: user.tenant.display_name,
-        language: user.tenant.language,
-      } : null,
+      tenant: user.tenant
+        ? {
+            id: user.tenant.id,
+            name: user.tenant.name,
+            display_name: user.tenant.display_name,
+            language: user.tenant.language,
+          }
+        : null,
     };
   }
 }

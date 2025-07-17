@@ -115,6 +115,43 @@
         </CardContent>
       </Card>
 
+      <!-- Subscription Info -->
+      <Card v-if="stats?.subscription" class="lg:col-span-3">
+        <CardHeader>
+          <h3 class="text-lg font-medium text-foreground">{{ t('admin.tenants.details.subscription') }}</h3>
+        </CardHeader>
+        <CardContent>
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.plan') }}</dt>
+              <dd class="mt-1">
+                <Badge :variant="getSubscriptionBadgeVariant(stats.subscription.status)">
+                  {{ stats.subscription.plan_display_name }}
+                </Badge>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.subscriptionStatus') }}</dt>
+              <dd class="mt-1 text-sm text-foreground">{{ t(`subscription.status.${stats.subscription.status}`) || stats.subscription.status }}</dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.expiresOn') }}</dt>
+              <dd class="mt-1 text-sm text-foreground">{{ formatDate(stats.subscription.current_period_end) }}</dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-muted-foreground">{{ t('admin.tenants.details.usage') }}</dt>
+              <dd class="mt-1 text-sm">
+                <div class="space-y-1">
+                  <div>{{ t('subscription.usage.cars_washed') }}: {{ stats.subscription.usage.cars_washed }} / {{ stats.subscription.limits.max_cars_per_month || '∞' }}</div>
+                  <div>{{ t('subscription.usage.active_users') }}: {{ stats.subscription.usage.active_users }} / {{ stats.subscription.limits.max_active_users || '∞' }}</div>
+                  <div>{{ t('subscription.usage.locations') }}: {{ stats.subscription.usage.locations }} / {{ stats.subscription.limits.max_locations || '∞' }}</div>
+                </div>
+              </dd>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <!-- Users list -->
       <div class="lg:col-span-3">
         <h3 class="text-lg font-medium text-foreground mb-4">{{ t('admin.tenants.details.users') }}</h3>
@@ -144,6 +181,7 @@ import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader } from '~/components/ui/card'
+import { Badge } from '~/components/ui/badge'
 import { Breadcrumb } from '~/components/ui/breadcrumb'
 import UsersList from '~/components/users/UsersList.vue'
 import type { UserWithoutPassword } from '~/types/users'
@@ -175,6 +213,18 @@ const breadcrumbItems = computed(() => [
 // Methods
 const formatDate = (dateString: string) => {
   return format(new Date(dateString), 'dd MMM yyyy', { locale: nl })
+}
+
+const getSubscriptionBadgeVariant = (status: string) => {
+  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    'ACTIVE': 'default',
+    'PAST_DUE': 'destructive', 
+    'CANCELED': 'secondary',
+    'INCOMPLETE': 'outline',
+    'TRIALING': 'secondary',
+    'EXPIRED': 'destructive'
+  }
+  return variants[status] || 'default'
 }
 
 const loadTenant = async () => {

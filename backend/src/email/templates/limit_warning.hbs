@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limiet Waarschuwing - Wasplanning</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            background-color: #1E2C48;
+            color: white;
+        }
+        .content {
+            padding: 20px 0;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+        .stats {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #1E2C48;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #1E2C48;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="{{frontendUrl}}/wasplanning-logo.png" alt="Wasplanning Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;">
+            <h1>Wasplanning Systeem</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Beste {{firstName}},</h2>
+            
+            <div class="warning-box">
+                <strong>⚠️ Waarschuwing:</strong> Je hebt {{percentage}}% van je limiet voor {{limitType}} bereikt!
+            </div>
+            
+            <p>Je nadert de limiet van je huidige abonnement:</p>
+            
+            <div class="stats">
+                <p><strong>Type:</strong> {{limitType}}</p>
+                <p><strong>Huidig gebruik:</strong> {{currentUsage}}</p>
+                <p><strong>Limiet:</strong> {{limit}}</p>
+                <p><strong>Percentage gebruikt:</strong> {{percentage}}%</p>
+            </div>
+            
+            <p>Als je de limiet bereikt, kun je geen nieuwe {{limitType}} meer toevoegen. Om je limiet te verhogen, kun je upgraden naar een hoger abonnement.</p>
+            
+            <div style="text-align: center;">
+                <a href="{{frontendUrl}}/garage-admin/subscription" class="button">Bekijk Abonnementen</a>
+            </div>
+            
+            <p>Heb je vragen? Neem dan contact met ons op.</p>
+        </div>
+        
+        <div class="footer">
+            <p>Dit is een automatisch gegenereerd bericht van het Wasplanning Systeem.</p>
+        </div>
+    </div>
+</body>
+</html>

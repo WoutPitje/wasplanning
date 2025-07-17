@@ -24,6 +24,11 @@ export class TenantGuard implements CanActivate {
       return true;
     }
 
+    // Ensure user has a tenant
+    if (!user.tenant || !user.tenant.id) {
+      throw new ForbiddenException('User must belong to a tenant');
+    }
+
     // Check if route has tenant parameter
     const tenantId = request.params?.tenantId;
     if (tenantId && tenantId !== user.tenant.id) {

@@ -1,466 +1,327 @@
-import type {
-  SubscriptionPlan,
-  Subscription,
-  CreateSubscriptionDto,
-  UpdateSubscriptionDto,
-  UsageData,
-  PaymentMethod,
-  CreatePaymentMethodDto,
+import type { 
+  Subscription, 
+  SubscriptionPlan, 
+  PaymentMethod, 
+  UsageRecord,
+  AttachPaymentMethodDto,
+  ChangePlanDto,
+  StripeSetupIntent
 } from '~/types/subscriptions'
 
 export const useSubscriptions = () => {
   const config = useRuntimeConfig()
   const authStore = useAuthStore()
   
-  // Reactive state
+  // State management
   const pending = ref(false)
   const error = ref<string | null>(null)
-
+  
   // Get authorization header
   const getAuthHeader = () => ({
     Authorization: `Bearer ${authStore.accessToken}`
   })
-
-  // Subscription Plans
-  const getPlans = async (): Promise<SubscriptionPlan[] | null> => {
+  
+  // Get current subscription
+  const getSubscription = async (): Promise<Subscription | null> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<SubscriptionPlan[]>(`${config.public.apiUrl}/subscriptions/plans`, {
-        method: 'GET',
-        headers: getAuthHeader()
-      })
+      const response = await $fetch<Subscription>(
+        `${config.public.apiUrl}/subscriptions/current`,
+        {
+          method: 'GET',
+          headers: getAuthHeader()
+        }
+      )
       
       return response
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to fetch plans'
+      error.value = err.data?.message || 'Failed to fetch subscription'
       return null
     } finally {
       pending.value = false
     }
   }
-
-  const getPlan = async (id: string): Promise<SubscriptionPlan | null> => {
+  
+  // Get all plans
+  const getPlans = async (): Promise<SubscriptionPlan[]> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<SubscriptionPlan>(`${config.public.apiUrl}/subscriptions/plans/${id}`, {
-        method: 'GET',
-        headers: getAuthHeader()
-      })
+      const response = await $fetch<SubscriptionPlan[]>(
+        `${config.public.apiUrl}/subscriptions/plans`,
+        {
+          method: 'GET',
+          headers: getAuthHeader()
+        }
+      )
       
       return response
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to fetch plan'
+      error.value = err.data?.message || 'Failed to fetch plans'
+      return []
+    } finally {
+      pending.value = false
+    }
+  }
+  
+  // Get current usage
+  const getUsage = async (): Promise<UsageRecord[]> => {
+    try {
+      pending.value = true
+      error.value = null
+      
+      const response = await $fetch<UsageRecord[]>(
+        `${config.public.apiUrl}/subscriptions/usage`,
+        {
+          method: 'GET',
+          headers: getAuthHeader()
+        }
+      )
+      
+      return response
+    } catch (err: any) {
+      error.value = err.data?.message || 'Failed to fetch usage'
+      return []
+    } finally {
+      pending.value = false
+    }
+  }
+  
+  // Change subscription plan
+  const changePlan = async (data: ChangePlanDto): Promise<any> => {
+    try {
+      pending.value = true
+      error.value = null
+      
+      const response = await $fetch<any>(
+        `${config.public.apiUrl}/subscriptions/upgrade`,
+        {
+          method: 'POST',
+          headers: getAuthHeader(),
+          body: data
+        }
+      )
+      
+      return response
+    } catch (err: any) {
+      error.value = err.data?.message || 'Failed to change plan'
       return null
     } finally {
       pending.value = false
     }
   }
-
-  // Current Subscription
-  const getCurrentSubscription = async (): Promise<Subscription | null> => {
+  
+  // Cancel subscription
+  const cancelSubscription = async (): Promise<boolean> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<Subscription>(`${config.public.apiUrl}/subscriptions/current`, {
-        method: 'GET',
-        headers: getAuthHeader()
-      })
-      
-      return response
-    } catch (err: any) {
-      // 404 means no subscription, which is valid
-      if (err.statusCode === 404) {
-        return null
-      }
-      error.value = err.data?.message || err.message || 'Failed to fetch subscription'
-      return null
-    } finally {
-      pending.value = false
-    }
-  }
-
-  const createSubscription = async (dto: CreateSubscriptionDto): Promise<Subscription | null> => {
-    try {
-      pending.value = true
-      error.value = null
-      
-      const response = await $fetch<Subscription>(`${config.public.apiUrl}/subscriptions`, {
-        method: 'POST',
-        headers: getAuthHeader(),
-        body: dto
-      })
-      
-      return response
-    } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to create subscription'
-      return null
-    } finally {
-      pending.value = false
-    }
-  }
-
-  const updateSubscription = async (id: string, dto: UpdateSubscriptionDto): Promise<Subscription | null> => {
-    try {
-      pending.value = true
-      error.value = null
-      
-      const response = await $fetch<Subscription>(`${config.public.apiUrl}/subscriptions/${id}`, {
-        method: 'PATCH',
-        headers: getAuthHeader(),
-        body: dto
-      })
-      
-      return response
-    } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to update subscription'
-      return null
-    } finally {
-      pending.value = false
-    }
-  }
-
-  const cancelSubscription = async (id: string, immediately: boolean = false): Promise<Subscription | null> => {
-    try {
-      pending.value = true
-      error.value = null
-      
-      const response = await $fetch<Subscription>(`${config.public.apiUrl}/subscriptions/${id}?immediately=${immediately}`, {
-        method: 'DELETE',
-        headers: getAuthHeader()
-      })
-      
-      return response
-    } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to cancel subscription'
-      return null
-    } finally {
-      pending.value = false
-    }
-  }
-
-  // Usage and Billing
-  const getCurrentUsage = async (): Promise<UsageData | null> => {
-    try {
-      pending.value = true
-      error.value = null
-      
-      const response = await $fetch<UsageData>(`${config.public.apiUrl}/subscriptions/usage/current-period`, {
-        method: 'GET',
-        headers: getAuthHeader()
-      })
-      
-      return response
-    } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to fetch usage data'
-      return null
-    } finally {
-      pending.value = false
-    }
-  }
-
-  // Payment Methods
-  const getPaymentMethods = async (): Promise<PaymentMethod[] | null> => {
-    try {
-      pending.value = true
-      error.value = null
-      
-      const response = await $fetch<PaymentMethod[]>(`${config.public.apiUrl}/payments/methods`, {
-        method: 'GET',
-        headers: getAuthHeader()
-      })
-      
-      return response
-    } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to fetch payment methods'
-      return null
-    } finally {
-      pending.value = false
-    }
-  }
-
-  const createPaymentMethod = async (dto: CreatePaymentMethodDto): Promise<PaymentMethod | null> => {
-    try {
-      pending.value = true
-      error.value = null
-      
-      const response = await $fetch<PaymentMethod>(`${config.public.apiUrl}/payments/methods`, {
-        method: 'POST',
-        headers: getAuthHeader(),
-        body: dto
-      })
-      
-      return response
-    } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to create payment method'
-      return null
-    } finally {
-      pending.value = false
-    }
-  }
-
-  const deletePaymentMethod = async (id: string): Promise<boolean> => {
-    try {
-      pending.value = true
-      error.value = null
-      
-      await $fetch(`${config.public.apiUrl}/payments/methods/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeader()
-      })
+      await $fetch(
+        `${config.public.apiUrl}/subscriptions/cancel`,
+        {
+          method: 'POST',
+          headers: getAuthHeader()
+        }
+      )
       
       return true
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to delete payment method'
+      error.value = err.data?.message || 'Failed to cancel subscription'
       return false
     } finally {
       pending.value = false
     }
   }
-
-  const setDefaultPaymentMethod = async (id: string): Promise<PaymentMethod | null> => {
+  
+  // Reactivate subscription (cancel the scheduled downgrade)
+  const reactivateSubscription = async (): Promise<boolean> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<PaymentMethod>(`${config.public.apiUrl}/payments/methods/${id}/set-default`, {
-        method: 'PATCH',
-        headers: getAuthHeader()
-      })
-      
-      return response
-    } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to set default payment method'
-      return null
-    } finally {
-      pending.value = false
-    }
-  }
-
-  // Payment and Checkout
-  const createPaidSubscription = async (plan: SubscriptionPlan, billingInterval: 'monthly' | 'yearly'): Promise<{ checkoutUrl: string } | null> => {
-    try {
-      pending.value = true
-      error.value = null
-      
-      // Build return URL
-      const returnUrl = `${window.location.origin}/garage-admin/payment-return?action=new`
-      
-      const response = await $fetch<{ checkoutUrl: string }>(`${config.public.apiUrl}/subscriptions/paid`, {
-        method: 'POST',
-        headers: getAuthHeader(),
-        body: { 
-          planName: plan.name,
-          billingInterval: billingInterval === 'yearly' ? 'year' : 'month',
-          returnUrl
+      await $fetch(
+        `${config.public.apiUrl}/subscriptions/reactivate`,
+        {
+          method: 'POST',
+          headers: getAuthHeader()
         }
-      })
+      )
       
-      return response
+      return true
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to create paid subscription'
-      return null
+      error.value = err.data?.message || 'Failed to reactivate subscription'
+      return false
     } finally {
       pending.value = false
     }
   }
-
-  const previewPlanChange = async (subscriptionId: string, newPlan: SubscriptionPlan, billingInterval: 'monthly' | 'yearly'): Promise<any | null> => {
+  
+  // Get payment methods
+  const getPaymentMethods = async (): Promise<PaymentMethod[]> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<any>(`${config.public.apiUrl}/subscriptions/${subscriptionId}/preview-plan-change`, {
-        method: 'POST',
-        headers: getAuthHeader(),
-        body: { 
-          newPlanName: newPlan.name,
-          billingInterval: billingInterval === 'yearly' ? 'year' : 'month',
+      const response = await $fetch<PaymentMethod[]>(
+        `${config.public.apiUrl}/payments/methods`,
+        {
+          method: 'GET',
+          headers: getAuthHeader()
         }
-      })
+      )
       
       return response
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to preview plan change'
-      return null
+      error.value = err.data?.message || 'Failed to fetch payment methods'
+      return []
     } finally {
       pending.value = false
     }
   }
-
-  const changePlan = async (subscriptionId: string, newPlan: SubscriptionPlan, billingInterval: 'monthly' | 'yearly'): Promise<{ checkoutUrl: string } | Subscription | null> => {
+  
+  // Create setup intent for adding payment method
+  const createSetupIntent = async (): Promise<StripeSetupIntent | null> => {
     try {
       pending.value = true
       error.value = null
       
-      // Build return URL
-      const returnUrl = `${window.location.origin}/garage-admin/payment-return?action=change`
-      
-      const response = await $fetch<{ checkoutUrl: string } | Subscription>(`${config.public.apiUrl}/subscriptions/${subscriptionId}/change-plan`, {
-        method: 'POST',
-        headers: getAuthHeader(),
-        body: { 
-          newPlanName: newPlan.name,
-          billingInterval: billingInterval === 'yearly' ? 'year' : 'month',
-          returnUrl
+      const response = await $fetch<StripeSetupIntent>(
+        `${config.public.apiUrl}/payments/setup-intent`,
+        {
+          method: 'POST',
+          headers: getAuthHeader()
         }
-      })
+      )
       
       return response
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to change plan'
+      error.value = err.data?.message || 'Failed to create setup intent'
       return null
     } finally {
       pending.value = false
     }
   }
-
-  const getCreditBalance = async (): Promise<any | null> => {
+  
+  // Add payment method
+  const addPaymentMethod = async (data: AttachPaymentMethodDto): Promise<PaymentMethod | null> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<any>(`${config.public.apiUrl}/subscriptions/credit-balance`, {
-        method: 'GET',
-        headers: getAuthHeader()
-      })
+      const response = await $fetch<PaymentMethod>(
+        `${config.public.apiUrl}/payments/methods`,
+        {
+          method: 'POST',
+          headers: getAuthHeader(),
+          body: data
+        }
+      )
       
       return response
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to fetch credit balance'
+      error.value = err.data?.message || 'Failed to add payment method'
       return null
     } finally {
       pending.value = false
     }
   }
-
-  const getPaymentHistory = async (): Promise<any[] | null> => {
+  
+  // Set default payment method
+  const setDefaultPaymentMethod = async (id: string): Promise<boolean> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<any[]>(`${config.public.apiUrl}/payments/transactions`, {
-        method: 'GET',
-        headers: getAuthHeader()
-      })
+      await $fetch(
+        `${config.public.apiUrl}/payments/methods/${id}/default`,
+        {
+          method: 'PUT',
+          headers: getAuthHeader()
+        }
+      )
       
-      return response
+      return true
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to fetch payment history'
-      return null
+      error.value = err.data?.message || 'Failed to set default payment method'
+      return false
     } finally {
       pending.value = false
     }
   }
-
-  const completeNewSubscription = async (paymentId: string): Promise<Subscription | null> => {
+  
+  // Delete payment method
+  const deletePaymentMethod = async (id: string): Promise<boolean> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<Subscription>(`${config.public.apiUrl}/subscriptions/complete-new/${paymentId}`, {
-        method: 'POST',
-        headers: getAuthHeader()
-      })
+      await $fetch(
+        `${config.public.apiUrl}/payments/methods/${id}`,
+        {
+          method: 'DELETE',
+          headers: getAuthHeader()
+        }
+      )
       
-      return response
+      return true
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to complete subscription'
-      return null
+      error.value = err.data?.message || 'Failed to delete payment method'
+      return false
     } finally {
       pending.value = false
     }
   }
-
-  const completeChangePlan = async (paymentId: string): Promise<Subscription | null> => {
+  
+  // Get invoices
+  const getInvoices = async (params?: { limit?: number; starting_after?: string }): Promise<any> => {
     try {
       pending.value = true
       error.value = null
       
-      const response = await $fetch<Subscription>(`${config.public.apiUrl}/subscriptions/complete-change/${paymentId}`, {
-        method: 'POST',
-        headers: getAuthHeader()
-      })
+      const queryParams = new URLSearchParams()
+      if (params?.limit) queryParams.append('limit', params.limit.toString())
+      if (params?.starting_after) queryParams.append('starting_after', params.starting_after)
+      
+      const response = await $fetch(
+        `${config.public.apiUrl}/subscriptions/invoices${queryParams.toString() ? '?' + queryParams.toString() : ''}`,
+        {
+          headers: getAuthHeader()
+        }
+      )
       
       return response
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to complete plan change'
-      return null
+      error.value = err.data?.message || 'Failed to load invoices'
+      return { invoices: [], has_more: false }
     } finally {
       pending.value = false
     }
   }
-
-  // Utility functions
-  const formatPrice = (price: number, currency: string = 'EUR'): string => {
-    return new Intl.NumberFormat('nl-NL', {
-      style: 'currency',
-      currency,
-    }).format(price)
-  }
-
-  const calculateYearlySavings = (monthlyPrice: number, yearlyPrice: number): number => {
-    return (monthlyPrice * 12) - yearlyPrice
-  }
-
-  const getUsagePercentage = (current: number, limit?: number): number => {
-    if (!limit) return 0
-    return Math.round((current / limit) * 100)
-  }
-
-  const isFeatureAvailable = (features: Record<string, boolean>, feature: string): boolean => {
-    return features[feature] === true
-  }
-
-  const getUsageWarningLevel = (percentage: number): 'success' | 'warning' | 'error' => {
-    if (percentage >= 90) return 'error'
-    if (percentage >= 75) return 'warning'
-    return 'success'
-  }
-
+  
   return {
     // State
     pending: readonly(pending),
-    loading: readonly(pending), // Keep for backward compatibility
     error: readonly(error),
-
-    // Subscription Plans
+    
+    // Methods
+    getSubscription,
     getPlans,
-    getPlan,
-
-    // Current Subscription
-    getCurrentSubscription,
-    createSubscription,
-    updateSubscription,
-    cancelSubscription,
-
-    // Usage
-    getCurrentUsage,
-
-    // Payment Methods
-    getPaymentMethods,
-    createPaymentMethod,
-    deletePaymentMethod,
-    setDefaultPaymentMethod,
-
-    // Payment and Checkout
-    createPaidSubscription,
-    previewPlanChange,
+    getUsage,
     changePlan,
-    completeNewSubscription,
-    completeChangePlan,
-    getCreditBalance,
-    getPaymentHistory,
-
-    // Utilities
-    formatPrice,
-    calculateYearlySavings,
-    getUsagePercentage,
-    isFeatureAvailable,
-    getUsageWarningLevel,
+    cancelSubscription,
+    reactivateSubscription,
+    getPaymentMethods,
+    createSetupIntent,
+    addPaymentMethod,
+    setDefaultPaymentMethod,
+    deletePaymentMethod,
+    getInvoices,
+    
+    // Utils
+    clearError: () => { error.value = null }
   }
 }

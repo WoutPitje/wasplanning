@@ -52,7 +52,7 @@ describe('JwtStrategy', () => {
   beforeEach(async () => {
     // Set JWT_SECRET before creating module
     mockConfigService.get.mockReturnValue('test-jwt-secret');
-    
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JwtStrategy,

@@ -5,9 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { Tenant } from './tenant.entity';
+import { UserLocation } from '../../locations/entities/user-location.entity';
 
 export enum UserRole {
   WERKPLAATS = 'workshop',
@@ -60,4 +62,7 @@ export class User {
   @ManyToOne(() => Tenant, (tenant) => tenant.users)
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
+
+  @OneToMany(() => UserLocation, (userLocation) => userLocation.user)
+  userLocations: UserLocation[];
 }

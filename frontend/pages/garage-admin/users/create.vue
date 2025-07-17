@@ -17,6 +17,13 @@
       </div>
     </div>
 
+    <!-- Error Alert -->
+    <Alert v-if="error" variant="destructive">
+      <AlertCircle class="h-4 w-4" />
+      <AlertTitle>{{ t('common.error') }}</AlertTitle>
+      <AlertDescription>{{ error }}</AlertDescription>
+    </Alert>
+
     <!-- Form -->
     <UserForm
       :tenant-id="authStore.tenant?.id"
@@ -39,6 +46,8 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '~/components/ui/button'
+import { Alert, AlertTitle, AlertDescription } from '~/components/ui/alert'
+import { AlertCircle } from 'lucide-vue-next'
 import UserForm from '~/components/users/UserForm.vue'
 import TemporaryPasswordDialog from '~/components/users/TemporaryPasswordDialog.vue'
 import type { CreateUserDto } from '~/types/users'
@@ -47,7 +56,7 @@ import { UserRole } from '~/types/auth'
 const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
-const { createUser, pending } = useUsers()
+const { createUser, pending, error } = useUsers()
 
 definePageMeta({
   middleware: ['auth'],

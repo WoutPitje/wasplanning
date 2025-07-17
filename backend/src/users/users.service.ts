@@ -9,11 +9,14 @@ import { Repository } from 'typeorm';
 import { User, UserRole } from '../auth/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
 import { EmailService } from '../email/email.service';
+import { LimitsService } from '../subscriptions/services/limits.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { CurrentUser } from './interfaces/current-user.interface';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
+import { SubscriptionLimitExceededException } from '../subscriptions/interfaces/subscription-limits.interface';
 
 @Injectable()
 export class UsersService {
@@ -22,6 +25,8 @@ export class UsersService {
     private userRepository: Repository<User>,
     private authService: AuthService,
     private emailService: EmailService,
+    private limitsService: LimitsService,
+    private auditService: AuditService,
   ) {}
 
   private generateTemporaryPassword(): string {
@@ -46,6 +51,47 @@ export class UsersService {
       );
     }
 
+    // Check subscription limits
+    const canCreate = await this.limitsService.canCreateUser(
+      createUserDto.tenant_id,
+    );
+    if (!canCreate) {
+      const limitsInfo = await this.limitsService.getLimitsAndUsage(
+        createUserDto.tenant_id,
+      );
+
+      // Log the limit exceeded attempt
+      await this.auditService.logAction({
+        tenant_id: createUserDto.tenant_id,
+        user_id: null, // We don't have current user context here
+        action: 'limit.exceeded',
+        resource_type: 'user',
+        resource_id: null,
+        details: {
+          type: 'active_users',
+          current_usage: limitsInfo.active_users.current,
+          limit: limitsInfo.active_users.limit,
+          attempted_action: 'create_user',
+          email: createUserDto.email,
+        },
+        ip_address: '127.0.0.1', // TODO: Get from request context
+        user_agent: 'System',
+      });
+
+      throw new ForbiddenException({
+        error: 'SUBSCRIPTION_LIMIT_EXCEEDED',
+        message:
+          'Je hebt het maximale aantal gebruikers voor je abonnement bereikt',
+        details: {
+          type: 'active_users',
+          current: limitsInfo.active_users.current,
+          limit: limitsInfo.active_users.limit,
+          percentage: limitsInfo.active_users.percentage,
+        },
+        upgradeUrl: '/garage-admin/subscription',
+      });
+    }
+
     // Generate temporary password if not provided
     const password = createUserDto.password || this.generateTemporaryPassword();
     const shouldGeneratePassword = !createUserDto.password;
@@ -68,7 +114,10 @@ export class UsersService {
         firstName: user.first_name || 'Gebruiker',
         lastName: user.last_name || '',
         temporaryPassword: shouldGeneratePassword ? password : undefined,
-        tenantName: userWithTenant?.tenant?.display_name || userWithTenant?.tenant?.name || 'Wasplanning',
+        tenantName:
+          userWithTenant?.tenant?.display_name ||
+          userWithTenant?.tenant?.name ||
+          'Wasplanning',
       });
     } catch (emailError) {
       // Log error but don't fail user creation
@@ -276,5 +325,16 @@ export class UsersService {
     await this.userRepository.update(id, { is_active: false });
 
     return { message: `User ${user.email} has been deactivated` };
+  }
+
+  async findTenantAdmins(tenantId: string): Promise<User[]> {
+    return this.userRepository.find({
+      where: {
+        tenant_id: tenantId,
+        role: UserRole.GARAGE_ADMIN,
+        is_active: true,
+      },
+      select: ['id', 'email', 'first_name', 'last_name'],
+    });
   }
 }

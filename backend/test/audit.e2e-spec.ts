@@ -24,7 +24,7 @@ describe('Audit Endpoints (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Configure validation pipe to transform query params
     app.useGlobalPipes(
       new ValidationPipe({
@@ -33,7 +33,7 @@ describe('Audit Endpoints (e2e)', () => {
         transform: true,
       }),
     );
-    
+
     await app.init();
 
     dataSource = app.get(DataSource);
@@ -49,6 +49,32 @@ describe('Audit Endpoints (e2e)', () => {
       [`test-audit-${uniqueId}`, 'Test Audit Garage', true],
     );
     tenantId = tenant[0].id;
+
+    // Create subscription with standard plan for the tenant
+    const standardPlan = await dataSource.query(
+      `SELECT id FROM subscription_plans WHERE name = 'standard' LIMIT 1`,
+    );
+    if (standardPlan.length > 0) {
+      const currentDate = new Date();
+      const nextMonth = new Date(currentDate);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+      await dataSource.query(
+        `INSERT INTO subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, 'active', $3, $4, NOW(), NOW())`,
+        [tenantId, standardPlan[0].id, currentDate, nextMonth],
+      );
+
+      // Initialize usage records
+      await dataSource.query(
+        `INSERT INTO usage_records (id, tenant_id, record_type, period_start, period_end, count, created_at, updated_at)
+         VALUES 
+           (gen_random_uuid(), $1, 'cars_washed', $2, $3, 0, NOW(), NOW()),
+           (gen_random_uuid(), $1, 'active_users', $2, $3, 0, NOW(), NOW()),
+           (gen_random_uuid(), $1, 'locations', $2, $3, 0, NOW(), NOW())`,
+        [tenantId, currentDate, nextMonth],
+      );
+    }
 
     // Create test users with unique emails
     const superAdmin = await usersService.create({
@@ -86,7 +112,10 @@ describe('Audit Endpoints (e2e)', () => {
 
     response = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: `garageadmin-${uniqueId}@test.com`, password: 'Test123!' });
+      .send({
+        email: `garageadmin-${uniqueId}@test.com`,
+        password: 'Test123!',
+      });
     garageAdminToken = response.body.access_token;
 
     response = await request(app.getHttpServer())
@@ -114,10 +143,20 @@ describe('Audit Endpoints (e2e)', () => {
 
   afterAll(async () => {
     // Clean up test data
-    await dataSource.query('DELETE FROM audit_logs WHERE tenant_id = $1', [tenantId]);
-    await dataSource.query('DELETE FROM users WHERE tenant_id = $1', [tenantId]);
+    await dataSource.query('DELETE FROM audit_logs WHERE tenant_id = $1', [
+      tenantId,
+    ]);
+    await dataSource.query('DELETE FROM users WHERE tenant_id = $1', [
+      tenantId,
+    ]);
+    await dataSource.query('DELETE FROM usage_records WHERE tenant_id = $1', [
+      tenantId,
+    ]);
+    await dataSource.query('DELETE FROM subscriptions WHERE tenant_id = $1', [
+      tenantId,
+    ]);
     await dataSource.query('DELETE FROM tenants WHERE id = $1', [tenantId]);
-    
+
     await app.close();
   });
 
@@ -157,9 +196,7 @@ describe('Audit Endpoints (e2e)', () => {
     });
 
     it('should reject unauthenticated requests', () => {
-      return request(app.getHttpServer())
-        .get('/audit')
-        .expect(401);
+      return request(app.getHttpServer()).get('/audit').expect(401);
     });
 
     it('should support pagination', () => {
@@ -182,7 +219,9 @@ describe('Audit Endpoints (e2e)', () => {
         .expect((res) => {
           const items = res.body.items;
           if (items.length > 0) {
-            expect(items.every((item: any) => item.action === 'auth.login')).toBe(true);
+            expect(
+              items.every((item: any) => item.action === 'auth.login'),
+            ).toBe(true);
           }
         });
     });
@@ -195,14 +234,18 @@ describe('Audit Endpoints (e2e)', () => {
         .expect((res) => {
           const items = res.body.items;
           if (items.length > 0) {
-            expect(items.every((item: any) => item.resource_type === 'user')).toBe(true);
+            expect(
+              items.every((item: any) => item.resource_type === 'user'),
+            ).toBe(true);
           }
         });
     });
 
     it('should support date filtering', () => {
       const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000)
+        .toISOString()
+        .split('T')[0];
 
       return request(app.getHttpServer())
         .get(`/audit?start_date=${today}&end_date=${tomorrow}`)
@@ -329,7 +372,8 @@ describe('Audit Endpoints (e2e)', () => {
   describe('Tenant isolation', () => {
     it('should only return logs for the user tenant', async () => {
       // Create another tenant with unique name
-      const otherUniqueId = Date.now() + Math.random().toString(36).substr(2, 9);
+      const otherUniqueId =
+        Date.now() + Math.random().toString(36).substr(2, 9);
       const otherTenant = await dataSource.query(
         `INSERT INTO tenants (name, display_name, is_active) 
          VALUES ($1, $2, $3) 
@@ -337,6 +381,31 @@ describe('Audit Endpoints (e2e)', () => {
         [`other-audit-${otherUniqueId}`, 'Other Garage', true],
       );
       const otherTenantId = otherTenant[0].id;
+
+      // Create subscription for the other tenant
+      const standardPlan = await dataSource.query(
+        `SELECT id FROM subscription_plans WHERE name = 'standard' LIMIT 1`,
+      );
+      if (standardPlan.length > 0) {
+        const currentDate = new Date();
+        const nextMonth = new Date(currentDate);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+        await dataSource.query(
+          `INSERT INTO subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, created_at, updated_at)
+           VALUES (gen_random_uuid(), $1, $2, 'active', $3, $4, NOW(), NOW())`,
+          [otherTenantId, standardPlan[0].id, currentDate, nextMonth],
+        );
+
+        await dataSource.query(
+          `INSERT INTO usage_records (id, tenant_id, record_type, period_start, period_end, count, created_at, updated_at)
+           VALUES 
+             (gen_random_uuid(), $1, 'cars_washed', $2, $3, 0, NOW(), NOW()),
+             (gen_random_uuid(), $1, 'active_users', $2, $3, 0, NOW(), NOW()),
+             (gen_random_uuid(), $1, 'locations', $2, $3, 0, NOW(), NOW())`,
+          [otherTenantId, currentDate, nextMonth],
+        );
+      }
 
       // Create a user in the other tenant
       const otherUser = await usersService.create({
@@ -351,13 +420,19 @@ describe('Audit Endpoints (e2e)', () => {
       // Login as the other tenant's admin
       const otherAuthResponse = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: `other-${otherUniqueId}@test.com`, password: 'Test123!' });
+        .send({
+          email: `other-${otherUniqueId}@test.com`,
+          password: 'Test123!',
+        });
       const otherToken = otherAuthResponse.body.access_token;
 
       // Perform action in other tenant
       await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: `other-${otherUniqueId}@test.com`, password: 'Test123!' });
+        .send({
+          email: `other-${otherUniqueId}@test.com`,
+          password: 'Test123!',
+        });
 
       // Check that original tenant admin can't see other tenant's logs
       const response = await request(app.getHttpServer())
@@ -366,16 +441,29 @@ describe('Audit Endpoints (e2e)', () => {
         .expect(200);
 
       const items = response.body.items;
-      const otherTenantLogs = items.filter((item: any) => 
-        item.user && item.user.email === `other-${otherUniqueId}@test.com`
+      const otherTenantLogs = items.filter(
+        (item: any) =>
+          item.user && item.user.email === `other-${otherUniqueId}@test.com`,
       );
-      
+
       expect(otherTenantLogs.length).toBe(0);
 
       // Clean up
-      await dataSource.query('DELETE FROM audit_logs WHERE tenant_id = $1', [otherTenantId]);
-      await dataSource.query('DELETE FROM users WHERE tenant_id = $1', [otherTenantId]);
-      await dataSource.query('DELETE FROM tenants WHERE id = $1', [otherTenantId]);
+      await dataSource.query('DELETE FROM audit_logs WHERE tenant_id = $1', [
+        otherTenantId,
+      ]);
+      await dataSource.query('DELETE FROM users WHERE tenant_id = $1', [
+        otherTenantId,
+      ]);
+      await dataSource.query('DELETE FROM usage_records WHERE tenant_id = $1', [
+        otherTenantId,
+      ]);
+      await dataSource.query('DELETE FROM subscriptions WHERE tenant_id = $1', [
+        otherTenantId,
+      ]);
+      await dataSource.query('DELETE FROM tenants WHERE id = $1', [
+        otherTenantId,
+      ]);
     });
   });
 });

@@ -52,7 +52,7 @@ describe('EmailService Error Handling', () => {
     it('should handle SMTP connection timeout', async () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('<html>Test template</html>');
-      
+
       const timeoutError = new Error('Connection timeout');
       timeoutError.name = 'TimeoutError';
       mockTransporter.sendMail.mockRejectedValue(timeoutError);
@@ -64,13 +64,15 @@ describe('EmailService Error Handling', () => {
         data: { firstName: 'John' },
       };
 
-      await expect(service.sendEmail(emailData)).rejects.toThrow('Connection timeout');
+      await expect(service.sendEmail(emailData)).rejects.toThrow(
+        'Connection timeout',
+      );
     });
 
     it('should handle SMTP authentication errors', async () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('<html>Test template</html>');
-      
+
       const authError = new Error('Invalid login: 535 Authentication failed');
       authError.name = 'AuthenticationError';
       mockTransporter.sendMail.mockRejectedValue(authError);
@@ -82,13 +84,15 @@ describe('EmailService Error Handling', () => {
         data: { firstName: 'John' },
       };
 
-      await expect(service.sendEmail(emailData)).rejects.toThrow('Invalid login: 535 Authentication failed');
+      await expect(service.sendEmail(emailData)).rejects.toThrow(
+        'Invalid login: 535 Authentication failed',
+      );
     });
 
     it('should handle network connectivity errors', async () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('<html>Test template</html>');
-      
+
       const networkError = new Error('getaddrinfo ENOTFOUND smtp.invalid.com');
       networkError.name = 'NetworkError';
       mockTransporter.sendMail.mockRejectedValue(networkError);
@@ -100,7 +104,9 @@ describe('EmailService Error Handling', () => {
         data: { firstName: 'John' },
       };
 
-      await expect(service.sendEmail(emailData)).rejects.toThrow('getaddrinfo ENOTFOUND smtp.invalid.com');
+      await expect(service.sendEmail(emailData)).rejects.toThrow(
+        'getaddrinfo ENOTFOUND smtp.invalid.com',
+      );
     });
   });
 
@@ -116,7 +122,7 @@ describe('EmailService Error Handling', () => {
       };
 
       await expect(service.sendEmail(emailData)).rejects.toThrow(
-        'Template not found: user_welcome'
+        'Template not found: user_welcome',
       );
     });
 
@@ -134,7 +140,7 @@ describe('EmailService Error Handling', () => {
       };
 
       await expect(service.sendEmail(emailData)).rejects.toThrow(
-        'Failed to render email template: user_welcome'
+        'Failed to render email template: user_welcome',
       );
     });
 
@@ -156,7 +162,9 @@ describe('EmailService Error Handling', () => {
 
     it('should handle template with undefined variables gracefully', async () => {
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue('Hello {{undefinedVar}}, welcome {{firstName}}!');
+      mockFs.readFileSync.mockReturnValue(
+        'Hello {{undefinedVar}}, welcome {{firstName}}!',
+      );
       mockTransporter.sendMail.mockResolvedValue({
         messageId: 'test-id',
         accepted: ['test@example.com'],
@@ -177,7 +185,7 @@ describe('EmailService Error Handling', () => {
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           html: 'Hello , welcome John!', // undefined variables become empty strings
-        })
+        }),
       );
     });
   });
@@ -186,7 +194,7 @@ describe('EmailService Error Handling', () => {
     it('should handle invalid recipient email addresses', async () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('<html>Test template</html>');
-      
+
       const validationError = new Error('Invalid recipients');
       validationError.name = 'AddressError';
       mockTransporter.sendMail.mockRejectedValue(validationError);
@@ -198,13 +206,15 @@ describe('EmailService Error Handling', () => {
         data: { firstName: 'John' },
       };
 
-      await expect(service.sendEmail(emailData)).rejects.toThrow('Invalid to email address: invalid-email-address');
+      await expect(service.sendEmail(emailData)).rejects.toThrow(
+        'Invalid to email address: invalid-email-address',
+      );
     });
 
     it('should handle rejected recipient addresses', async () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('<html>Test template</html>');
-      
+
       // Simulate partial delivery failure
       mockTransporter.sendMail.mockResolvedValue({
         messageId: 'partial-success-id',
@@ -230,7 +240,9 @@ describe('EmailService Error Handling', () => {
   describe('Welcome Email Error Scenarios', () => {
     it('should handle sendWelcomeEmail with missing user data', async () => {
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue('<html>Welcome {{firstName}} {{lastName}}!</html>');
+      mockFs.readFileSync.mockReturnValue(
+        '<html>Welcome {{firstName}} {{lastName}}!</html>',
+      );
       mockTransporter.sendMail.mockResolvedValue({
         messageId: 'welcome-id',
         accepted: ['test@example.com'],
@@ -248,7 +260,7 @@ describe('EmailService Error Handling', () => {
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           html: '<html>Welcome  !</html>', // Empty names should render as empty
-        })
+        }),
       );
     });
 
@@ -262,7 +274,7 @@ describe('EmailService Error Handling', () => {
       };
 
       await expect(
-        service.sendWelcomeEmail('test@example.com', userData)
+        service.sendWelcomeEmail('test@example.com', userData),
       ).rejects.toThrow('Template not found: user_welcome');
     });
   });
@@ -306,7 +318,7 @@ describe('EmailService Error Handling', () => {
     it('should handle multiple simultaneous email sends', async () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('<html>Test {{index}}</html>');
-      
+
       // First call succeeds, second fails, third succeeds
       mockTransporter.sendMail
         .mockResolvedValueOnce({

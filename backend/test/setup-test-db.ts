@@ -20,13 +20,13 @@ const testDataSource = new DataSource({
 
 export async function setupTestDatabase() {
   await testDataSource.initialize();
-  
+
   // Drop all tables
   await testDataSource.dropDatabase();
-  
+
   // Run migrations
   await testDataSource.runMigrations();
-  
+
   await testDataSource.destroy();
 }
 

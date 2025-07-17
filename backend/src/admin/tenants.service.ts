@@ -14,6 +14,16 @@ import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { CreateTenantResponseDto } from './dto/create-tenant-response.dto';
 import { StorageService } from '../storage/storage.service';
 import { FileCategory } from '../storage/entities/file.entity';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from '../subscriptions/entities/subscription.entity';
+import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
+import {
+  UsageRecord,
+  UsageType,
+} from '../subscriptions/entities/usage-record.entity';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class TenantsService {
@@ -22,8 +32,15 @@ export class TenantsService {
     private tenantRepository: Repository<Tenant>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Subscription)
+    private subscriptionRepository: Repository<Subscription>,
+    @InjectRepository(SubscriptionPlan)
+    private subscriptionPlanRepository: Repository<SubscriptionPlan>,
+    @InjectRepository(UsageRecord)
+    private usageRecordRepository: Repository<UsageRecord>,
     private authService: AuthService,
     private storageService: StorageService,
+    private auditService: AuditService,
   ) {}
 
   private generateTemporaryPassword(): string {
@@ -73,6 +90,58 @@ export class TenantsService {
 
     const savedTenant = await this.tenantRepository.save(tenant);
 
+    // Create subscription with FREE plan
+    const freePlan = await this.subscriptionPlanRepository.findOne({
+      where: { name: 'free' },
+    });
+
+    if (!freePlan) {
+      throw new InternalServerErrorException(
+        'Free subscription plan not found',
+      );
+    }
+
+    const currentDate = new Date();
+    const nextMonth = new Date(currentDate);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    const subscription = this.subscriptionRepository.create({
+      tenant_id: savedTenant.id,
+      plan_id: freePlan.id,
+      status: SubscriptionStatus.ACTIVE,
+      current_period_start: currentDate,
+      current_period_end: nextMonth,
+    });
+
+    await this.subscriptionRepository.save(subscription);
+
+    // Initialize usage records for the new tenant
+    for (const type of Object.values(UsageType)) {
+      await this.usageRecordRepository.save({
+        tenant_id: savedTenant.id,
+        record_type: type,
+        period_start: currentDate,
+        period_end: nextMonth,
+        count: 0,
+      });
+    }
+
+    // Log subscription creation
+    await this.auditService.logAction({
+      tenant_id: savedTenant.id,
+      user_id: null, // System action
+      action: 'subscription.created',
+      resource_type: 'subscription',
+      resource_id: subscription.id,
+      details: {
+        plan_name: 'free',
+        auto_assigned: true,
+        reason: 'New tenant creation',
+      },
+      ip_address: '127.0.0.1',
+      user_agent: 'System',
+    });
+
     // Generate temporary password
     const temporaryPassword = this.generateTemporaryPassword();
 
@@ -116,6 +185,7 @@ export class TenantsService {
         'created_at',
         'updated_at',
       ],
+      relations: ['subscription', 'subscription.plan'],
       order: { created_at: 'DESC' },
     });
 
@@ -138,6 +208,18 @@ export class TenantsService {
         return {
           ...tenant,
           logo_url: actualLogoUrl,
+          subscription: tenant.subscription
+            ? {
+                id: tenant.subscription.id,
+                plan_name: tenant.subscription.plan?.name || 'unknown',
+                plan_display_name:
+                  tenant.subscription.plan?.display_name || 'Unknown',
+                status: tenant.subscription.status,
+                current_period_end: tenant.subscription.current_period_end,
+                cancel_at_period_end: tenant.subscription.cancel_at_period_end,
+                cancel_at: tenant.subscription.cancel_at,
+              }
+            : null,
         };
       }),
     );
@@ -148,7 +230,7 @@ export class TenantsService {
   async findOne(id: string) {
     const tenant = await this.tenantRepository.findOne({
       where: { id },
-      relations: ['users'],
+      relations: ['users', 'subscription', 'subscription.plan'],
     });
 
     if (!tenant) {
@@ -203,7 +285,7 @@ export class TenantsService {
   async getStats(id: string) {
     const tenant = await this.tenantRepository.findOne({
       where: { id },
-      relations: ['users'],
+      relations: ['users', 'subscription', 'subscription.plan'],
     });
 
     if (!tenant) {
@@ -218,6 +300,28 @@ export class TenantsService {
       {} as Record<string, number>,
     );
 
+    // Get current usage data
+    const currentPeriodStart =
+      tenant.subscription?.current_period_start || new Date();
+    const currentPeriodEnd =
+      tenant.subscription?.current_period_end || new Date();
+
+    const usageRecords = await this.usageRecordRepository.find({
+      where: {
+        tenant_id: id,
+        period_start: currentPeriodStart,
+        period_end: currentPeriodEnd,
+      },
+    });
+
+    const usageByType = usageRecords.reduce(
+      (acc, record) => {
+        acc[record.record_type] = record.count;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
     return {
       tenant_id: tenant.id,
       tenant_name: tenant.name,
@@ -226,6 +330,27 @@ export class TenantsService {
       users_by_role: usersByRole,
       created_at: tenant.created_at,
       last_updated: tenant.updated_at,
+      subscription: tenant.subscription
+        ? {
+            plan_name: tenant.subscription.plan?.name || 'unknown',
+            plan_display_name:
+              tenant.subscription.plan?.display_name || 'Unknown',
+            status: tenant.subscription.status,
+            current_period_end: tenant.subscription.current_period_end,
+            usage: {
+              cars_washed: usageByType[UsageType.CARS_WASHED] || 0,
+              active_users: tenant.users.filter((u) => u.is_active).length,
+              locations: 1, // Currently single location per tenant
+            },
+            limits: {
+              max_cars_per_month:
+                tenant.subscription.plan?.max_cars_per_month || null,
+              max_active_users:
+                tenant.subscription.plan?.max_active_users || null,
+              max_locations: tenant.subscription.plan?.max_locations || null,
+            },
+          }
+        : null,
     };
   }
 

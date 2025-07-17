@@ -12,27 +12,26 @@ This document consolidates all business logic for the Wasplanning system, a mult
 - ROI: Save 2-4 hours daily on manual coordination
 
 ### Pricing Structure
-- **Starter**: €49/month per location
-  - Up to 500 cars/month
-  - Up to 10 active users
+- **Gratis**: €0/month
+  - Up to 50 cars/month
+  - Up to 2 active users
   - 1 location
   - Basic features
   
-- **Groei**: €149/month per location
-  - Up to 2000 cars/month
-  - Up to 50 active users
-  - Up to 5 locations
-  - Advanced features + API access
+- **Standaard**: €100/month
+  - Up to 1500 cars/month
+  - Up to 10 active users
+  - Up to 3 locations
+  - All features + reporting
   
-- **Enterprise**: €299/month (custom)
+- **Enterprise**: €400/month
   - Unlimited cars
   - Unlimited users
   - Unlimited locations
   - All features + custom integrations
-  - Priority support
+  - Priority support + API access
 
-- **Trial**: 30 days free for all new tenants
-- **Billing**: Monthly or yearly (10% discount)
+- **Billing**: Monthly only
 - **No setup fees**
 
 ## User Roles & Permissions
@@ -154,11 +153,11 @@ This document consolidates all business logic for the Wasplanning system, a mult
 - Usage resets at start of each cycle
 - Failed payment retry logic (3 attempts)
 
-### Trial Management
-- 30-day free trial for new tenants
-- Full feature access during trial
-- Automatic conversion to paid at trial end
-- Email reminders at days 7, 14, 23, 29
+### Free Tier Management
+- Start with free tier immediately
+- Upgrade prompts when approaching limits
+- Seamless upgrade to paid plans
+- Usage tracking and notifications
 
 ## Wash Task Business Logic
 
@@ -337,15 +336,15 @@ When washers have no assigned vehicles:
 
 ## System Integration
 
-### API Access (Groei+)
+### API Access (Enterprise)
 - RESTful API for external systems
 - Webhook support for events
 - OAuth2 authentication
 - Rate limits per tier
-- Custom integration support (Enterprise)
+- Custom integration support
 
 ### Standard Integrations
-- Mollie (payments)
+- Payment providers (TBD - considering Lemon Squeezy)
 - SendGrid (email)
 - MinIO (file storage)
 - Redis (caching/queues)

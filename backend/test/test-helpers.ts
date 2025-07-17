@@ -1,5 +1,18 @@
 import { DataSource } from 'typeorm';
 
+export async function cleanupAllTestData(dataSource: DataSource) {
+  // Delete all data in the correct order to avoid foreign key constraints
+  await dataSource.query('DELETE FROM audit_logs');
+  await dataSource.query('DELETE FROM user_locations');
+  await dataSource.query('DELETE FROM locations');
+  await dataSource.query('DELETE FROM usage_records');
+  await dataSource.query('DELETE FROM payment_methods');
+  await dataSource.query('DELETE FROM webhook_events');
+  await dataSource.query('DELETE FROM subscriptions');
+  await dataSource.query('DELETE FROM users');
+  await dataSource.query('DELETE FROM tenants');
+}
+
 export async function cleanupTestData(dataSource: DataSource) {
   // Delete all test data to ensure clean state
   // First delete audit logs to avoid foreign key constraint violations
@@ -35,7 +48,25 @@ export async function cleanupTestData(dataSource: DataSource) {
          )
     )
   `);
-  
+
+  // Delete related entities
+  await dataSource.query(
+    `DELETE FROM user_locations WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test-e2e-%')`,
+  );
+  await dataSource.query(
+    `DELETE FROM locations WHERE tenant_id IN (SELECT id FROM tenants WHERE name LIKE 'test-e2e-%')`,
+  );
+  await dataSource.query(
+    `DELETE FROM usage_records WHERE tenant_id IN (SELECT id FROM tenants WHERE name LIKE 'test-e2e-%' OR id IN ('a1111111-1111-1111-1111-111111111111', 'b1111111-1111-1111-1111-111111111111', 'b3333333-3333-3333-3333-333333333333', '550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002'))`,
+  );
+  await dataSource.query(
+    `DELETE FROM payment_methods WHERE tenant_id IN (SELECT id FROM tenants WHERE name LIKE 'test-e2e-%' OR id IN ('a1111111-1111-1111-1111-111111111111', 'b1111111-1111-1111-1111-111111111111', 'b3333333-3333-3333-3333-333333333333', '550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002'))`,
+  );
+  await dataSource.query(`DELETE FROM webhook_events`);
+  await dataSource.query(
+    `DELETE FROM subscriptions WHERE tenant_id IN (SELECT id FROM tenants WHERE name LIKE 'test-e2e-%' OR id IN ('a1111111-1111-1111-1111-111111111111', 'b1111111-1111-1111-1111-111111111111', 'b3333333-3333-3333-3333-333333333333', '550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002'))`,
+  );
+
   await dataSource.query(`
     DELETE FROM users 
     WHERE email LIKE '%@test-e2e-%' 
@@ -46,7 +77,18 @@ export async function cleanupTestData(dataSource: DataSource) {
          'b3333333-3333-3333-3333-333333333333',
          'b2222222-2222-2222-2222-222222222222',
          'b4444444-4444-4444-4444-444444444444',
-         'b5555555-5555-5555-5555-555555555555'
+         'b5555555-5555-5555-5555-555555555555',
+         '550e8400-e29b-41d4-a716-446655440001',
+         '550e8400-e29b-41d4-a716-446655440002'
+       )
+       OR id IN (
+         'a2222222-2222-2222-2222-222222222222',
+         'b2222222-2222-2222-2222-222222222222',
+         'b4444444-4444-4444-4444-444444444444',
+         'b5555555-5555-5555-5555-555555555555',
+         '550e8400-e29b-41d4-a716-446655440003',
+         '550e8400-e29b-41d4-a716-446655440004',
+         '550e8400-e29b-41d4-a716-446655440005'
        )
   `);
 

@@ -5,10 +5,14 @@
 - Frontend: Nuxt 3 + Vue 3 + shadcn-vue + Pinia + TailwindCSS
 - Mobile: Expo + React Native + Zustand + NativeWind
 - Real-time: Socket.io
-- Auth: JWT + Role-based access
+- Auth: JWT + Role-based access control (RBAC)
+- Payments: Stripe (subscriptions, payment methods, webhooks)
+- Email: SMTP with Handlebars templates
 
-## Code Style
-- Use TypeScript everywhere
+## Code Style & Best Practices
+
+### TypeScript Rules
+- Use TypeScript everywhere (strict mode enabled)
 - Prefer composition over inheritance
 - Use async/await over Promises
 - Follow existing naming conventions
@@ -16,13 +20,132 @@
 - Use proper error handling with try/catch
 - Always validate DTOs with class-validator
 
+### Error Handling
+```typescript
+// GOOD - Specific exceptions with context
+throw new NotFoundException('User not found');
+throw new ForbiddenException('Insufficient permissions');
+throw new ConflictException('Email already exists');
+
+// BAD - Generic errors
+throw new Error('Something went wrong');
+return { error: 'Invalid request' };
+```
+
+### Audit Logging Pattern
+```typescript
+await this.auditService.logAction({
+  tenant_id: req.user.tenant.id,
+  user_id: req.user.id,
+  action: 'resource.action', // e.g., 'user.created'
+  resource_type: 'resource_name',
+  resource_id: resource.id,
+  details: { /* relevant context */ },
+  ip_address: req.ip,
+  user_agent: req.headers['user-agent'],
+});
+```
+
+### Required Audit Events
+- Authentication: login, logout, impersonation start/stop
+- User Management: create, update, delete, password reset, role change
+- Tenant Management: create, update, suspend, resume
+- Subscription: plan change, payment method add/remove, limit exceeded
+- Settings: any configuration changes
+
 ## Backend Rules
+
+### Controller Implementation (MANDATORY PATTERN)
+```typescript
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard) // ALWAYS in this order
+@Roles(UserRole.GARAGE_ADMIN) // Specify allowed roles
+@Controller('resources')
+export class ResourceController {
+  constructor(
+    private readonly resourceService: ResourceService,
+    private readonly auditService: AuditService,
+  ) {}
+
+  @Post()
+  @CheckLimit(LimitType.RESOURCES) // Check subscription limits
+  async create(@Body() dto: CreateDto, @Request() req: any) {
+    // Service handles business logic with tenant isolation
+    const resource = await this.resourceService.create(dto, req.user.tenant.id);
+    
+    // Audit log after successful operation
+    await this.auditService.logAction({
+      tenant_id: req.user.tenant.id,
+      user_id: req.user.id,
+      action: 'resource.created',
+      resource_type: 'resource',
+      resource_id: resource.id,
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    
+    return resource;
+  }
+}
+```
+
+### Service Implementation (MANDATORY PATTERN)
+```typescript
+@Injectable()
+export class ResourceService {
+  async create(dto: CreateDto, tenantId: string) {
+    // ALWAYS check tenant-scoped uniqueness
+    const existing = await this.repository.findOne({
+      where: { name: dto.name, tenant_id: tenantId },
+    });
+    
+    if (existing) {
+      throw new ConflictException('Resource already exists');
+    }
+    
+    // ALWAYS include tenant_id
+    const resource = this.repository.create({
+      ...dto,
+      tenant_id: tenantId,
+    });
+    
+    return this.repository.save(resource);
+  }
+  
+  async findAll(tenantId: string) {
+    // ALWAYS filter by tenant
+    return this.repository.find({
+      where: { tenant_id: tenantId },
+      order: { created_at: 'DESC' },
+    });
+  }
+}
+```
+
+### Authentication & Authorization Decorators
+- `@Public()` - Mark endpoints as publicly accessible (login, health)
+- `@Roles(...roles)` - Restrict access to specific roles
+- `@CurrentUser()` - Inject authenticated user into method
+- `@NoImpersonation()` - Prevent impersonated access (password changes)
+- `@RateLimit(options)` - Apply rate limiting (e.g., {points: 5, duration: 60})
+- `@CheckLimit(limitType)` - Check subscription limits (CARS_WASHED, ACTIVE_USERS, LOCATIONS)
+- `@AllowReadOnly()` - Allow read-only access for restricted subscriptions
+
+### Guards (Apply in Order)
+1. **JwtAuthGuard** - JWT authentication (skipped for @Public)
+2. **RolesGuard** - Role-based access control
+3. **TenantGuard** - Tenant isolation enforcement
+4. **SubscriptionGuard** - Subscription limit checking
+5. **NoImpersonationGuard** - Block impersonated users
+
+### API Rules
 - All endpoints MUST have Swagger decorators
 - Use modules for feature organization
 - Database entities in separate files
 - Always use transactions for multi-table operations
 - Redis for caching and job queues only
 - MinIO for all file storage (photos, documents)
+- NEVER trust client-provided tenant IDs - use req.user.tenant.id
+- Return meaningful errors with proper HTTP status codes
 
 ## Frontend Rules
 - Use composables for ALL API requests (never direct $fetch in components)
@@ -64,28 +187,93 @@
 - TypeScript for all components
 - File-based routing with Expo Router
 
-## Multi-Tenancy (MANDATORY)
-- ALL entities MUST have tenant_id foreign key
-- ALL API endpoints MUST be tenant-aware
-- Row-Level Security MUST be enabled on tenant-scoped tables
-- JWT tokens MUST include tenant context
-- Redis keys MUST be namespaced by tenant
-- MinIO buckets MUST be per tenant
-- WebSocket rooms MUST be tenant-specific
+## Multi-Tenancy & Security (MANDATORY)
 
-## User Roles (FIXED - Per Tenant)
-1. Werkplaats - submit wash requests only
-2. Wassers - view queue, update status
-3. Haal/Breng Planners - view completion status only
-4. Wasplanners - manage queue and assignments
-5. Garage Admin - manage users and settings for their garage
-6. Super Admin - manage all garages and global settings
+### Tenant Isolation Rules
+- ALL entities MUST have tenant_id foreign key (except global tables)
+- ALL queries MUST include tenant_id filter for non-super-admin users
+- Services receive tenantId as parameter, NOT from DTOs
+- Cross-tenant access ONLY allowed for SUPER_ADMIN role
+- TenantGuard validates and adds tenant context to requests
+- Validate tenant ownership before ANY operation
 
-## Database Naming
+### Security Implementation
+- JWT tokens include user with tenant relationship
+- Redis keys namespaced by tenant: `tenant:${tenantId}:${key}`
+- MinIO paths include tenant: `${tenantId}/category/filename`
+- WebSocket rooms tenant-specific: `tenant:${tenantId}:room`
+- Audit logs track all significant actions with IP/user agent
+
+### Subscription & Limits
+- One subscription per tenant (enforced by unique constraint)
+- Three plans: Free (50 cars/5 users/1 location), Standard (€100), Enterprise (€400)
+- Real-time usage tracking with atomic increments
+- Warnings sent at 80% usage threshold
+- Hard limits enforced with meaningful error messages
+- Mid-cycle upgrades with automatic proration
+
+## User Roles & Permissions (FIXED - Per Tenant)
+
+### Role Hierarchy
+1. **SUPER_ADMIN** (super_admin)
+   - Universal access across all tenants
+   - Can impersonate other users for support
+   - Manages tenants and system-wide settings
+   - Bypasses all role and tenant restrictions
+   - Can view all audit logs
+
+2. **GARAGE_ADMIN** (garage_admin)
+   - Full access within their tenant only
+   - Can create/manage users (except other admins)
+   - Manages subscription and billing
+   - Views tenant audit logs
+   - Cannot access other tenants
+
+3. **WASPLANNERS** (wash_planners)
+   - Manages wash queue and assignments
+   - Views all wash-related data
+   - Can assign tasks to washers
+   - Limited to their tenant
+
+4. **WASSERS** (washers)
+   - Views assigned wash tasks
+   - Updates wash status
+   - Limited to their own tasks
+   - Mobile-optimized interface
+
+5. **WERKPLAATS** (workshop)
+   - Creates wash requests
+   - Views status of submitted requests
+   - Cannot modify assignments
+   - Limited to their location
+
+6. **HAAL_BRENG_PLANNERS** (pickup_delivery_planners)
+   - Views completed washes
+   - Manages pickup/delivery schedules
+   - Cannot modify wash tasks
+   - Coordinates vehicle logistics
+
+## Database Rules
+
+### Naming Conventions
 - snake_case for table/column names
-- UUID primary keys
-- created_at/updated_at timestamps
-- Soft deletes with deleted_at
+- UUID primary keys for all tables
+- created_at/updated_at timestamps (automatic)
+- Soft deletes with deleted_at when appropriate
+- Foreign keys: tablename_id (e.g., tenant_id, user_id)
+
+### Migration Rules
+- NEVER modify existing migrations
+- Create new migrations for schema changes
+- Test migrations with rollback before committing
+- Include both `up` and `down` methods
+- Name format: TIMESTAMP-DescriptiveAction.ts
+
+### Entity Best Practices
+- Add indexes for tenant_id and commonly queried fields
+- Use lazy loading sparingly - prefer explicit joins
+- Always specify cascade options explicitly
+- Use transactions for multi-step operations
 
 ## API Conventions
 - RESTful endpoints
@@ -110,15 +298,98 @@ wasplanning/
 - PostgreSQL on 5432, Redis on 6379, MinIO on 9000
 - API on 3001, Frontend on 3000
 
-## Testing
-- Jest for backend unit tests
-- Vitest for frontend unit tests  
-- Playwright for E2E tests
-- Minimum 80% code coverage
+## Testing Requirements
+
+### Test Coverage
+- Minimum 80% code coverage required
+- Test happy paths AND error cases
+- Include edge cases and boundary conditions
+- Mock external services (Stripe, email, MinIO)
+
+### Test Structure
+```typescript
+describe('ResourceService', () => {
+  let service: ResourceService;
+  let repository: Repository<Resource>;
+
+  beforeEach(() => {
+    // Setup mocks and dependencies
+  });
+
+  describe('create', () => {
+    it('should create resource with tenant association', async () => {
+      // Test implementation
+    });
+    
+    it('should throw ConflictException for duplicate names', async () => {
+      // Test implementation
+    });
+    
+    it('should enforce subscription limits', async () => {
+      // Test implementation
+    });
+  });
+});
+```
+
+### Testing Stack
+- Backend: Jest for unit tests, SuperTest for integration
+- Frontend: Vitest for unit tests, @testing-library/vue
+- E2E: Playwright for full user scenarios
+- Mobile: Jest + React Native Testing Library
+
+## Common Pitfalls to Avoid
+
+1. ❌ Forgetting tenant isolation in queries
+2. ❌ Trusting client-provided IDs without validation
+3. ❌ Not checking subscription limits before operations
+4. ❌ Missing audit logs for important actions
+5. ❌ Hardcoding text instead of using i18n
+6. ❌ Not handling Stripe webhook failures
+7. ❌ Skipping input validation
+8. ❌ Using synchronous operations for heavy tasks
+9. ❌ Not implementing proper error handling
+10. ❌ Forgetting to test edge cases
+
+## Stripe Integration Rules
+
+### Payment Security
+- Use SetupIntents for payment method collection
+- NEVER store raw card data
+- Handle webhooks with signature verification
+- Implement idempotency for payment operations
+- Support 3D Secure authentication
+- Grace period (30 days) for failed payments
+
+### Webhook Events to Handle
+- customer.subscription.created/updated/deleted
+- invoice.payment_succeeded/failed
+- payment_intent.succeeded/failed
+- payment_method.attached/detached
+
+## Performance Guidelines
+
+### Database Optimization
+- Use pagination for large datasets (default: 20 items)
+- Add indexes for frequently queried fields
+- Avoid N+1 queries - use joins or DataLoader
+- Cache frequently accessed data in Redis
+
+### API Optimization
+- Implement response caching where appropriate
+- Use compression for API responses
+- Minimize payload sizes
+- Implement field selection for large objects
+
+### Frontend Performance
+- Lazy load routes and components
+- Optimize images and assets
+- Use virtual scrolling for long lists
+- Implement proper loading states
 
 ## NO Offline Mode
 - Mobile app does NOT need offline functionality
-- No biometric authentication
-- No location tracking
+- No biometric authentication required
+- No location tracking needed
 - No minimum photo resolution requirements
-- No digital signatures
+- No digital signatures required

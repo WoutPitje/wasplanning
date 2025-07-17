@@ -84,7 +84,7 @@ describe('AuthController', () => {
         password: 'testpassword',
       };
 
-      const mockRequest = { 
+      const mockRequest = {
         user: mockUser,
         ip: '127.0.0.1',
         headers: {
